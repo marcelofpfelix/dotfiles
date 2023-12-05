@@ -1,0 +1,77 @@
+################################################################################
+# export
+################################################################################
+
+
+
+# app exports
+################################################################################
+
+# allow vagrant experimental features
+export VAGRANT_EXPERIMENTAL="1"
+
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+
+# wireshark theme
+export QT_STYLE_OVERRIDE=Adwaita-Dark
+
+# Ruby Gems
+export GEM_HOME="$HOME/gems"
+
+# nvm
+export NVM_DIR="$HOME/.nvm"
+
+# path exports
+################################################################################
+
+# add ~/bin to path
+export PATH="$PATH:$HOME/bin"
+
+# golang
+export PATH=$PATH:/usr/local/go/bin
+export PATH="$PATH:$HOME/go/bin"
+
+# Ruby Gems
+export PATH="$PATH:$HOME/gems/bin"
+
+# pyenv
+export PATH="$PATH:$PYENV_ROOT/bin"
+
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change
+export PATH="$PATH:$HOME/.rvm/bin"
+
+
+################################################################################
+# app completions
+################################################################################
+
+# terraform
+complete -o nospace -C /usr/bin/terraform terraform
+
+# kubectl
+source <(kubectl completion zsh)
+complete -F __start_kubectl k
+[[ /usr/local/bin/kubectl ]] && source <(kubectl completion zsh)
+
+# nvm
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# pyenv
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+#pyenv virtualenvwrapper_lazy
+
+
+################################################################################
+# others
+################################################################################
+
+# copilot
+# not working
+# eval "$(github-copilot-cli alias -- "$0")"
+
+# cloudflared
+# TUNNEL_ORIGIN_CERT="~/.cloudflared/cert.pem"
