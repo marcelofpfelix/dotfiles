@@ -1,0 +1,19 @@
+$include /etc/inputrc
+
+# Allow up/down autocompletion of commands from bash history
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+# words which have more than one possible completion cause the matches to be listed
+set show-all-if-ambiguous on
+# Readline performs filename matching and completion in a case-insensitive
+set completion-ignore-case on
+# sets readline to display possible completions using different colors to indicate their file types
+set colored-stats On
+# maximum number of characters to be the common prefix to display for completions
+set completion-prefix-display-length 3
+# sets every completion which is a symbolic link to a directory to have a slash appended
+set mark-symlinked-directories On
+# sets the completions to be listed immediately instead of ringing the bell
+set show-all-if-unmodified On
+# sets completions to be appended by characters that indicate their file types reported by the stat system call
+set visible-stats On

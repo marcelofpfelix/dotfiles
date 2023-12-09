@@ -1,0 +1,62 @@
+# this file will be included to zshrc and bashrc
+
+################################################################################
+# alias
+################################################################################
+
+alias grep="grep --color"
+
+alias ls='ls $LS_OPTIONS'
+alias ll='ls $LS_OPTIONS -lrth'
+alias l='ls $LS_OPTIONS -lArth'
+
+alias ips="ip -c -br -4 a"
+alias digs="dig +short"
+alias ipub="curl ipinfo.io/ip"
+
+alias datei="date +\"%Y-%m-%dT%H:%M:%S%:z\""
+alias dateu="date -u +\"%Y-%m-%d_%H:%M:%S\""
+
+alias psef="ps -ef | grep"
+alias diss="diff -w --side-by-side --suppress-common-lines"
+# for find
+
+# docker
+alias dl="sudo docker logs -t -n 500"
+alias dstart="sudo docker stop"
+alias dstop="sudo docker start"
+
+
+################################################################################
+# export
+################################################################################
+
+# vtysh
+export VTYSH_PAGER="less -FX" # 'cat'
+# time
+export TIME_STYLE=long-iso
+export TZ="/usr/share/zoneinfo/UTC"
+# history
+export HISTCONTROL=ignoredups:erasedups  # no duplicate entries
+export HISTSIZE=10000
+export HISTFILESIZE=20000
+export HISTTIMEFORMAT='%Y-%m-%d %T '
+# ls
+export LS_OPTIONS='--color=auto'
+# hostname
+export hostname="`hostname -s`"
+
+# add ~/bin to path
+export PATH="$PATH:$HOME/bin"
+
+### utils
+# default interface
+LINK=$(ip r | grep '^default' | grep -oP '(?<=dev\s)\w+' | head -n 1)
+
+
+################################################################################
+# others
+################################################################################
+
+# To use different colors for different file extensions
+eval "$(dircolors)"

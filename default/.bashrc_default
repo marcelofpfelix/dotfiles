@@ -1,0 +1,24 @@
+# this file will be included to bashrc
+
+################################################################################
+# others
+################################################################################
+
+
+# Save and reload the history after each command finishes
+PROMPT_COMMAND="${PROMPT_COMMAND:+$PROMPT_COMMAND$'\n'}history -a; history -c; history -r"
+
+# set umask
+umask 033
+
+# set a colored prompt
+if grep -q 'prod' <<< $hostname; then
+    PS1='\[\033[01;34m\]\u@\[\033[01;31m\]\h\[\033[01;34m\]:\w \[\033[01;31m\]\$\[\033[00m\] '
+elif grep -q 'dev' <<< $hostname; then
+    PS1='\[\033[01;34m\]\u@\[\033[01;33m\]\h\[\033[01;34m\]:\w \[\033[01;33m\]\$\[\033[00m\] '
+else
+    PS1='\[\033[01;34m\]\u@\[\033[01;32m\]\h\[\033[01;34m\]:\w \[\033[01;32m\]\$\[\033[00m\] '
+fi
+
+# echo uptime
+echo "Uptime : `uptime`"

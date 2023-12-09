@@ -1,4 +1,4 @@
-# Instead of editing the rc file
+# this file will be included to zshrc and bashrc
 
 ################################################################################
 # alias
@@ -12,10 +12,12 @@ alias gcam='git commit -am'
 alias gl='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit'
 
 alias vi="nvim"
+alias cat="bat -p"
 alias k="kubectl"
 
 alias venv="source .env/bin/activate"
 alias m="make"
+alias ap="ansible-playbook"
 
 alias sshhosts="sed -rn 's/^\s*Host\s+(.*)\s*/\1/ip' ~/.ssh/config"
 
@@ -23,3 +25,31 @@ alias sshhosts="sed -rn 's/^\s*Host\s+(.*)\s*/\1/ip' ~/.ssh/config"
 # export
 ################################################################################
 
+# app exports
+################################################################################
+
+# allow vagrant experimental features
+export VAGRANT_EXPERIMENTAL="1"
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+# wireshark theme
+export QT_STYLE_OVERRIDE=Adwaita-Dark
+# Ruby Gems
+export GEM_HOME="$HOME/gems"
+# nvm
+export NVM_DIR="$HOME/.nvm"
+
+# path exports
+################################################################################
+
+# golang
+export PATH=$PATH:/usr/local/go/bin
+export PATH="$PATH:$HOME/go/bin"
+# Ruby Gems
+export PATH="$PATH:$HOME/gems/bin"
+# pyenv
+export PATH="$PATH:$PYENV_ROOT/bin"
+# cargo
+. "$HOME/.cargo/env"
+# Add RVM to PATH for scripting. Make sure this is the last PATH variable change
+export PATH="$PATH:$HOME/.rvm/bin"

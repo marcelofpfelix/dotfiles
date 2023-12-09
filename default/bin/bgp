@@ -1,0 +1,26 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# show the BGP peers on a server
+################################################################################
+
+
+function getpeers {
+    sudo vtysh -c "show run" | sed -n '/^router bgp/,/^!/p'
+}
+
+
+main() {
+
+  if [ "$1" == "-s" ]; then
+      getpeers | awk '$1=="neighbor" { print $2 }' | uniq
+  else
+      getpeers
+  fi
+
+  exit
+}
+
+
+main "$@"
