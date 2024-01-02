@@ -1,0 +1,30 @@
+session_name: dev ${SERVICE}
+environment:
+  # env needs to start with LC_
+  LC_LAYOUT: dash
+  LC_SERVICE: us ${SERVICE}
+windows:
+- window_name: dev ${SERVICE}
+  focus: 'true'
+  # layout: '3a55,206x52,0,0[206x27,0,0{103x27,0,0,0,102x27,104,0,4},206x24,0,28{103x24,0,28,1,102x24,104,28,2}]'
+  layout: 5a82,282x74,0,0[282x34,0,0{98x34,0,0,60,95x34,99,0,61,87x34,195,0,66},282x39,0,35{98x39,0,35,62,95x39,99,35,63,87x39,195,35,64}]
+  options:
+    synchronize-panes: 'off'
+  environment:
+
+  panes:
+    - environment:
+        LC_PANE_ROW: '1'
+      shell_command: ssh t014
+    - environment:
+        LC_PANE_ROW: '1'
+        LC_SERVICE: ${SERVICE}
+      shell_command: ssh t011
+    - environment:
+        LC_PANE_ROW: '1'
+      shell_command: ssh t205
+    - focus: 'true'
+      shell_command: ssh t014
+    - ssh t011
+    - ssh t205
+  #start_directory: /home/marcelof/git/marcelofpfelix/kamalab

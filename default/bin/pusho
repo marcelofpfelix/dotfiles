@@ -1,0 +1,28 @@
+################################################################################
+#                                 FILE INFO
+# git push to origin
+################################################################################
+
+
+main() {
+  # get branch name
+  branch="$(git symbolic-ref --short HEAD)"
+
+  # if branch is 'master' or 'main' confirm push
+  if [ "$branch" == "master" ] || [ "$branch" == "main" ]; then
+      echo "❗ warning: you are on branch '$branch'!"
+      if (gum confirm "push $branch to origin?"); then
+        echo ""
+      else
+        echo "Exiting, no push made." && exit
+      fi
+  fi
+
+  git push origin "$branch"
+
+  # open pr
+  gh pr create --fill --web
+}
+
+
+main "$@"

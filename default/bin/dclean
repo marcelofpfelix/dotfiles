@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Define the list of container names to exclude
+exclude=("debian" "ubuntu")
+
+# Get the names of all running containers
+containers=$(docker ps --format '{{.Names}}')
+
+# For each container
+for container in $containers
+do
+  # If the container name is not in the exclude list
+  if [[ ! " ${exclude[@]} " =~ " ${container} " ]]; then
+    # Stop the container
+    docker stop $container
+  fi
+done
+
+# Define the list of network names to exclude
+exclude=("docker0" "br1")
+
+# Get the names of all networks
+networks=$(docker network ls --format '{{.Name}}')
+
+# For each network
+for network in $networks
+do
+  # If the network name is not in the exclude list
+  if [[ ! " ${exclude[@]} " =~ " ${network} " ]]; then
+    # Remove the network
+    docker network rm $network
+  fi
+done
+
+
+#TODO
+# stop containers, except for a specific list
+# same for netrworks and
+
+
+
+
+
+# docker image prune --all --filter "until=30d"
+
+
+# docker system prune -f
+
+#   docker container prune -f ; \
+#   docker image prune -f ; \
+#   docker network prune -f ; \
+#   docker volume prune -f '

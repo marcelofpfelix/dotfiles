@@ -2,17 +2,14 @@
 
 ################################################################################
 #                                 FILE INFO
-# vtysh show run for containers
+# use bat to read cheatsheets
 ################################################################################
 
-main() {
+cd ~/git/marcelofpfelix/dotfiles/desktop/che
 
-  container=${1:-kamailio}
+# if [ $# -ne 1 ]; then
+#     echo "Usage: $0 <cheatsheet>"
+#     exit 1
+# fi
 
-  result=`sudo docker exec "$container" vtysh -c "show run" | grep network | column -t`
-
-  printf "$result\n"
-
-}
-
-main "$@"
+bat "$1.yml"

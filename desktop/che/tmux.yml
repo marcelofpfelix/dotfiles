@@ -1,0 +1,24 @@
+# tmux
+
+session:
+    new -s name: Start a new named session
+    attach: Attach to the most recently used session
+
+panes:
+# sync
+    X: synchronize-panes
+    C-%: split vertically
+    C-": split horizontally
+
+
+window:
+    C-c: Create a new window
+    C-w: Choose a window from a list
+    C-n: Change to the next window
+    C-p: Change to the previous window
+    C-f: Find a window
+    C-,: Rename the current window
+    C-&: Kill the current window
+
+others:
+    C-m: Toggle mouse mode

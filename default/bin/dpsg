@@ -1,0 +1,25 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# short docker ps with regex, grouped by image
+################################################################################
+
+main() {
+
+  query=$(sudo docker ps -a --format "{{.Image}} {{.State}}" | cut -d'/' -f3 | sed 's/:/ /' | sort | uniq -c | column -t)
+
+
+  if [ -z "$1" ]; then
+    result=$query
+  else
+    result=$(echo "$query" | grep "$1"  | column -t)
+  fi
+
+  result="${result//"running"/"🟢"}"
+  result="${result//"exited"/"🔴"}"
+
+  echo "$result"
+}
+
+main "$@"
