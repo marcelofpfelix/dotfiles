@@ -1,0 +1,52 @@
+# vim motions
+
+## command + count + motion
+
+motion:
+    hjkl: move left down up right
+    # words
+    8k: move up 8 lines
+    w: move to next word
+    b: move to previous word
+    e: move to end of word
+    ge: move to end of previous word
+    B: move to the beginning of the previous WORD
+    # word: letters, numbers, and underscores
+    # WORD: non-blank characters
+
+    gg: move to the top of the file
+    G: move to the bottom of the file
+
+    # horizontal
+    _: move to the first non-blank character of the line
+    0: move to the beginning of the line
+    $: move to the end of the line
+    f(: move to the next ( character ( F( move to the previous)
+    t(: move till character ( T( move till previous)
+    \,;: repeat back/forward the last f/F, t/T motion
+
+
+    /: search forward
+    \?: search backward
+
+visual:
+    v: start visual mode
+    V: start linewise visual mode
+    y: yank (copy)
+    p: paste
+    y5j: yank 5 lines down
+    yt;: yank up to the next ; (not included)
+
+
+command:
+    x: delete character under cursor
+    dd: delete line
+    d3j: delete 3 lines down
+    d$: delete to end of line
+    u: undo
+    ctrl+r: redo
+    i: insert before cursor (I at bol)
+    a: insert after cursor (A at eol)
+
+# \ escaping yaml special characters
+# http://www.viemu.com/vi-vim-cheat-sheet.gif

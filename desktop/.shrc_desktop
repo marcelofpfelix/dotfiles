@@ -12,7 +12,7 @@ alias gcam='git commit -am'
 alias gl='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit'
 
 alias vi="nvim"
-alias cat="bat -p"
+alias cat="bat -p --paging=never"
 alias k="kubectl"
 
 alias venv="source .env/bin/activate"

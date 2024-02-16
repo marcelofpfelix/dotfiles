@@ -1,0 +1,49 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# ansible-playbook to update the dotfiles into
+################################################################################
+
+  # change to local directory
+cd "$(dirname $0)"
+  # load lib
+. ../lib/lib_utils.sh
+
+main() {
+  cd ~/git/marcelofpfelix/homelab/
+
+  # change this according to the target:
+  work="-i ~/work.ini";
+
+  if [ -z "$1" ]; then
+    target=desktop
+  else
+    target=$(grep -v -e '\[' -e '\#' -e '^$'  ~/work.ini | gum filter)
+  fi
+
+  # service=${1:-desktop}; shift
+
+
+  #target=${1:-$service}; shift
+
+  # if [ -z "$1" ]; then
+  #   target="desktop"
+  # else
+  #   target="$1"
+  # fi
+
+  # if [ -z "$2" ]; then
+  #   service="$target"
+  # else
+  #   service="$2"
+  # fi
+
+  log note "ansible-playbook home.yml $work -e \"target=$target\"" # service=$service
+  #ansible-playbook deploy-home.yml -e "target=$target service=$service"
+  ansible-playbook home.yml $work -e "target=$target" # " service=$service
+
+}
+
+
+main "$@"

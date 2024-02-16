@@ -1,0 +1,26 @@
+session_name: ${ENV}-${SERVICE}
+environment:
+  # env needs to start with LC_
+  LC_LAYOUT: dash
+  LC_SERVICE: ${SERVICE}
+windows:
+- window_name: ${ENV}-${SERVICE}
+  focus: 'true'
+  layout: 2b2c,266x68,0,0[266x35,0,0{88x35,0,0,175,88x35,89,0,218,88x35,178,0,219},266x32,0,36{88x32,0,36,220,88x32,89,36,221,88x32,178,36,224}]
+  options:
+    synchronize-panes: 'off'
+  panes:
+    - environment:
+        LC_PANE_ROW: '1'
+      shell_command: ssh ${SERVER_1}
+    - environment:
+        LC_PANE_ROW: '1'
+        LC_SERVICE: ${SERVICE}
+      shell_command: ssh ${SERVER_2}
+    - environment:
+        LC_PANE_ROW: '1'
+      shell_command: ssh ${SERVER_3}
+    - focus: 'true'
+      shell_command: ssh ${SERVER_1}
+    - ssh ${SERVER_2}
+    - ssh ${SERVER_3}

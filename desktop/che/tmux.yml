@@ -1,15 +1,15 @@
 # tmux
 
+## key bindings
+
+prefix: C-a
+
 session:
-    new -s name: Start a new named session
-    attach: Attach to the most recently used session
-
-panes:
-# sync
-    X: synchronize-panes
-    C-%: split vertically
-    C-": split horizontally
-
+    (: previous session
+    ): next session
+    L: last (previously used) session
+    s: choose a session from a list
+    $: rename session
 
 window:
     C-c: Create a new window
@@ -20,5 +20,43 @@ window:
     C-,: Rename the current window
     C-&: Kill the current window
 
+panes:
+    x: Kill the current pane
+    X: synchronize-panes
+    C-%: split vertically
+    C-": split horizontally
+    z: Zoom into a pane
+
 others:
     C-m: Toggle mouse mode
+
+### plugins
+
+tmux-open:
+    o: Open a file or URL
+    C-o: Open with the editor
+
+tmux-yank:
+    y: Copy selection to system clipboard
+    Y: Copy selection, and pasting it to the command line
+    C-y: Copy command to system clipboard
+
+tmux-copycat:
+    C-?: search up
+    C-/: search down
+    n/N: next/previous match
+    C-ctrl-f: simple file search
+    C-ctrl-u: url search
+    C-ctrl-d: digit search
+    C-ctrl-i: ip address search
+
+## cli commands
+
+cli_session:
+    new -s name: Start a new named session
+    attach -t name: Attach to the most recently used session
+    kill-session: Kill the current session
+    switch-client -t name: Switch to an existing session
+
+cli-commands:
+    kill-server: Kill the server; all sessions and windows will be terminated

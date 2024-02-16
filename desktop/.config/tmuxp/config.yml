@@ -1,17 +1,17 @@
+# https://tmuxp.git-pull.com/configuration/examples.html
 session_name: 4-pane-split
 windows:
   - window_name: dev window
+    # use a custom layout:
+    # tmux list-windows -F "#{window_active} #{window_layout}" | grep "^1" | cut -d " " -f 2
     layout: tiled
     shell_command_before:
-      - cd ~/
+      - cd /tmp
     panes:
       - shell_command:
           - cd /var/log
           - ls -al | grep \.log
-      - echo hello
-      - echo hello
-      - echo hello
-      - echo yo1
-      - echo yo2
-      - echo yo3
-      - echo yo4
+      - echo hello2
+      - echo hello3
+      - echo hello4
+  #start_directory: /home/marcelof/

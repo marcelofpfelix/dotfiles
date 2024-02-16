@@ -2,18 +2,14 @@
 
 ################################################################################
 #                                 FILE INFO
-# custom docker exec with shell selection
+# bar to show in polybar
 ################################################################################
 
-# change to local directory
-cd "$(dirname $0)"
-# load libs
-. ../lib/lib_utils.sh
-. ../lib/lib_de.sh
+# scripts to run
+alerts
+check-time
+check-resolv
+check-safe
 
-main() {
-  de "$@"
-}
-
-  # $1: container name
-main "$@"
+# use ENV var from POLY
+# or define here!

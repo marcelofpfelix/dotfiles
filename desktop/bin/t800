@@ -1,0 +1,39 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# run terminator with the correct environment
+################################################################################
+
+# change to local directory
+cd "$(dirname $0)"
+# load lib
+. ../lib/lib_tmx.sh
+. ../lib/lib_utils.sh
+
+main() {
+    # check if no args were provided
+    if [ $# -eq 0 ]; then
+        service=$(echo "$SERVICES" | gum filter)
+        env=$(echo "$ENVS" | gum filter)
+
+        # default values
+        service=${service:-us}
+        env=${env:-dev}
+    # else should be $service $env
+    else
+        service=${1:-us}; shift
+        env=${1:-dev}; shift
+    fi
+
+
+    log note "t800="${service}-${env}" service=${service} /usr/bin/terminator -l term16 -T ${service}-${env}"
+    # serverlist=deployEU service=eu /usr/bin/terminator -l term16 -T deployEU
+    t800="${service}-${env}" service=${service} /usr/bin/terminator -l term16 -T ${service}-${env} &
+
+    #SERVER_1=${SERVER_1[${service}-${env}]} SERVER_2=${SERVER_2[${service}-${env}]} SERVER_3=${SERVER_3[${service}-${env}]} SERVER_4=${SERVER_4[${service}-${env}]} SERVICE=${service} ENV=${env} DISABLE_AUTO_TITLE='true' tmuxp load ${PROFILE[${service}-${env}]}
+
+}
+
+
+main "$@"

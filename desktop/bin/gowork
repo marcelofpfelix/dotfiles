@@ -1,0 +1,15 @@
+#!/bin/bash
+
+i3-msg "workspace 4"
+wezterm start -- tmux &
+sleep 1
+
+i3-msg "workspace 5"
+slack &
+sleep 1
+
+#; layout tabbed
+i3-msg "workspace 3; append_layout $HOME/.config/i3/layouts/work.json; layout default"
+google-chrome --profile-directory="Default" &
+code ~/work.code-workspace &
+# google-chrome --profile-directory="Default"  --app-id=kjgfgldnnfoeklkmfkjfagphfepbbdan &

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# connect to the 2nd monitor
+################################################################################
+
+primary=eDP-1
+
+# check if we have a monitor connected
+secondary=$(xrandr | grep " connected " | awk '{ print$1 }' | grep -v $primary)
+
+if [ -z "$secondary" ]; then
+    xrandr --auto
+else
+    xrandr --output $secondary --auto --right-of $primary
+    feh --bg-fill $HOME/Pictures/base.png
+fi

@@ -10,8 +10,6 @@ windows:
   layout: 5a82,282x74,0,0[282x34,0,0{98x34,0,0,60,95x34,99,0,61,87x34,195,0,66},282x39,0,35{98x39,0,35,62,95x39,99,35,63,87x39,195,35,64}]
   options:
     synchronize-panes: 'off'
-  environment:
-
   panes:
     - environment:
         LC_PANE_ROW: '1'
@@ -27,4 +25,4 @@ windows:
       shell_command: ssh t014
     - ssh t011
     - ssh t205
-  #start_directory: /home/marcelof/git/marcelofpfelix/kamalab
+  #start_directory: /home/marcelof/

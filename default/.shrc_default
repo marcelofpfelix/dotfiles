@@ -17,8 +17,9 @@ alias ipub="curl ipinfo.io/ip"
 alias datei="date +\"%Y-%m-%dT%H:%M:%S%:z\""
 alias dateu="date -u +\"%Y-%m-%d_%H:%M:%S\""
 
-alias psef="ps -ef | grep"
+alias psef="ps -ef | grep" # pgrep -a
 alias diss="diff -w --side-by-side --suppress-common-lines"
+alias cl="clear"
 # for find
 
 # docker

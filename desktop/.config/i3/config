@@ -1,0 +1,38 @@
+# i3 config file (v4)
+# Please see https://i3wm.org/docs/userguide.html for a complete reference!
+# Validate the config with `i3 -c ~/.config/i3/config -C`
+
+# ##############################################################################
+# set vars
+# ##############################################################################
+
+# super
+set $mod Mod4
+
+set $left           h
+set $right          l
+set $up             k
+set $down           j
+
+# Define names for default workspaces for which we configure key bindings later on.
+# We use variables to avoid repeating the names in multiple places.
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
+set $ws6 "6"
+set $ws7 "7"
+set $ws8 "8"
+set $ws9 "9"
+set $ws10 "10"
+
+# ##############################################################################
+# includes
+# ##############################################################################
+
+
+include $HOME/.config/i3/layout.conf
+include $HOME/.config/i3/workspace.conf
+include $HOME/.config/i3/bindings.conf
+include $HOME/.config/i3/startup.conf
