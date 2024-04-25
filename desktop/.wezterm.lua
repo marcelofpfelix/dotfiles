@@ -17,6 +17,8 @@ end
 config.color_scheme = 'Dracula (Official)'
 
 config.font = wezterm.font 'Fira Code'
+config.font_size = 10.0
+config.enable_tab_bar = false
 
 
 -- and finally, return the configuration to wezterm

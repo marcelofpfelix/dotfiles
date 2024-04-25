@@ -322,3 +322,20 @@ declare -A RPCOLOR=(
     ['oiw']='[on bright_white]'   # On High Intensity backgrounds White
 
 )
+
+
+# ##############################################################################
+# use color themes
+# https://catppuccin.com/palette
+
+declare -A HCOLOR=(
+    # Regular Colors
+    ['k']='#11111b'      # Black
+    ['r']='#f38ba8'      # Red
+    ['g']='#a6e3a1'      # Green
+    ['y']='#f9e2af'      # Yellow
+    ['b']='#89b4fa'      # Blue
+    ['p']='#cba6f7'      # Purple
+    ['c']='#89dceb'      # Cyan
+    ['w']='#cdd6f4'      # White
+)

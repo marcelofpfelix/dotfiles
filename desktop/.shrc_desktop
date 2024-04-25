@@ -11,8 +11,11 @@ alias gp='git pull --rebase'
 alias gcam='git commit -am'
 alias gl='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit'
 
+# tool replacements
 alias vi="nvim"
 alias cat="bat -p --paging=never"
+alias cdi="__zoxide_zi"
+
 alias k="kubectl"
 
 alias venv="source .env/bin/activate"
@@ -24,6 +27,9 @@ alias sshhosts="sed -rn 's/^\s*Host\s+(.*)\s*/\1/ip' ~/.ssh/config"
 ################################################################################
 # export
 ################################################################################
+
+# default editor
+export EDITOR=/usr/bin/nvim
 
 # app exports
 ################################################################################

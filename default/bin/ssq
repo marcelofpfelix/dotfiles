@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Monitor network connections and display those with a queue size over 3,000,000
+
+while true; do
+    var_date=$(echo ""$(date +"%T.%1N")" ")
+    # Use `ss -nt4` to get TCP IPv4 connections, then use awk to filter and display
+    ss -nt4 | awk -v date="$var_date" 'NR>1 {if ($3 > 3000000 || $4 > 3000000) print date $0}'
+    #echo $var_date
+
+    # Wait for a specified interval before repeating the check
+    sleep 0.2 # Adjust the sleep time as needed
+done | tee -a /tmp/ss.log

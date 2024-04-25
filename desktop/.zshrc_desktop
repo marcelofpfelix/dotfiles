@@ -5,7 +5,7 @@
 ################################################################################
 
 # terraform
-complete -o nospace -C /usr/bin/terraform terraform
+#complete -o nospace -C /usr/bin/terraform terraform
 
 # kubectl
 source <(kubectl completion zsh)
@@ -16,20 +16,35 @@ complete -F __start_kubectl k
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
+################################################################################
+# others
+################################################################################
+
+# cloudflared
+# TUNNEL_ORIGIN_CERT="~/.cloudflared/cert.pem"
+
+# zoxide alias
+alias cd="z"
+
+# ##############################################################################
+# eval
+# ##############################################################################
+# should be at the end section
+
 # pyenv
 eval "$(pyenv init --path)"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 #pyenv virtualenvwrapper_lazy
 
+# zoxide
+eval "$(zoxide init zsh)"
 
-################################################################################
-# others
-################################################################################
+# starship
+eval "$(starship init zsh)"
 
 # copilot
 # not working
 # eval "$(github-copilot-cli alias -- "$0")"
 
-# cloudflared
-# TUNNEL_ORIGIN_CERT="~/.cloudflared/cert.pem"
+# check https://github.com/marcogreiveldinger/.dotfiles/blob/main/.zsh/.zshrc

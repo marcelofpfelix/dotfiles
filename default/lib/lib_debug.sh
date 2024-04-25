@@ -52,8 +52,8 @@ function log_level(){
     )
 
     # default is `1 g``
-    level=${level_array["$1"]:-1}
-    color=${color_array[$level]}
+    local level=${level_array["$1"]:-1}
+    local color=${color_array[$level]}
 
     # Check conditions and print accordingly
     if [ "${LOG_TAG:0:1}" == "1" ]; then
@@ -79,9 +79,9 @@ function log_level(){
 #     [N]: (cid: str) the color of each string
 function printc() {
     # default color is bold blue
-    cid=${2:-bb}
-    color=$(color "$cid")
-    default=$(color "n")
+    local cid=${2:-bb}
+    local color=$(color "$cid")
+    local default=$(color "n")
 
     # if the color is n or invalid, then don't change the color
     if [[ $cid == "n" ]] || [[ -z ${COLOR["$cid"]} ]]; then
@@ -105,14 +105,16 @@ function printc() {
 #        4: split char
 #        5: newline
 function println() {
+    local settings
+    local colors
     # parse the argument as an array ,
     IFS=',' read -a settings <<< "${!#}"
     # parse the first argument as an array :
     IFS=':' read -a colors <<< "${settings[0]}"
-    level=${settings[1]:-1}
-    tabs=${settings[2]:-0}
-    split=${settings[3]:-' '}
-    newline=${settings[4]:-1}
+    local level=${settings[1]:-1}
+    local tabs=${settings[2]:-0}
+    local split=${settings[3]:-' '}
+    local newline=${settings[4]:-1}
 
     # if the verbose level is above the current level, then return
     if (( $level > $LOG_LEVEL )); then
@@ -146,7 +148,7 @@ function println() {
 #     [3]: (settings: int) println settings
 function printkv() {
     # default settings
-    settings=${3:-"bb:n,"}
+    local settings=${3:-"bb:n,"}
 
     println "$1:" "$2" "$settings"
 }
@@ -160,6 +162,9 @@ function printkv() {
 #     [2]: (str) message
 #     [N]: (str) last argument is the colors
 function log() {
+    local level
+    local cid
+    local tag
     read cid level tag < <(log_level $1)
 
     #print key

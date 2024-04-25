@@ -15,16 +15,26 @@ motion:
     # WORD: non-blank characters
 
     gg: move to the top of the file
+    7gg: move to line 7
     G: move to the bottom of the file
+    \{: move to the previous paragraph
+    \}: move to the next paragraph
+    ctrl-f: move forward one page
+    ctrl-b: move backward one page
+    ctrl-u: move up half a page
+    ctrl-d: move down half a page
 
     # horizontal
-    _: move to the first non-blank character of the line
+    _|^: move to the first non-blank character of the line
+    g_: move to the last non-blank character of the line
     0: move to the beginning of the line
     $: move to the end of the line
+    A: move to the end of the line and enter insert mode
+
     f(: move to the next ( character ( F( move to the previous)
     t(: move till character ( T( move till previous)
     \,;: repeat back/forward the last f/F, t/T motion
-
+    \%: move to the matching parenthesis, bracket, or brace
 
     /: search forward
     \?: search backward
@@ -32,21 +42,36 @@ motion:
 visual:
     v: start visual mode
     V: start linewise visual mode
+    ctrl-v: start visual-block mode
     y: yank (copy)
     p: paste
     y5j: yank 5 lines down
     yt;: yank up to the next ; (not included)
+    w: select text until the next word
 
-
-command:
+normal:
     x: delete character under cursor
     dd: delete line
     d3j: delete 3 lines down
     d$: delete to end of line
     u: undo
     ctrl+r: redo
+    esc|ctrl-[: go back to normal mode
     i: insert before cursor (I at bol)
     a: insert after cursor (A at eol)
+
+command:
+    \:%s/foo/bar/g: replace foo with bar in the whole file (%)
+
+macro:
+    q1: start recording and save to register 1
+    q: stop recording
+    \@1: play back from register 1
+    \@@: play back last macro
+    3@1: play back 3 times from register 1
+    :reg: show registers
+
+
 
 # \ escaping yaml special characters
 # http://www.viemu.com/vi-vim-cheat-sheet.gif

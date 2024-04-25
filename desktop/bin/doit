@@ -1,0 +1,107 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# time management script
+# a wrapper for timew, parses the tag and time minutes
+# and outputs in a format for a bar, such as polibar
+################################################################################
+
+# change to local directory
+cd "$(dirname $0)"
+# load lib
+. ../lib/lib_utils.sh
+
+cli="""
+use: doit
+long: |
+  timewarriror util
+  to track time
+flags:
+  - use: bar
+    short: show status
+    alias: b
+    type: bool
+"""
+
+declare -A status_icon=(
+    ['off']=󰔞
+    ['rest']=󰏤
+    ['break']=
+    ['lunch']=󱐟
+    ['dev']=
+    ['ops']=󱁤
+    ['head']=
+    ['toil']=󰹆
+)
+
+main() {
+
+    # ##########################################################################
+    # cli
+    # ##########################################################################
+
+    # parse the cli arguments
+    result=$(echo "$cli" | boa $@)
+    readarray -t args <<<"$result"
+    if [[ ${args[-1]} != "false" ]]; then
+        # print the help message
+        echo "$result"
+	    exit 1
+	else
+		bar=${args[0]}
+	fi
+
+	# ##########################################################################
+
+	status=$(timew)
+
+	# get the word after the second quote
+	tag=$(echo $status | grep Tracking | awk '{print $2}')
+	# echo "$tag"
+	# get the time in minutes
+	time=$(echo $status | awk '{print $NF}' | awk -F: '{print $1*60 + $2}')
+    # if tag is impty, set to off
+	if [ -z "$tag" ]; then
+		tag="off"
+    fi
+    # container=${1:-kss-us}
+
+
+	if $bar; then
+		# echo "%{F#f38ba8}${status_icon[$tag]} $time%{F-}"
+
+		echo "${status_icon[$tag]} $time"
+	else
+		# print the result
+		println "Running cli" "doit" "-b ${bar}" n:b:c:b:c
+	fi
+
+
+}
+
+main "$@"
+
+comment="""
+#
+status:
+  - rest
+  - break
+  - off
+  - lunch
+
+work:
+  - dev:
+  - ops:
+  - head: Administrative work not tied directly to running a service.
+  - toil: Work directly tied to running a service that is repetitive, manual
+~/.timewarrior/timewarrior.cfg
+
+
+# https://github.com/agwells/timew-scripts/tree/master
+https://github.com/gabor-boros/minutes
+https://github.com/fradeve/twtools
+https://github.com/gkssjovi/trackwarrior
+https://github.com/lauft/timew-report
+https://github.com/liloman/pomodoroTasks2
+"""

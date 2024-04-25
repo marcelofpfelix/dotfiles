@@ -1,0 +1,12 @@
+# Here is an example of entries that use the default, override and blank values
+#   variable=foo   -- By specifying a value, this overrides the default
+
+# Use the command 'task show' to see all defaults and overrides
+
+# Files
+data.location=~/.task
+
+# Color theme (uncomment one to use)
+include /usr/share/taskwarrior/dark-violets-256.theme
+
+regex=on

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 i3-msg "workspace 4"
-wezterm start -- tmux &
+wezterm start -- tmux new -s dash &
 sleep 1
 
 i3-msg "workspace 5"

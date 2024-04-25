@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# ##############################################################################
+#                                 FILE INFO
+# attach a session or create a new one if it doesn't exist
+# ##############################################################################
+
+name=${1:-tmuxa}
+
+tmux attach -t $name || tmux new -s $name
