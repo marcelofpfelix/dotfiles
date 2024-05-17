@@ -1,5 +1,71 @@
 # this file will be included to zshrc
 
+# history
+bindkey -v
+bindkey '^R' history-incremental-search-backward
+HISTFILE=~/.histfile
+HISTSIZE=10000
+SAVEHIST=10000
+setopt AUTO_CONTINUE
+setopt LONG_LIST_JOBS
+setopt HIST_VERIFY
+setopt SHARE_HISTORY
+setopt HIST_IGNORE_SPACE
+setopt HIST_SAVE_NO_DUPS
+setopt HIST_IGNORE_ALL_DUPS
+
+# Colors
+unset LSCOLORS
+
+# Don't require escaping globbing characters in zsh.
+unsetopt nomatch
+
+# Completions.
+autoload -Uz compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+
+# Case insensitive.
+zstyle ':completion:*' matcher-list 'm:{[:lower:][:upper:]}={[:upper:][:lower:]}' 'm:{[:lower:][:upper:]}={[:upper:][:lower:]} l:|=* r:|=*' 'm:{[:lower:][:upper:]}={[:upper:][:lower:]} l:|=* r:|=*' 'm:{[:lower:][:upper:]}={[:upper:][:lower:]} l:|=* r:|=*'
+
+## Exports
+
+# Colors
+export CLICOLOR=1
+export CLICOLOR_FORCE=1
+
+# plugins
+# # https://github.com/zsh-users/antigen
+# I don't use a PM since a git pull is easy enough
+
+# https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins
+export ZSH_PLUGINS="/opt/git"
+source $ZSH_PLUGINS/romkatv/zsh-defer/zsh-defer.plugin.zsh
+# fzf-tab needs to be loaded after compinit, but before plugins which will wrap widgets
+zsh-defer source $ZSH_PLUGINS/aloxaf/fzf-tab/fzf-tab.zsh
+zsh-defer source $ZSH_PLUGINS/zsh-users/zsh-autosuggestions/zsh-autosuggestions.zsh
+zsh-defer source $ZSH_PLUGINS/zsh-users/zsh-history-substring-search/zsh-history-substring-search.zsh
+zsh-defer source $ZSH_PLUGINS/zsh-users/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+# Note that zsh-syntax-highlighting must be the last plugin sourced.
+
+# fzf-tab config
+# disable sort when completing `git checkout`
+zstyle ':completion:*:git-checkout:*' sort false
+# set descriptions format to enable group support
+# NOTE: don't use escape sequences here, fzf-tab will ignore them
+zstyle ':completion:*:descriptions' format '[%d]'
+# set list-colors to enable filename colorizing
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+# force zsh not to show completion menu, which allows fzf-tab to capture the unambiguous prefix
+zstyle ':completion:*' menu no
+# preview directory's content with eza when completing cd
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
+# switch group using `<` and `>`
+zstyle ':fzf-tab:*' switch-group '<' '>'
+# with tmux popup
+# zstyle ':fzf-tab:*' fzf-command ftb-tmux-popup
+# ls | ftb-tmux-popup
+
+
 ################################################################################
 # app completions
 ################################################################################
@@ -9,8 +75,8 @@
 
 # kubectl
 source <(kubectl completion zsh)
-complete -F __start_kubectl k
-[[ /usr/local/bin/kubectl ]] && source <(kubectl completion zsh)
+#complete -F __start_kubectl k
+#[[ /usr/local/bin/kubectl ]] && source <(kubectl completion zsh)
 
 # nvm
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm

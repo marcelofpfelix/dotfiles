@@ -5,6 +5,13 @@
 # run tmuxp with the correct environment
 ################################################################################
 
+# TODO:
+# use boa and kill window mode
+# test for popup tmux
+    # with ftb-tmux-popup or fzf-tmux
+
+# close existing window
+
 # change to local directory
 cd "$(dirname $0)"
 # load lib
@@ -12,23 +19,21 @@ cd "$(dirname $0)"
 . ../lib/lib_utils.sh
 
 main() {
+    # default values
+    service_env=${service_env:-"us-prod"}
+
     # check if no args were provided
     if [ $# -eq 0 ]; then
-        service=$(echo "$SERVICES" | gum filter)
-        env=$(echo "$ENVS" | gum filter)
-
-        # default values
-        service=${service:-us}
-        env=${env:-dev}
-    # else should be $service $env
+        service_env=$(echo "$SERVICES" | gum filter)
     else
-        service=${1:-us}; shift
-        env=${1:-dev}; shift
+        service_env=${1:-"us-prod"}; shift
     fi
+    # get the service and env
+    service=$(echo $service_env | cut -d'-' -f1)
+    env=$(echo $service_env | cut -d'-' -f2)
 
-    log note " SERVER_1=${SERVER_1[${service}-${env}]} SERVER_2=${SERVER_2[${service}-${env}]} SERVER_3=${SERVER_3[${service}-${env}]} SERVER_4=${SERVER_4[${service}-${env}]} SERVICE=${service} ENV=${env} DISABLE_AUTO_TITLE='true' tmuxp load ${PROFILE[${service}-${env}]}"
-    SERVER_1=${SERVER_1[${service}-${env}]} SERVER_2=${SERVER_2[${service}-${env}]} SERVER_3=${SERVER_3[${service}-${env}]} SERVER_4=${SERVER_4[${service}-${env}]} SERVICE=${service} ENV=${env} DISABLE_AUTO_TITLE='true' tmuxp load ${PROFILE[${service}-${env}]}
-
+    log note " SERVER_1=${SERVER_1[${service_env}]} SERVER_2=${SERVER_2[${service_env}]} SERVER_3=${SERVER_3[${service_env}]} SERVER_4=${SERVER_4[${service_env}]} SERVICE=${service} ENV=${env} DISABLE_AUTO_TITLE='true' tmuxp load ${PROFILE[${service_env}]}"
+    SERVER_1=${SERVER_1[${service_env}]} SERVER_2=${SERVER_2[${service_env}]} SERVER_3=${SERVER_3[${service_env}]} SERVER_4=${SERVER_4[${service_env}]} SERVICE=${service} ENV=${env} DISABLE_AUTO_TITLE='true' tmuxp load -a ${PROFILE[${service_env}]}
 }
 
 

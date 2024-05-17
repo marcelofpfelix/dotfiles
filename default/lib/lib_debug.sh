@@ -7,11 +7,13 @@
 
 # include libraries
 . ../lib/lib_colors.sh
+. ../lib/lib_icon.sh
+
 
 # ##############################################################################
 # Constants - global config
-LOG_LEVEL=1 # default log level is `INFO`
-LOG_TAG="11" # default log tag is `ℹ️INFO` (bits)
+LOG_LEVEL=1 # default log level is `NOTE`
+LOG_TAG="11" # default log tag is `✅NOTE` (bits)
 
 # ##############################################################################
 # Functions
@@ -89,7 +91,7 @@ function printc() {
         return
     fi
 
-    printf "${color}${1}${default}"
+    echo -en "${color}${1}${default}"
 }
 
 

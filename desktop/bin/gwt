@@ -1,0 +1,93 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# git worktree management
+################################################################################
+
+  # change to local directory
+cd "$(dirname $0)"
+  # load lib
+. ../lib/lib_utils.sh
+
+# global variables
+LOG_LEVEL=2 # 2:INFO, default is 1:NOTE
+
+cli="""
+use: gwt
+long: |
+  manage git worktrees
+flags:
+  - use: clone
+    short: repo to clone
+    alias: c
+    type: string
+"""
+
+
+main() {
+
+    # parse the cli arguments
+    result=$(echo "$cli" | boa $@)
+    readarray -t args <<<"$result"
+    # check if the help flag (last arguent) is present
+    if [[ ${args[-1]} != "false" ]]; then
+        # print the help message
+        echo "$result"
+        exit 1
+    else
+        cmd=${args[0]}
+
+        clone=${args[0]}
+
+        # print the result
+        log INFO "Running cli" "gwt" "-c ${clone}" n:b:c:b:c
+    fi
+
+    # if no cmd is provided, print the help message
+    if [ -z "$cmd" ]; then
+        echo "$(echo "$cli" | boa --help)"
+        exit 1
+    fi
+
+    # clone
+    if [ -n "$clone" ]; then
+        # remove the .git from the repo
+        # Extract the repo name from the URL
+        repo=$(basename -s .git $clone)
+
+        # Extract the user/organization name from the URL
+        user=$(echo $clone | awk -F[/:] '{print $(NF-1)}')
+        log INFO "user/repo: $user/$repo"
+
+        mkdir -p ~/git/$user/$repo
+        cd ~/git/$user/$repo
+
+        git clone --bare git@github.com:$user/$repo.git # $clone
+        cd $repo.git
+
+        # get default branch
+        default_branch="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
+
+        git worktree add ../$default_branch $default_branch
+        cd ../$default_branch
+
+        tmux new-window -n ${repo}_${default_branch} -c ~/git/$user/$repo/$default_branch
+
+        # use tmx instead
+
+        exit
+    fi
+
+
+    # to review
+    # https://stackoverflow.com/questions/74862356/git-pull-doesnt-pull-latest-changes-when-using-git-worktree
+
+    # commands
+    # add
+    # list
+    # switch
+
+}
+
+main "$@"

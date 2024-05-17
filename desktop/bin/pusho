@@ -7,9 +7,10 @@
 main() {
   # get branch name
   branch="$(git symbolic-ref --short HEAD)"
+  default_branch="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
 
-  # if branch is 'master' or 'main' confirm push
-  if [ "$branch" == "master" ] || [ "$branch" == "main" ]; then
+  # if branch is 'default_branch' confirm push
+  if [ "$branch" = $default_branch ]; then
       echo "❗ warning: you are on branch '$branch'!"
       if (gum confirm "push $branch to origin?"); then
         echo ""

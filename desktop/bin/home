@@ -30,6 +30,19 @@ flags:
     type: bool
 """
 
+local_copy() {
+    # copy the dotfiles to the local directory
+    cp -rT ~/git/marcelofpfelix/dotfiles/default  ~
+    cp -rT ~/git/marcelofpfelix/dotfiles/desktop  ~
+    cp -rT ~/git/marcelofpfelix/dotfiles/work     ~
+    cp -rT ~/git/marcelofpfelix/dotfiles/workdesk ~
+
+    # ignore jinja2 templates
+    rm ~/.ssh/config.d/work.j2
+    echo "Copied dotfiles to home directory"
+    exit 0
+}
+
 
 main() {
 
@@ -67,9 +80,7 @@ main() {
     # check if $target is empty
     if [ -z "$target" ]; then
         if [ "$yesman" = "true" ]; then
-            # defaults
-            target=desktop
-            inventory=~/work.ini
+            local_copy
         else
             target=$(grep -v -e '\[' -e '\#' -e '^$' $inventory | gum filter)
         fi

@@ -3,32 +3,22 @@
 configuration {
     show-icons:      true;
     disable-history: false;
+    modi: "window,drun,run";
+    display-drun: "Apps";
     // font: "JetBrainsMono Nerd Font 15";
     // icon-theme: "Papirus-Apps";
-    display-drun: "Apps";
+
     // drun-display-format: "{name}";
     // scroll-method:			0;
     // sidebar-mode:			true;
     // location: 0;
-    modi: "window,drun,run";
+
 }
 
-* {
-    font: "Fira Code Retina 10";// "Jetbrains Mono 12";
-    foreground: #f8f8f2;
-    background-color: #282a36;
-    active-background: #6272a4;
-    urgent-background: #ff5555;
-    urgent-foreground: #282a36;
-    selected-background: @active-background;
-    selected-urgent-background: @urgent-background;
-    selected-active-background: @active-background;
-    separatorcolor: @active-background;
-    bordercolor: @active-background;
-}
+@import "colors.rasi"
 
 #window {
-    background-color: @background-color;
+    background-color: @background;
     border:           3;
     border-radius:    6;
     border-color:     @bordercolor;
@@ -59,7 +49,7 @@ configuration {
     padding: 3px ;
 }
 #element.normal.normal {
-    background-color: @background-color;
+    background-color: @background;
     text-color:       @foreground;
 }
 #element.normal.urgent {
@@ -68,22 +58,22 @@ configuration {
 }
 #element.normal.active {
     background-color: @active-background;
-    text-color:       @foreground;
+    text-color:       @background;
 }
 #element.selected.normal {
     background-color: @selected-background;
-    text-color:       @foreground;
+    text-color:       @background;
 }
 #element.selected.urgent {
     background-color: @selected-urgent-background;
-    text-color:       @foreground;
+    text-color:       @background;
 }
 #element.selected.active {
     background-color: @selected-active-background;
-    text-color:       @foreground;
+    text-color:       @background;
 }
 #element.alternate.normal {
-    background-color: @background-color;
+    background-color: @background;
     text-color:       @foreground;
 }
 #element.alternate.urgent {

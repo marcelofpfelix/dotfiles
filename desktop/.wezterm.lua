@@ -14,7 +14,8 @@ end
 
 -- For example, changing the color scheme:
 -- config.color_scheme = 'AdventureTime'
-config.color_scheme = 'Dracula (Official)'
+config.color_scheme = 'catppuccin-mocha'
+-- config.color_scheme = 'Dracula (Official)'
 
 config.font = wezterm.font 'Fira Code'
 config.font_size = 10.0

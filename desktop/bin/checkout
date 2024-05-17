@@ -1,0 +1,53 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# git checkout a new branch
+################################################################################
+
+
+main() {
+    # get default branch name
+    default_branch="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
+
+    # checkout default branch
+    git checkout "$default_branch"
+
+    # pull
+    git pull
+    # check if pull was successful
+    if [ $? -ne 0 ]; then
+        echo "Exiting, no branch created." && exit
+    fi
+
+    # check number of arguments is 1
+    if [ "$#" -eq 1 ]; then
+        branch="$1"
+    else
+        # ask for new branch name
+        branch=$(gum input --placeholder "New branch name")
+    fi
+
+    # check if branch name is empty
+    if [ -z "$branch" ]; then
+        echo "Exiting, no branch created." && exit
+    fi
+    # check if branch name is 'master' or 'main'
+    if [ "$branch" == "master" ] || [ "$branch" == "main" ]; then
+        echo "Exiting, no branch created." && exit
+    fi
+    # check if branch name already exists
+    if git show-ref --verify --quiet "refs/heads/$branch"; then
+        echo "Branch '$branch' already exists."
+        if (gum confirm "Reset '$branch'?"); then
+            echo ""
+        else
+            git checkout "$branch"
+            echo "Exiting, no branch created." && exit
+        fi
+    fi
+
+    git checkout -B "$branch"
+}
+
+main "$@"

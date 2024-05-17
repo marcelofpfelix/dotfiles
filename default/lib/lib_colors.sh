@@ -8,7 +8,39 @@
 
 # ##############################################################################
 # Constants - global config
-RICHPY=0 # default log level is 0
+RICHPY=0 # default richpy format is 0
+LEMONBAR=0 # default lemonbar format is 0
+
+
+declare -A color16=(
+    ['surface0']='#313244'  # black
+    ['red']='#f38ba8'       # red
+    ['green']='#a6e3a1'     # green
+    ['yellow']='#f9e2af'    # yellow
+    ['blue']='#89b4fa'      # blue
+    ['pink']='#f5c2e7'      # pink
+    ['mauve']='#cba6f7'     # mauve
+    ['text']='#cdd6f4'      # text
+
+    ['overlay0']='#6c7086'   # overlay0
+    ['marron']='#eba0ac'     # marron
+    ['teal']='#94e2d5'       # teal
+    ['peach']='#fab387'      # peach
+    ['sky']='#89dceb'        # sky
+    ['flamingo']='#f2cdcd'   # flamingo
+    ['lavender']='#b4befe'   # lavender
+    ['subtext0']='#a6adc8'   # subtext0
+
+    ['rosewater']='#f5e0dc'  # rosewater
+    ['sapphire']='#74c7ec'   # sapphire
+    ['crust']='#11111b'      # crust
+    ['mantle']='#181825'     # mantle
+    ['base']='#1e1e2e'       # base
+    ['surface1']='#45475a'   # surface1
+    ['surface2']='#585b70'   # surface2
+    ['overlay1']='#7f849c'   # overlay1
+    ['overlay2']='#9399b2'   # overlay2
+)
 
 
 # ##############################################################################
@@ -68,6 +100,24 @@ function color() {
         color='[default]'
     fi
 
+    # check if richpy is enabled
+    if [[ $LEMONBAR -eq 1 ]]; then
+        # colours
+        declare -A cid=(
+            ['k']=${color16['surface0']} # Black
+            ['r']=${color16['red']}      # Red
+            ['g']=${color16['green']}    # Green
+            ['y']=${color16['yellow']}   # Yellow
+            ['b']=${color16['blue']}     # Blue
+            ['p']=${color16['pink']}     # Purple
+            ['c']=${color16['teal']}     # Cyan
+            ['w']=${color16['text']}     # White
+        )
+        escape='%%{'
+        style='F'
+        color='F-'
+        suffix='}'
+    fi
     # if the size of the id is 1, then it's a color
     if [[ ${#1} == 1 ]]; then
         # if the is is n, the sytle is empty
@@ -83,8 +133,32 @@ function color() {
         # remove the last character for style
         style=${sid[${1:0:${#1}-1}]}
     fi
-    printf "${escape}${style}${color}"
+    printf "${escape}${style}${color}${suffix}"
 }
+
+
+
+
+
+base16="""
+base00: "1e1e2e" # base
+base01: "181825" # mantle
+base02: "313244" # surface0
+base03: "45475a" # surface1
+base04: "585b70" # surface2
+base05: "cdd6f4" # text
+base06: "f5e0dc" # rosewater
+base07: "b4befe" # lavender
+base08: "f38ba8" # red
+base09: "fab387" # peach
+base0A: "f9e2af" # yellow
+base0B: "a6e3a1" # green
+base0C: "94e2d5" # teal
+base0D: "89b4fa" # blue
+base0E: "cba6f7" # mauve
+base0F: "f2cdcd" # flamingo
+"""
+
 
 
 # ##############################################################################

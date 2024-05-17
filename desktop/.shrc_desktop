@@ -5,6 +5,10 @@
 ################################################################################
 
 # Git aliases
+alias g='git'
+alias gw='git worktree'
+alias ga='git add'
+alias gaa='git add .'
 alias gs='git status'
 alias gc='git commit'
 alias gp='git pull --rebase'
@@ -17,6 +21,8 @@ alias cat="bat -p --paging=never"
 alias cdi="__zoxide_zi"
 
 alias k="kubectl"
+alias d="docker"
+
 
 alias venv="source .env/bin/activate"
 alias m="make"

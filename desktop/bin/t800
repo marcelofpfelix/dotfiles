@@ -27,7 +27,7 @@ main() {
     fi
 
 
-    log note "t800="${service}-${env}" service=${service} /usr/bin/terminator -l term16 -T ${service}-${env}"
+    log INFO "t800="${service}-${env}" service=${service} /usr/bin/terminator -l term16 -T ${service}-${env}"
     # serverlist=deployEU service=eu /usr/bin/terminator -l term16 -T deployEU
     t800="${service}-${env}" service=${service} /usr/bin/terminator -l term16 -T ${service}-${env} &
 
