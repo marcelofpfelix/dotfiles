@@ -11,14 +11,16 @@ motion:
     e: move to end of word
     ge: move to end of previous word
     B: move to the beginning of the previous WORD
+
     # word: letters, numbers, and underscores
     # WORD: non-blank characters
 
     gg: move to the top of the file
-    7gg: move to line 7
+    7gg: move to line 7 (or :7)
+    10: move 10 lines down
     G: move to the bottom of the file
-    \{: move to the previous paragraph
-    \}: move to the next paragraph
+    '{': move to the previous paragraph
+    '}': move to the next paragraph
     ctrl-f: move forward one page
     ctrl-b: move backward one page
     ctrl-u: move up half a page
@@ -33,11 +35,12 @@ motion:
 
     f(: move to the next ( character ( F( move to the previous)
     t(: move till character ( T( move till previous)
-    \,;: repeat back/forward the last f/F, t/T motion
-    \%: move to the matching parenthesis, bracket, or brace
+    ',;': repeat back/forward the last f/F, t/T motion
+    '%': move to the matching parenthesis, bracket, or brace
 
     /: search forward
-    \?: search backward
+    '?': search backward
+    '*': search forward for the word under the cursor
 
 visual:
     v: start visual mode
@@ -48,20 +51,34 @@ visual:
     y5j: yank 5 lines down
     yt;: yank up to the next ; (not included)
     w: select text until the next word
+    vi(: select text inside ( and )
+    va(: select text inside ( and ) including the parentheses
+    ya(: yank text inside ( and )
+    viw: select the current word
+
 
 normal:
     x: delete character under cursor
     dd: delete line
     d3j: delete 3 lines down
     d$: delete to end of line
+    df(: delete to the next ( character
+    d2f(: delete to the second ( character
+    yf(: yank to the next ( character
     u: undo
     ctrl+r: redo
     esc|ctrl-[: go back to normal mode
     i: insert before cursor (I at bol)
     a: insert after cursor (A at eol)
+    o: insert new line below (O above)
+    .: repeat last command
+    J: join lines
+    zz: center the screen on the cursor
+    r: replace character under cursor
+
 
 command:
-    \:%s/foo/bar/g: replace foo with bar in the whole file (%)
+    ':%s/foo/bar/g': replace foo with bar in the whole file (%)
 
 macro:
     q1: start recording and save to register 1

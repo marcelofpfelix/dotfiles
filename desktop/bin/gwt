@@ -5,89 +5,153 @@
 # git worktree management
 ################################################################################
 
+# should exit as soon as it encounters any non-zero exit code or usage of
+# undefined variables or failed piped commands
+# set -Eeuo pipefail
   # change to local directory
 cd "$(dirname $0)"
   # load lib
 . ../lib/lib_utils.sh
-
 # global variables
-LOG_LEVEL=2 # 2:INFO, default is 1:NOTE
+LOG_LEVEL=3 # default is 1:NOTE
 
-cli="""
+# cli with boa
+CLI="""
 use: gwt
+short: manage git worktrees
 long: |
   manage git worktrees
-flags:
+commands:
   - use: clone
     short: repo to clone
-    alias: c
-    type: string
+    aliases:
+      - c
+    flags:
+      - use: repo
+        short: repository
+        alias: r
+        type: string
+  - use: switch
+    short: switch to a specific worktree
+    flags:
+      - use: repo
+        short: repository
+        alias: r
+        type: string
+      - use: branch
+        short: branch
+        alias: b
+        type: string
+
 """
+. ../lib/lib_cli.sh
+git_dir=~/gwt
 
+gwt() {
+    log DEBG "$FUNCNAME: $*"
+    # if arguments over 1 run subcommand
+    if [ $# -gt 0 ]; then
+        $@
+    fi
+}
 
-main() {
-
-    # parse the cli arguments
-    result=$(echo "$cli" | boa $@)
-    readarray -t args <<<"$result"
-    # check if the help flag (last arguent) is present
-    if [[ ${args[-1]} != "false" ]]; then
-        # print the help message
-        echo "$result"
-        exit 1
-    else
-        cmd=${args[0]}
-
-        clone=${args[0]}
-
-        # print the result
-        log INFO "Running cli" "gwt" "-c ${clone}" n:b:c:b:c
+clone() {
+    log DEBG "$FUNCNAME: $*"
+    # if arguments over 1
+    if [ $# -gt 0 ]; then
+        $@
     fi
 
-    # if no cmd is provided, print the help message
-    if [ -z "$cmd" ]; then
-        echo "$(echo "$cli" | boa --help)"
-        exit 1
+    # no subcommands, running the function
+    repo_url="${ARGS[1]}"
+    # print the result
+    log INFO "Running:" "${CMDS[@]}" "-r ${repo_url}" n:b:c:b:c
+
+    if [ -z "$repo_url" ]; then
+        repo_url=$(gum input --placeholder github.com/ --prompt "Enter the repo: " --value "")
     fi
 
-    # clone
-    if [ -n "$clone" ]; then
-        # remove the .git from the repo
-        # Extract the repo name from the URL
-        repo=$(basename -s .git $clone)
+    # remove the .git from the repo
+    # Extract the repo name from the URL
+    repo=$(basename -s .git $repo_url)
 
-        # Extract the user/organization name from the URL
-        user=$(echo $clone | awk -F[/:] '{print $(NF-1)}')
-        log INFO "user/repo: $user/$repo"
+    # Extract the user/organization name from the URL
+    user=$(echo $repo_url | awk -F[/:] '{print $(NF-1)}')
+    log INFO "user/repo: $user/$repo"
 
-        mkdir -p ~/git/$user/$repo
-        cd ~/git/$user/$repo
+    mkdir -p $git_dir/$user/$repo
+    cd $git_dir/$user/$repo
 
-        git clone --bare git@github.com:$user/$repo.git # $clone
-        cd $repo.git
+    git clone --bare git@github.com:$user/$repo.git .bare
+    # git command either refer to a .git directory or to a .git file. This last
+    # needs though to contain a pointer to the repository directory
+    echo "gitdir: ./.bare" > .git
+    # Explicitly sets the remote origin fetch so we can fetch remote branches
+    git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+    # Gets all branches from origin
+    git fetch origin
 
-        # get default branch
-        default_branch="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
+    # cd $repo.git
 
-        git worktree add ../$default_branch $default_branch
-        cd ../$default_branch
+    # get default branch
+    default_branch="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
 
-        tmux new-window -n ${repo}_${default_branch} -c ~/git/$user/$repo/$default_branch
+    git worktree add $default_branch
+    cd $default_branch
 
-        # use tmx instead
+    tmux new-window -n ${repo}_${default_branch} -c $git_dir/$user/$repo/$default_branch
+    # use tmx instead
 
-        exit
+
+}
+
+
+switch() {
+    log DEBG "$FUNCNAME: $*"
+    # if arguments over 1
+    if [ $# -gt 0 ]; then
+        $@
     fi
 
+    # no subcommands, running the function
+    repo_url="${ARGS[1]}"
+    # print the result
+    log INFO "Running:" "${CMDS[@]}" "-r ${repo_url}" n:b:c:b:c
 
-    # to review
-    # https://stackoverflow.com/questions/74862356/git-pull-doesnt-pull-latest-changes-when-using-git-worktree
+    if [ -z "$repo_url" ]; then
+        cd $git_dir
+        repo_url=$(find . -mindepth 3 -maxdepth 3 -type d -not -path "*.bare" -not -path "archive" -prune | fzf)
+    fi
+
+    tmux new-window -n $repo_url -c $git_dir/$repo_url
+
+}
 
     # commands
     # add
     # list
     # switch
+"${CMDS[@]}"
 
-}
 
-main "$@"
+# check:
+# - https://stackoverflow.com/questions/54367011/git-bare-repositories-worktrees-and-tracking-branches
+# - https://morgan.cugerone.com/blog/workarounds-to-git-worktree-using-bare-repository-and-cannot-fetch-remote-branches/
+# - https://stackoverflow.com/questions/74862356/git-pull-doesnt-pull-latest-changes-when-using-git-worktree
+
+
+# how to get remote branches
+# how to pull updates
+# to to switch to a commit
+  # git worktree add -b workbranch2 workbranch2 30abe6a
+
+
+# git clone --bare git@github.com:team-telnyx/ansible.git .bare
+
+#echo "gitdir: ./.bare" > .git
+
+# Explicitly sets the remote origin fetch so we can fetch remote branches
+# git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+
+# Gets all branches from origin
+# git fetch origin

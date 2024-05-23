@@ -7,7 +7,8 @@
 alias grep="grep --color"
 
 alias ls='ls $LS_OPTIONS'
-alias ll='ls $LS_OPTIONS -lrth'
+alias ls='ls $LS_OPTIONS -1'
+alias ll='ls $LS_OPTIONS -lArth'
 alias l='ls $LS_OPTIONS -lArth'
 
 alias ips="ip -c -br -4 a"
@@ -18,7 +19,7 @@ alias datei="date +\"%Y-%m-%dT%H:%M:%S%:z\""
 alias dateu="date -u +\"%Y-%m-%d_%H:%M:%S\""
 
 alias psef="ps -ef | grep" # pgrep -a
-alias diss="diff -w --side-by-side --suppress-common-lines"
+alias diffs="diff -w --side-by-side --suppress-common-lines --color"
 alias cl="clear"
 # for find
 

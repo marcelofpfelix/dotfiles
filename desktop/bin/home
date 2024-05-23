@@ -29,6 +29,8 @@ flags:
     alias: w
     type: bool
 """
+#. ../lib/lib_cli.sh
+
 
 local_copy() {
     # copy the dotfiles to the local directory
@@ -44,7 +46,7 @@ local_copy() {
 }
 
 
-main() {
+home() {
 
     # ##########################################################################
     # cli
@@ -58,9 +60,10 @@ main() {
         echo "$result"
         exit 1
     else
-        target=${args[0]}
-        yesman=${args[1]}
-        work=${args[2]}
+        cmd=${args[0]}
+        target=${args[1]}
+        yesman=${args[2]}
+        work=${args[3]}
 
         # print the result
         println "Running cli" "home" "-t ${target}" "-y ${yesman}" "-w ${work}" n:b:c:b:c
@@ -92,4 +95,5 @@ main() {
 }
 
 
-main "$@"
+home "$@"
+#"${CMDS[@]}"

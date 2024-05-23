@@ -14,5 +14,5 @@ if [ -z "$secondary" ]; then
     xrandr --auto
 else
     xrandr --output $secondary --auto --right-of $primary
-    feh --bg-fill $HOME/Pictures/base.png
+    feh --bg-fill $HOME/.local/share/backgrounds/bkg2.png
 fi
