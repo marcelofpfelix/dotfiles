@@ -5,7 +5,9 @@
 
 # ##############################################################################
 # Constants - global config
-NERD=1 # default to use nerdfonts
+[[ -z "$NERD" ]] && NERD=1 # default to use nerdfonts
+
+
 
 # ##############################################################################
 # gets the icon from the id

@@ -31,7 +31,7 @@ motion:
     g_: move to the last non-blank character of the line
     0: move to the beginning of the line
     $: move to the end of the line
-    A: move to the end of the line and enter insert mode
+    A: move to the end of the line and enter insert mode (I at bol)
 
     f(: move to the next ( character ( F( move to the previous)
     t(: move till character ( T( move till previous)
@@ -41,13 +41,23 @@ motion:
     /: search forward
     '?': search backward
     '*': search forward for the word under the cursor
+    '/## .*': search for `##` and the matching regex
+    gd: go to definition of the word under the cursor
+    gf: go t a file in an import
+    gi: go to the last inserted mode
+    d/hello: to delete everything until the first occurrence of hello
+    dgn: delete match and go to next. Delete next ones with '.'
 
 visual:
     v: start visual mode
     V: start linewise visual mode
     ctrl-v: start visual-block mode
     y: yank (copy)
+    yy: yank line (or Y)
     p: paste
+    P: paste before
+    gP: paste and move cursor after paste
+    yyp: duplicate lin
     y5j: yank 5 lines down
     yt;: yank up to the next ; (not included)
     w: select text until the next word
@@ -56,11 +66,22 @@ visual:
     ya(: yank text inside ( and )
     viw: select the current word
 
+insert:
+    ctrl-u: remove last inserted character
+    ctrl-w: remove the last word
+    ctrl-U: remove the last line
+    'ctrl-r "': pastes the contents of the unnamed register
+    'ctrl-r a': pastes the contents of register a
+    'ctrl-r 0': pastes the contents of the yank register
 
+    # operators
 normal:
-    x: delete character under cursor
+    x: delete character under cursor (like dl)
+    xp: swap characters
     dd: delete line
+    D: delete to end of line
     d3j: delete 3 lines down
+    ddp: swap 2 lines
     d$: delete to end of line
     df(: delete to the next ( character
     d2f(: delete to the second ( character
@@ -75,10 +96,19 @@ normal:
     J: join lines
     zz: center the screen on the cursor
     r: replace character under cursor
+    c: delete and insert at the same time
+    C: delete to end of line and insert
+    s: delete and insert unde the cursor (same as cl)
+    ~: toggle case of the character under the cursor
+    g~w: toggle case of the current word
+    '>': adds identation (< removes)
+    =: Format the code
 
-
+    # ex-commands
 command:
     ':%s/foo/bar/g': replace foo with bar in the whole file (%)
+    ':reg': show registers
+    '10,+2d a': delete line 10 to 12 and saves in register a (. current line, $ end of )
 
 macro:
     q1: start recording and save to register 1
@@ -87,6 +117,33 @@ macro:
     \@@: play back last macro
     3@1: play back 3 times from register 1
     :reg: show registers
+
+REGISTERS:
+    '"': unnamed register is where you copy and cut stuff to
+    a-z: registers you can use explicitly to copy and cut text at will
+    '0': stores the last thing you have yanked
+    1-9: store the last 9 things you cut by using either the delete or the change command
+    '"{name of register}y{motion}': yank to register ("ayas )
+
+
+# TEXT OBJECTS
+text_object:
+    '{operator}a{text-object}': Apply operator to all text-object including trailing whitespace
+    '{operator}i{text-object}': Apply operator inside text-object
+    w: for word
+    s: for sentence
+    \': for quotes (", `)
+    p: for paragraph
+    b: or (, ) for block surrounded by ()
+    B: or {, } for block surrounded by {}
+    '<, >': for a block surrounded by <>
+    '[, ]': for a block surrounded by []
+    t: for tag.
+
+splits:
+    :sp {relative-path-to-file} command to open a file in a horizontal split <CTRL-W> S
+    :vsp {relative-path-to-file} command to open a file in a vertical split <CTRL-W> V
+
 
 
 

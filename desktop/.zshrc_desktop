@@ -3,6 +3,8 @@
 # history
 bindkey -v
 bindkey '^R' history-incremental-search-backward
+# available after 0.48.0
+# source <(fzf --zsh)
 HISTFILE=~/.histfile
 HISTSIZE=10000
 SAVEHIST=10000
@@ -16,9 +18,21 @@ setopt HIST_IGNORE_ALL_DUPS
 
 # Colors
 unset LSCOLORS
+if [ "$TERM" = "xterm" ]; then
+  export TERM=xterm-256color
+fi
 
 # Don't require escaping globbing characters in zsh.
 unsetopt nomatch
+
+# allow intractive comments with extended_glob still on
+# https://apple.stackexchange.com/questions/405246/zsh-comment-character
+setopt interactive_comments
+
+# rye
+source "$HOME/.rye/env"
+# Make sure ~/.zfunc is added to fpath, before compinit.
+rye self completion -s zsh > ~/.zfunc/_rye
 
 # Completions.
 autoload -Uz compinit && compinit
@@ -91,11 +105,17 @@ source <(kubectl completion zsh)
 
 # zoxide alias
 alias cd="z"
+alias ll='eza -lA -snew --icons --git --total-size'
+alias l='eza -l -snew --icons --no-user --no-time --no-permissions'
+alias lt='l -T'
+alias ls='ls $LS_OPTIONS -1'
+
 
 # ##############################################################################
 # eval
 # ##############################################################################
 # should be at the end section
+
 
 # pyenv
 eval "$(pyenv init --path)"

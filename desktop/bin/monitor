@@ -6,13 +6,16 @@
 ################################################################################
 
 primary=eDP-1
+second="DP-2"
 
 # check if we have a monitor connected
 secondary=$(xrandr | grep " connected " | awk '{ print$1 }' | grep -v $primary)
 
 if [ -z "$secondary" ]; then
-    xrandr --auto
+    xrandr --auto && xrandr --output $second --off
+    echo "No secondary monitor connected"
 else
     xrandr --output $secondary --auto --right-of $primary
     feh --bg-fill $HOME/.local/share/backgrounds/bkg2.png
+    echo "Connected $secondary to the right of $primary"
 fi

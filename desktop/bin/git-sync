@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Global config
+REPOS=(
+    "/path/to/your/first/repo"
+    "/path/to/your/second/repo"
+    "/path/to/your/third/repo"
+)
+
+# Commit message
+COMMIT_MSG="Automated commit from cron job"
+
+# Loop through each repository
+for REPO in "${REPOS[@]}"
+do
+    if [ -d "$REPO" ]; then
+        cd "$REPO" || { echo "Failed to change directory to $REPO"; continue; }
+
+        # Stage all changes
+        git add .
+
+        # Check if there are any changes to commit
+        if git diff-index --quiet HEAD --; then
+            echo "No changes to commit in $REPO."
+        else
+            # Commit changes
+            git commit -m "$COMMIT_MSG"
+
+            # Push changes
+            git push origin main
+        fi
+    else
+        echo "Repository $REPO does not exist."
+    fi
+done
+
+echo "All repositories processed."
+
+
+
+
+# TODO:
+# create alerts like this:
+# node_sysctl_net_ipv4_tcp_rmem{index="0"} 4096
+# write logs in tmp, have to lib_debug write a time a place.

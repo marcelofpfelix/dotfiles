@@ -1,0 +1,23 @@
+#!/bin/python3
+
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import time
+
+class WebRequestHandler(BaseHTTPRequestHandler):
+    # ...
+
+    def do_GET(self):
+        # sleep
+        time.sleep(30)
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+
+    def do_POST(self):
+        self.do_GET()
+
+    # ...
+
+if __name__ == "__main__":
+    server = HTTPServer(("0.0.0.0", 8080), WebRequestHandler)
+    server.serve_forever()

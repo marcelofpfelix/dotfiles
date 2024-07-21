@@ -12,8 +12,9 @@
 
 # ##############################################################################
 # Constants - global config
-LOG_LEVEL=1 # default log level is `NOTE`
-LOG_TAG="11" # default log tag is `✅NOTE` (bits)
+[[ -z "$LOG_LEVEL" ]] && LOG_LEVEL=1 # default log level is `NOTE`
+[[ -z "$LOG_TAG" ]] && LOG_TAG="11" # default log tag is `✅NOTE` (bits)
+
 
 # ##############################################################################
 # Functions

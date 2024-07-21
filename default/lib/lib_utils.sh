@@ -6,10 +6,14 @@
 
 # include libraries
 . ../lib/lib_debug.sh
+. ../lib/lib_cli.sh
+
 
 # ##############################################################################
 # Constants - global config
-export GUM_INPUT_PROMPT_FOREGROUND="#0FF"
+[[ -z "$GUM_INPUT_PROMPT_FOREGROUND" ]] && GUM_INPUT_PROMPT_FOREGROUND="#0FF" # default to use nerdfonts
+
+export GUM_INPUT_PROMPT_FOREGROUND
 
 
 # ##############################################################################

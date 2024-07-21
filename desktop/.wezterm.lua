@@ -20,6 +20,25 @@ config.color_scheme = 'catppuccin-mocha'
 config.font = wezterm.font 'Fira Code'
 config.font_size = 10.0
 config.enable_tab_bar = false
+config.window_background_opacity = 1.0
+config.window_decorations = 'RESIZE'
+
+config.keys = {
+  {
+    key = 'f',
+    mods = 'CTRL',
+    action = wezterm.action.ToggleFullScreen,
+  },
+}
+
+config.mouse_bindings = {
+  -- Ctrl-click will open the link under the mouse cursor
+  {
+    event = { Up = { streak = 1, button = 'Left' } },
+    mods = 'CTRL',
+    action = wezterm.action.OpenLinkAtMouseCursor,
+  },
+}
 
 
 -- and finally, return the configuration to wezterm

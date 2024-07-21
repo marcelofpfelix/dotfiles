@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# cli with boa
+CLI="""
+use: shoot
+short: manage tmux windows
+long: |
+  manage tmux windows
+commands:
+  - use: kill
+    short: kill windows
+    aliases:
+      - k
+"""
+
+# change to local directory
+cd "$(dirname $0)"
+# load lib
+. ../lib/lib_utils.sh
+. ../lib/lib_cli.sh
+# global variables
+LOG_LEVEL=3 # default is 1:NOTE
+
+
+shoot() {
+    log DEBG "$FUNCNAME: $*"
+    # if arguments over 1 run subcommand
+    if [ $# -gt 0 ]; then
+        $@
+        exit
+    fi
+
+
+}
+
+
+
+# run the command selected
+[[ -n "$CMD" ]] && "$CMD"
+
+
+sed 's/$/\r/' invite01.sip | nc -q 5 -u sipdev.telnyx.com 5060
+
+file=lrn.yml
+server=10.255.0.250
+port=5010
+# calculate the SIP-body length in bytes (with LF replaced with CRLF)
+bodylen=$(sed -e '1,/^$/ d;s/$/\r/' $file | wc -c)
+
+# send, with two header fields updated
+cat $file |\
+   sed -e "s/^\(Call-ID\|i\)\? *:.*/Call-ID: `uuidgen`/i" \
+       -e "s/^\(Content-Length\|L\) *:.*/Content-Length: $bodylen/i" \
+       -e 's/$/\r/' |\
+   nc -q 5 -u $server $port
+
+
+bodylen=$(sed -e '1,/^$/ d;s/$/\r/' invite01.sip | wc -c)
+tail -f -n 1000 invite01.sip |\
+    stdbuf -oL -eL sed -e "s/^\(Call-ID\|i\)\? *:.*/Call-ID: `uuidgen`/i" \
+                       -e "s/^\(Content-Length\|L\) *:.*/Content-Length: $bodylen/i" \
+                       -e 's/$/\r/' |\
+    socat - TCP:sipdev.telnyx.com:5060
+
+
+bodylen=$(sed -e '1,/^$/ d;s/$/\r/' invite01.sip | unix2dos | wc -c)
+tail -f -n 1000 invite01.sip |\
+    stdbuf -oL -eL sed -e "s/^\(Call-ID\|i\)\? *:.*/Call-ID: `uuidgen`/i" \
+                       -e "s/^\(Content-Length\|L\) *:.*/Content-Length: $bodylen/i" \
+                       -e 's/$/\r/' |\
+    socat - OPENSSL:sipdev.telnyx.com:5061
+
+
+for f in {1..10}; do
+    ((i++))
+    sed "s/XXXXX/$i/" etta.sip | unix2dos \
+        | nc -q 0 -u -p 5060 sipdev.telnyx.com 5060
+done
+
+not sip.resend-original and (sip.Method==INVITE or sip.Status-Code>100)

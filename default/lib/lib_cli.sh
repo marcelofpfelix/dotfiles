@@ -5,14 +5,31 @@
 # using https://github.com/marcelofpfelix/boa
 # ##############################################################################
 
-
-# parse the cli arguments
-result=$(echo "$CLI" | boa "$@")
-readarray -t ARGS <<<"$result"
-# check if the help flag (last arguent) is present
-if [[ ${ARGS[-1]} != "false" ]]; then
-    # print the help message
-    echo "$result"
-    exit 1
+# If CLI is set, parse ARGs and CMDS
+if [[ -n "$CLI" ]]; then
+    # parse the cli arguments
+    result=$(echo "$CLI" | boa "$@")
+    readarray -t ARGS <<<"$result"
+    # check if the help flag (last arguent) is present
+    if [[ ${ARGS[-1]} != "false" ]]; then
+        # print the help message
+        echo "$result" | bat -p --paging=never -lhelp
+        exit 1
+    fi
+    # replace spaces with _
+    CMD="${ARGS[0]// /_}"
+    read -a CMDS <<< "${ARGS[0]}" #TODO: delete
 fi
-read -a CMDS <<< "${ARGS[0]}"
+
+# check if the subcommand is present and run it
+subc() { #TODO: delete
+    # if arguments over 1 run subcommand
+    if [ $# -gt 0 ]; then
+        $@
+        exit
+    fi
+}
+
+help() {
+    echo "$CLI" | boa help | bat -p --paging=never -lhelp
+}

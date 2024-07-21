@@ -1,10 +1,10 @@
-session_name: ${ENV}-${SERVICE}
+session_name: dash # ${SERVICE}-${ENV}
 environment:
   # env needs to start with LC_
   LC_LAYOUT: dash
   LC_SERVICE: ${SERVICE}
 windows:
-- window_name: ${ENV}-${SERVICE}
+- window_name: ${SERVICE}-${ENV}
   focus: 'true'
   layout: 8aa6,266x68,0,0[266x34,0,0{66x34,0,0,225,66x34,67,0,232,66x34,134,0,230,65x34,201,0,231},266x33,0,35{66x33,0,35,226,66x33,67,35,229,66x33,134,35,227,65x33,201,35,228}]
   options:

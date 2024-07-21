@@ -8,8 +8,9 @@
 
 # ##############################################################################
 # Constants - global config
-RICHPY=0 # default richpy format is 0
-LEMONBAR=0 # default lemonbar format is 0
+
+[[ -z "$RICHPY" ]] && RICHPY=0 # default richpy format is 0
+[[ -z "$LEMONBAR" ]] && LEMONBAR=0 # default lemonbar format is 0
 
 
 declare -A color16=(

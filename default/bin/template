@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# global variables
+# cli with boa
+CLI="""
+use: template
+short: template script
+long: |
+    template script description
+    prints hello world
+commands:
+    - use: version
+      short: the version of the script
+      aliases:
+            - v
+"""
+LOG_LEVEL=3 # default is 1:NOTE
+
+# change to local directory
+cd "$(dirname $0)"
+# load lib
+. ../lib/lib_utils.sh
+
+
+template() {
+    log DEBG "$FUNCNAME: $*"
+    # run subcommands if any
+
+    echo "Hello, World!"
+}
+
+template_version() {
+    log DEBG "$FUNCNAME: $*"
+
+    echo "0.0.1"
+}
+
+# run the command selected
+[[ -n "$CMD" ]] && "$CMD"

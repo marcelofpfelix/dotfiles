@@ -2,19 +2,6 @@
 
 ################################################################################
 #                                 FILE INFO
-# git worktree management
-################################################################################
-
-# should exit as soon as it encounters any non-zero exit code or usage of
-# undefined variables or failed piped commands
-# set -Eeuo pipefail
-  # change to local directory
-cd "$(dirname $0)"
-  # load lib
-. ../lib/lib_utils.sh
-# global variables
-LOG_LEVEL=3 # default is 1:NOTE
-
 # cli with boa
 CLI="""
 use: gwt
@@ -33,35 +20,47 @@ commands:
         type: string
   - use: switch
     short: switch to a specific worktree
+    aliases:
+      - s
     flags:
       - use: repo
         short: repository
         alias: r
         type: string
-      - use: branch
-        short: branch
-        alias: b
-        type: string
+      - use: main
+        short: switch to main branch
+        alias: m
+        type: bool
+      - use: work
+        short: search in work user
+        alias: w
+        type: bool
 
 """
-. ../lib/lib_cli.sh
+################################################################################
+
+# should exit as soon as it encounters any non-zero exit code or usage of
+# undefined variables or failed piped commands
+# set -Eeuo pipefail
+  # change to local directory
+cd "$(dirname $0)"
+  # load lib
+. ../lib/lib_utils.sh
+# global variables
+LOG_LEVEL=3 # default is 1:NOTE
 git_dir=~/gwt
 
+USER=marcelofpfelix
+WORK_REPO="team-telnyx"
+REPO_IGNORE='-not -path "./$WORK_REPO*"'
+
+
+
 gwt() {
-    log DEBG "$FUNCNAME: $*"
-    # if arguments over 1 run subcommand
-    if [ $# -gt 0 ]; then
-        $@
-    fi
+    help
 }
 
-clone() {
-    log DEBG "$FUNCNAME: $*"
-    # if arguments over 1
-    if [ $# -gt 0 ]; then
-        $@
-    fi
-
+gwt_clone() {
     # no subcommands, running the function
     repo_url="${ARGS[1]}"
     # print the result
@@ -106,33 +105,53 @@ clone() {
 }
 
 
-switch() {
-    log DEBG "$FUNCNAME: $*"
-    # if arguments over 1
-    if [ $# -gt 0 ]; then
-        $@
-    fi
+gwt_switch() {
 
     # no subcommands, running the function
     repo_url="${ARGS[1]}"
+    main="${ARGS[2]}"
+    work="${ARGS[3]}"
+    depth=3
+    user=""
+    ignore="$WORK_REPO"
+
     # print the result
-    log INFO "Running:" "${CMDS[@]}" "-r ${repo_url}" n:b:c:b:c
+    log INFO "Running:" "${CMDS[@]}" "-r ${repo_url}" "-m $main" "-w $work" n:b:c:b:c
 
-    if [ -z "$repo_url" ]; then
-        cd $git_dir
-        repo_url=$(find . -mindepth 3 -maxdepth 3 -type d -not -path "*.bare" -not -path "archive" -prune | fzf)
+    if [ "$main" = "true" ]; then
+      depth=2
     fi
+    if [ "$work" = "true" ]; then
+      ignore=$USER
+      user=$WORK_REPO
+      depth=2
+    fi
+# -printf "%P"
 
-    tmux new-window -n $repo_url -c $git_dir/$repo_url
+    #echo       find ./ -mindepth $depth -maxdepth $depth -type d -not -path "*.bare" -not -path "archive" -not -path "./$ignore*" -prune - fzf -q "$repo_url"
+#    if [ -z "$repo_url" ]; then
+    cd $git_dir/$user
+    repo_url=$(find ./ -mindepth $depth -maxdepth $depth -type d -not -path "*.bare" -not -path "archive" -not -path "./$ignore*" -prune  -printf "%P\n" | fzf -q "$repo_url")
+    [[ -z "$repo_url" ]] && exit 1
+#    fi
 
+#Notes="""
+#fzf --preview "bat --color=always --style=numbers --line-range=:500 {}"
+#"""
+
+    tmux new-window -n $repo_url -c $git_dir/$user/$repo_url
+    cd $git_dir/$user/$repo_url
+    branch=${PWD##*/}
+    git fetch origin
+    git pull origin $branch
 }
 
     # commands
     # add
     # list
     # switch
-"${CMDS[@]}"
-
+# run the command selected
+[[ -n "$CMD" ]] && "$CMD"
 
 # check:
 # - https://stackoverflow.com/questions/54367011/git-bare-repositories-worktrees-and-tracking-branches
@@ -143,7 +162,7 @@ switch() {
 # how to get remote branches
 # how to pull updates
 # to to switch to a commit
-  # git worktree add -b workbranch2 workbranch2 30abe6a
+  # git worktree add -b 38.6 38.6 30abe6a
 
 
 # git clone --bare git@github.com:team-telnyx/ansible.git .bare
@@ -155,3 +174,9 @@ switch() {
 
 # Gets all branches from origin
 # git fetch origin
+
+
+
+
+# g fetch origin before creating a branch
+# g fetch --all

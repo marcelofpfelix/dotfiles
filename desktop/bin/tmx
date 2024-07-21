@@ -2,23 +2,42 @@
 
 ################################################################################
 #                                 FILE INFO
-# run tmuxp with the correct environment
+CLI="""
+use: tmx
+short: manage tmux windows
+long: |
+  run tmuxp with the correct environment
+commands:
+  - use: kill
+    short: kill windows
+    aliases:
+      - k
+"""
 ################################################################################
 
+
 # TODO:
-# use boa and kill window mode
 # test for popup tmux
     # with ftb-tmux-popup or fzf-tmux
-
-# close existing window
+# kill existing window before opening a new one
 
 # change to local directory
 cd "$(dirname $0)"
 # load lib
 . ../lib/lib_tmx.sh
 . ../lib/lib_utils.sh
+# global variables
+LOG_LEVEL=3 # default is 1:NOTE
 
-main() {
+
+tmx() {
+    log DEBG "$FUNCNAME: $*"
+    # if arguments over 1 run subcommand
+    if [ $# -gt 0 ]; then
+        $@
+        exit
+    fi
+
     # default values
     service_env=${service_env:-"us-prod"}
 
@@ -28,13 +47,70 @@ main() {
     else
         service_env=${1:-"us-prod"}; shift
     fi
+
+    # kill existing window before opening a new one
+    kill_1w $service_env
+
     # get the service and env
     service=$(echo $service_env | cut -d'-' -f1)
     env=$(echo $service_env | cut -d'-' -f2)
 
-    log note " SERVER_1=${SERVER_1[${service_env}]} SERVER_2=${SERVER_2[${service_env}]} SERVER_3=${SERVER_3[${service_env}]} SERVER_4=${SERVER_4[${service_env}]} SERVICE=${service} ENV=${env} DISABLE_AUTO_TITLE='true' tmuxp load ${PROFILE[${service_env}]}"
+    log INFO " SERVER_1=${SERVER_1[${service_env}]} SERVER_2=${SERVER_2[${service_env}]} SERVER_3=${SERVER_3[${service_env}]} SERVER_4=${SERVER_4[${service_env}]} SERVICE=${service} ENV=${env} DISABLE_AUTO_TITLE='true' tmuxp load ${PROFILE[${service_env}]}"
     SERVER_1=${SERVER_1[${service_env}]} SERVER_2=${SERVER_2[${service_env}]} SERVER_3=${SERVER_3[${service_env}]} SERVER_4=${SERVER_4[${service_env}]} SERVICE=${service} ENV=${env} DISABLE_AUTO_TITLE='true' tmuxp load -a ${PROFILE[${service_env}]}
 }
 
 
-main "$@"
+tmx_kill() {
+    log DEBG "$FUNCNAME: $*"
+    # if arguments over 1 run subcommand
+    if [ $# -gt 0 ]; then
+        $@
+    fi
+
+    # Get the list of current tmux windows in the current session
+    windows=$(tmux list-windows -F '#I: #W')
+
+    # Use gum to fuzzy find and select windows to kill
+    selected_windows=$(echo "$windows" | gum choose --no-limit)
+
+    # Check if any windows were selected
+    if [ -z "$selected_windows" ]; then
+        log ERRO "No windows selected. Exiting."
+        exit
+    fi
+
+    # Confirm the selected windows to kill
+    log NOTE "You have selected the following windows to kill: \n $selected_windows"
+    if ! (gum confirm "kill these windows?"); then
+        log ERRO "Aborting." && exit
+    fi
+
+    # kill the selected windows
+    while IFS= read -r line; do
+        window_id=$(echo "$line" | cut -d: -f1)
+        tmux kill-window -t "$window_id"
+    done <<< "$selected_windows"
+
+    log INFO "Selected windows killd."
+}
+
+kill_1w() {
+    # kill the window with the specified name
+    window_name=$1
+    # Get the list of current tmux windows in the current session
+    windows=$(tmux list-windows -F '#I: #W')
+
+    # Find the window ID corresponding to the window name
+    window_id=$(echo "$windows" | grep ": $window_name" | cut -d: -f1)
+    if [ -z "$window_id" ]; then
+        log INFO "No old window found to restart: $window_name"
+        return
+    fi
+    # kill the specified window
+    tmux kill-window -t "$window_id"
+    log INFO "Window $window_name (ID: $window_id) is getting restarted."
+}
+
+
+# run the command selected
+[[ -n "$CMD" ]] && "$CMD"
