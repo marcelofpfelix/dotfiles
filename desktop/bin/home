@@ -33,11 +33,13 @@ flags:
 
 
 local_copy() {
+  repo=~/gwt/marcelofpfelix/dotfiles/main
+
     # copy the dotfiles to the local directory
-    cp -rT ~/git/marcelofpfelix/dotfiles/default  ~
-    cp -rT ~/git/marcelofpfelix/dotfiles/desktop  ~
-    cp -rT ~/git/marcelofpfelix/dotfiles/work     ~
-    cp -rT ~/git/marcelofpfelix/dotfiles/workdesk ~
+    cp -rT ${repo}/default  ~
+    cp -rT ${repo}/desktop  ~
+    #cp -rT ${repo}/work     ~
+    #cp -rT ${repo}/workdesk ~
 
     # ignore jinja2 templates
     rm ~/.ssh/config.d/work.j2

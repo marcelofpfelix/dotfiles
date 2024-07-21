@@ -2,13 +2,11 @@
 
 # Global config
 REPOS=(
-    "/path/to/your/first/repo"
-    "/path/to/your/second/repo"
-    "/path/to/your/third/repo"
+    "/home/marcelof/gwt/marcelofpfelix/dotfiles/main"
 )
 
 # Commit message
-COMMIT_MSG="Automated commit from cron job"
+COMMIT_MSG="auto-update"
 
 # Loop through each repository
 for REPO in "${REPOS[@]}"
@@ -35,8 +33,6 @@ do
 done
 
 echo "All repositories processed."
-
-
 
 
 # TODO:
