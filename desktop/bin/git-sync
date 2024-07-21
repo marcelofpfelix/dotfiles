@@ -2,7 +2,7 @@
 
 # Global config
 REPOS=(
-    "/home/marcelof/gwt/marcelofpfelix/dotfiles/main"
+    "$HOME/gwt/marcelofpfelix/dotfiles/main"
 )
 
 # Commit message
