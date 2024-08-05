@@ -9,9 +9,9 @@ main() {
 
   container=${1:-kamailio}
 
-  result=`sudo docker exec "$container" vtysh -c "show run" | grep network | column -t`
+  result=$(sudo docker exec "$container" vtysh -c "show run" | grep network | column -t)
 
-  printf "$result\n"
+  echo "$result"
 
 }
 

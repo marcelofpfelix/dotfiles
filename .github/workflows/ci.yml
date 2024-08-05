@@ -1,0 +1,18 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  eol:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+    - uses: marcopaganini/check-trailing-spaces@v1
+    - uses: fernandrone/linelint@0.0.6
+    # - name: ShellCheck
+    #   uses: ludeeus/action-shellcheck@2.0.0
+    #   env:
+    #     SHELLCHECK_OPTS: -s bash

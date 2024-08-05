@@ -10,9 +10,9 @@ containers=$(docker ps --format '{{.Names}}')
 for container in $containers
 do
   # If the container name is not in the exclude list
-  if [[ ! " ${exclude[@]} " =~ " ${container} " ]]; then
+  if [[ ! " ${exclude[*]} " =~ " ${container} " ]]; then
     # Stop the container
-    docker stop $container
+    docker stop "$container"
   fi
 done
 
@@ -26,9 +26,9 @@ networks=$(docker network ls --format '{{.Name}}')
 for network in $networks
 do
   # If the network name is not in the exclude list
-  if [[ ! " ${exclude[@]} " =~ " ${network} " ]]; then
+  if [[ ! " ${exclude[*]} " =~ " ${network} " ]]; then
     # Remove the network
-    docker network rm $network
+    docker network rm "$network"
   fi
 done
 

@@ -8,7 +8,7 @@
 
 # if the script is interrupted, the run process should be killed
 sigint_handler(){
-    kill $PID 2>/dev/null
+    kill "$PID" 2>/dev/null
     exit
 }
 
@@ -23,7 +23,7 @@ main() {
 
     while true; do
         # run command in background
-        $@ &
+        "$@" &
 
         # get PID of last background process
         PID=$!

@@ -7,7 +7,7 @@
 
 main() {
 
-  query=$(sudo docker inspect --format='{{.Created}} {{.Name}} {{.State.Status}} {{.Image}} {{.Config.Image}}' $(sudo docker ps -q) \
+  query=$(sudo docker inspect --format='{{.Created}} {{.Name}} {{.State.Status}} {{.Image}} {{.Config.Image}}' "$(sudo docker ps -q)" \
         | sed 's/sha256:\([a-f0-9]\{12\}\)[a-f0-9]*/\t\1/;s/[\/T]/ /g;s/\.[0-9]*Z//' \
         | awk '{ split($NF,a,":"); print $1, $2, $3, $4, $5, a[2] }' \
         | grep "$1" | column -t)

@@ -3,6 +3,7 @@
 # Global config
 REPOS=(
     "$HOME/gwt/marcelofpfelix/dotfiles/main"
+    "$HOME/gwt/marcelofpfelix/homework/main"
 )
 
 # Commit message

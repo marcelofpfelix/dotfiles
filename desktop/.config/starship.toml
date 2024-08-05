@@ -76,3 +76,6 @@ crust = "#11111b"
 [time]
 disabled = false
 format = '[$time]($style) '
+
+[directory]
+truncate_to_repo = false

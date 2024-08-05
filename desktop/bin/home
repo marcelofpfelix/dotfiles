@@ -8,6 +8,7 @@
   # change to local directory
 cd "$(dirname $0)"
   # load lib
+# shellcheck source=.../default/lib/lib_utils.sh
 . ../lib/lib_utils.sh
 
 cli="""
@@ -32,14 +33,17 @@ flags:
 #. ../lib/lib_cli.sh
 
 
+dotfiles=~/gwt/marcelofpfelix/dotfiles/main
+homework=~/gwt/marcelofpfelix/homework/main
+
+
 local_copy() {
-  repo=~/gwt/marcelofpfelix/dotfiles/main
 
     # copy the dotfiles to the local directory
-    cp -rT ${repo}/default  ~
-    cp -rT ${repo}/desktop  ~
-    #cp -rT ${repo}/work     ~
-    #cp -rT ${repo}/workdesk ~
+    cp -rT ${dotfiles}/default  ~
+    cp -rT ${dotfiles}/desktop  ~
+    cp -rT ${homework}/work     ~
+    cp -rT ${homework}/workdesk ~
 
     # ignore jinja2 templates
     rm ~/.ssh/config.d/work.j2
@@ -78,8 +82,10 @@ home() {
     # check if $work is true
     if [ "$work" = "true" ]; then
         inventory=~/work.ini
+        home_src=$homework
     else
         inventory=inventory.ini
+        home_src=$dotfiles
     fi
 
     # check if $target is empty
@@ -91,8 +97,8 @@ home() {
         fi
     fi
 
-    log note "ansible-playbook home.yml -i $inventory -e \"target=$target\"" # service=$service
-    ansible-playbook home.yml -i $inventory -e "target=$target" # " service=$service
+    log note "ansible-playbook home.yml -i $inventory -e \"target=$target\" -e \"home_src=$home_src\"" # service=$service
+    ansible-playbook home.yml -i $inventory -e "target=$target -e home_src=$home_src" # " service=$service
 
 }
 

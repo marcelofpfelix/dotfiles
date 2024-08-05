@@ -17,7 +17,7 @@ commands:
 LOG_LEVEL=3 # default is 1:NOTE
 
 # change to local directory
-cd "$(dirname $0)"
+cd "$(dirname $0)" || exit
 # load lib
 . ../lib/lib_utils.sh
 
