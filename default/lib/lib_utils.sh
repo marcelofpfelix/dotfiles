@@ -11,7 +11,8 @@
 
 # ##############################################################################
 # Constants - global config
-[[ -z "$GUM_INPUT_PROMPT_FOREGROUND" ]] && GUM_INPUT_PROMPT_FOREGROUND="#0FF" # default to use nerdfonts
+GUM_INPUT_PROMPT_FOREGROUND=${GUM_INPUT_PROMPT_FOREGROUND:="#0FF"} # default to use nerdfonts
+#[[ -z "$GUM_INPUT_PROMPT_FOREGROUND" ]] && GUM_INPUT_PROMPT_FOREGROUND="#0FF"
 
 export GUM_INPUT_PROMPT_FOREGROUND
 
@@ -23,7 +24,7 @@ export GUM_INPUT_PROMPT_FOREGROUND
 function check_deps {
     # check that commands are available
 
-    returnval=0
+    return_code=0
     for command in $DEPENDENCIES; do
         if ! which $command >/dev/null; then
             log ERRO "command" "$command" "is not available" n,bb,n
@@ -32,5 +33,5 @@ function check_deps {
     done
 
 
-    return $returnval
+    return $return_code
 }

@@ -12,7 +12,7 @@ main() {
 
     # checkout default branch
     git checkout "$default_branch"
-
+    git fetch
     # pull
     git pull
     # check if pull was successful
@@ -24,8 +24,9 @@ main() {
     if [ "$#" -eq 1 ]; then
         branch="$1"
     else
+        exit
         # ask for new branch name
-        branch=$(gum input --placeholder "New branch name")
+        #branch=$(gum input --placeholder "New branch name")
     fi
 
     # check if branch name is empty
@@ -33,18 +34,29 @@ main() {
         echo "Exiting, no branch created." && exit
     fi
     # check if branch name is 'master' or 'main'
-    if [ "$branch" == "master" ] || [ "$branch" == "main" ]; then
+    if [ "$branch" == $default_branch ]; then
         echo "Exiting, no branch created." && exit
     fi
     # check if branch name already exists
+
+    if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+        # checkout and pull from remote
+        git checkout "$branch"
+        git pull origin "$branch"
+        exit
+    fi
     if git show-ref --verify --quiet "refs/heads/$branch"; then
-        echo "Branch '$branch' already exists."
-        if (gum confirm "Reset '$branch'?"); then
-            echo ""
-        else
-            git checkout "$branch"
-            echo "Exiting, no branch created." && exit
-        fi
+        # check if branch exists locally
+        git checkout "$branch"
+        exit
+
+        # echo "Branch '$branch' already exists."
+        # if (gum confirm "Reset '$branch'?"); then
+        #     echo ""
+        # else
+        #     git checkout "$branch"
+        #     echo "Exiting, no branch created." && exit
+        # fi
     fi
 
     git checkout -B "$branch"

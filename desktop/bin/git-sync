@@ -1,6 +1,18 @@
 #!/bin/bash
 
-# Global config
+################################################################################
+#                                 FILE INFO
+# Sync git repositories (supports both worktree and normal repos)
+# Format: "path" or "path:branch" (use "path:default" to explicitly use default branch)
+################################################################################
+
+set -Eeu -o pipefail
+
+# Repository configuration
+# Format: "path" or "path:branch"
+# - "path" uses the default branch
+# - "path:branch" uses the specified branch
+# - "path:default" explicitly uses the default branch
 REPOS=(
     "$HOME/gwt/marcelofpfelix/dotfiles/main"
     "$HOME/gwt/marcelofpfelix/homework/main"
@@ -9,34 +21,220 @@ REPOS=(
 # Commit message
 COMMIT_MSG="auto-update"
 
-# Loop through each repository
-for REPO in "${REPOS[@]}"
-do
-    if [ -d "$REPO" ]; then
-        cd "$REPO" || { echo "Failed to change directory to $REPO"; continue; }
+# Script name for status file
+SCRIPT_NAME="git-sync"
+STATUS_FILE="/tmp/script-status.ini"
 
-        # Stage all changes
-        git add .
+# Function to log messages
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
 
-        # Check if there are any changes to commit
-        if git diff-index --quiet HEAD --; then
-            echo "No changes to commit in $REPO."
+# Function to update status file
+update_status() {
+    local exit_code="$1"
+    local message="$2"
+    local status_line="${SCRIPT_NAME}: ${exit_code} ${message}"
+
+    (
+        flock -x 200
+        touch "$STATUS_FILE"
+        if grep -q "^${SCRIPT_NAME}:" "$STATUS_FILE" 2>/dev/null; then
+            sed -i "s|^${SCRIPT_NAME}:.*|${status_line}|" "$STATUS_FILE"
         else
-            # Commit changes
-            git commit -m "$COMMIT_MSG"
-
-            # Push changes
-            git push origin main
+            echo "$status_line" >> "$STATUS_FILE"
         fi
-    else
-        echo "Repository $REPO does not exist."
+    ) 200>"${STATUS_FILE}.lock"
+}
+
+# Function to detect if repository is a worktree
+is_worktree() {
+    if [ -f ".git" ]; then
+        # Check if .git is a file (not directory) and contains gitdir reference
+        grep -q "^gitdir:" .git 2>/dev/null
+        return $?
     fi
-done
+    return 1
+}
 
-echo "All repositories processed."
+# Function to get .bare directory path for worktree
+get_bare_dir() {
+    if [ -f ".git" ]; then
+        # Extract the gitdir path and find the .bare directory
+        local gitdir=$(grep "^gitdir:" .git | cut -d' ' -f2)
+        # The gitdir points to .bare/worktrees/branch, so we need to go up two levels
+        local bare_dir=$(dirname $(dirname "$gitdir"))
+        echo "$bare_dir"
+    fi
+}
 
+# Function to get default branch for worktree
+get_worktree_default_branch() {
+    local bare_dir=$(get_bare_dir)
+    if [ -n "$bare_dir" ] && [ -f "$bare_dir/HEAD" ]; then
+        local ref=$(cat "$bare_dir/HEAD")
+        echo "${ref##*/}"
+    else
+        echo "main"
+    fi
+}
 
-# TODO:
-# create alerts like this:
-# node_sysctl_net_ipv4_tcp_rmem{index="0"} 4096
-# write logs in tmp, have to lib_debug write a time a place.
+# Function to get default branch for normal repo
+get_normal_default_branch() {
+    # Try to get from remote HEAD
+    local branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+    if [ -n "$branch" ]; then
+        echo "$branch"
+        return
+    fi
+
+    # Fallback: query remote
+    branch=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
+    if [ -n "$branch" ]; then
+        echo "$branch"
+        return
+    fi
+
+    # Last resort
+    echo "main"
+}
+
+# Function to get current branch
+get_current_branch() {
+    git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ""
+}
+
+# Function to sync a repository
+sync_repo() {
+    local repo_path="$1"
+    local configured_branch="$2"
+
+    if [ ! -d "$repo_path" ]; then
+        log "ERROR: Repository $repo_path does not exist"
+        return 1
+    fi
+
+    cd "$repo_path" || {
+        log "ERROR: Failed to change directory to $repo_path"
+        return 1
+    }
+
+    log "Processing: $repo_path"
+
+    # Detect repository type and get default branch
+    local default_branch
+    if is_worktree; then
+        log "  Type: Worktree"
+        default_branch=$(get_worktree_default_branch)
+    else
+        log "  Type: Normal"
+        default_branch=$(get_normal_default_branch)
+    fi
+
+    # Determine target branch
+    local target_branch
+    if [ -z "$configured_branch" ] || [ "$configured_branch" = "default" ]; then
+        target_branch="$default_branch"
+        log "  Branch: $target_branch (default)"
+    else
+        target_branch="$configured_branch"
+        log "  Branch: $target_branch (configured)"
+    fi
+
+    # Get current branch
+    local current_branch=$(get_current_branch)
+
+    # Check if we're on the target branch
+    if [ "$current_branch" != "$target_branch" ]; then
+        log "  WARNING: Current branch ($current_branch) differs from target ($target_branch)"
+        log "  Skipping repository"
+        return 0
+    fi
+
+    # Fetch updates
+    log "  Fetching from origin..."
+    if ! git fetch origin "$target_branch" 2>&1; then
+        log "  ERROR: Failed to fetch from origin"
+        return 1
+    fi
+
+    # Pull changes
+    log "  Pulling changes..."
+    if ! git pull origin "$target_branch" 2>&1; then
+        log "  ERROR: Failed to pull changes"
+        return 1
+    fi
+
+    # Stage all changes
+    git add .
+
+    # Check if there are any changes to commit
+    if git diff-index --quiet HEAD -- 2>/dev/null; then
+        log "  No changes to commit"
+    else
+        log "  Committing changes..."
+        if ! git commit -m "$COMMIT_MSG" 2>&1; then
+            log "  ERROR: Failed to commit changes"
+            return 1
+        fi
+
+        log "  Pushing changes..."
+        if ! git push origin "$target_branch" 2>&1; then
+            log "  ERROR: Failed to push changes"
+            return 1
+        fi
+    fi
+
+    log "  ✓ Success"
+    return 0
+}
+
+# Main execution
+main() {
+    log "Starting git-sync"
+
+    local failed_repos=()
+    local total_repos=0
+    local success_count=0
+
+    for repo_config in "${REPOS[@]}"; do
+        total_repos=$((total_repos + 1))
+
+        # Parse repo path and branch
+        local repo_path="${repo_config%%:*}"
+        local branch=""
+        if [[ "$repo_config" == *:* ]]; then
+            branch="${repo_config#*:}"
+        fi
+
+        # Expand variables in path
+        repo_path=$(eval echo "$repo_path")
+
+        if sync_repo "$repo_path" "$branch"; then
+            success_count=$((success_count + 1))
+        else
+            failed_repos+=("$repo_path")
+        fi
+
+        echo
+    done
+
+    # Report results
+    log "Processed $success_count/$total_repos repositories successfully"
+
+    if [ ${#failed_repos[@]} -gt 0 ]; then
+        log "Failed repositories:"
+        for repo in "${failed_repos[@]}"; do
+            log "  - $repo"
+        done
+        update_status 1 "Failed: ${failed_repos[*]}"
+        exit 1
+    else
+        log "All repositories synced successfully"
+        update_status 0 "OK"
+        exit 0
+    fi
+}
+
+# Run main function
+main

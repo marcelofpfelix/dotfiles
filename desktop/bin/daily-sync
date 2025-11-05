@@ -2,14 +2,13 @@
 
 ################################################################################
 #                                 FILE INFO
-# use bat to read cheatsheets
+# Daily sync placeholder script
 ################################################################################
 
-cd ~/gwt/marcelofpfelix/dotfiles/main/desktop/che
+echo "[daily-sync] Running sync tasks..."
+# Add your sync commands here
+# Example:
+# rclone sync ~/documents remote:documents
 
-# if [ $# -ne 1 ]; then
-#     echo "Usage: $0 <cheatsheet>"
-#     exit 1
-# fi
-
-bat "$1.yml"
+echo "[daily-sync] Sync completed successfully"
+exit 0

@@ -11,7 +11,7 @@ cd "$(dirname $0)"
 # shellcheck source=.../default/lib/lib_utils.sh
 . ../lib/lib_utils.sh
 
-cli="""
+CLI="""
 use: home
 long: |
   Deploy home dotfiles repo
@@ -29,8 +29,12 @@ flags:
     short: use work inventory
     alias: w
     type: bool
+  - use: fast
+    short: fast deploy
+    alias: f
+    type: bool
 """
-#. ../lib/lib_cli.sh
+. ../lib/lib_cli.sh
 
 
 dotfiles=~/gwt/marcelofpfelix/dotfiles/main
@@ -53,29 +57,13 @@ local_copy() {
 
 
 home() {
+    cmd=${ARGS[0]}
+    target=${ARGS[1]}
+    yesman=${ARGS[2]}
+    work=${ARGS[3]}
+    fast=${ARGS[4]}
 
-    # ##########################################################################
-    # cli
-    # ##########################################################################
-
-    # parse the cli arguments
-    result=$(echo "$cli" | boa $@)
-    readarray -t args <<<"$result"
-    if [[ ${args[-1]} != "false" ]]; then
-        # print the help message
-        echo "$result"
-        exit 1
-    else
-        cmd=${args[0]}
-        target=${args[1]}
-        yesman=${args[2]}
-        work=${args[3]}
-
-        # print the result
-        println "Running cli" "home" "-t ${target}" "-y ${yesman}" "-w ${work}" n:b:c:b:c
-    fi
-
-    # ##########################################################################
+    println "Running cli" "home" "-t ${target}" "-y ${yesman}" "-w ${work}" "-f ${fast}" n:b:c:b:c
 
     cd ~/git/marcelofpfelix/homelab/
 
@@ -88,6 +76,12 @@ home() {
         home_src=$dotfiles
     fi
 
+    if [ "$fast" = "true" ]; then
+        flags=""
+    else
+        flags=" -e set_ssh=true -e set_shrc=true"
+    fi
+
     # check if $target is empty
     if [ -z "$target" ]; then
         if [ "$yesman" = "true" ]; then
@@ -97,11 +91,9 @@ home() {
         fi
     fi
 
-    log note "ansible-playbook home.yml -i $inventory -e \"target=$target\" -e \"home_src=$home_src\"" # service=$service
-    ansible-playbook home.yml -i $inventory -e "target=$target -e home_src=$home_src" # " service=$service
+    log note "ansible-playbook home.yml -i $inventory -e \"target=$target\" -e \"home_src=$home_src\" $flags" # service=$service
+    ansible-playbook home.yml -i $inventory -e "target=$target -e home_src=$home_src $flags" # " service=$service
 
 }
 
-
-home "$@"
-#"${CMDS[@]}"
+[[ -n "$CMD" ]] && "$CMD"

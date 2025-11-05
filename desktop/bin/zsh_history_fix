@@ -1,0 +1,10 @@
+#!/usr/bin/env zsh
+
+# Fixes a corrupt .zsh_history file
+histfile=".histfile"
+
+
+mv ~/${histfile} ~/.zsh_history_bad
+strings ~/.zsh_history_bad > ~/${histfile}
+fc -R ~/${histfile}
+rm ~/.zsh_history_bad

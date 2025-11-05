@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# docker sngrep filter by mac address
+################################################################################
+
+main() {
+  container="$1";shift
+  mac=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.MacAddress}}{{end}}' "$container")
+  echo "mac: $mac"
+  sudo sngrep "$@" ether host $mac
+}
+
+main "$@"

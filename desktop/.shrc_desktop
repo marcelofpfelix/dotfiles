@@ -11,15 +11,14 @@ alias ga='git add'
 alias gaa='git add .'
 alias gs='git status'
 alias gc='git commit'
-alias gp='git pull --rebase'
 alias gcam='git commit -am'
 alias gl='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit'
 
 
 # tool replacements
 alias vi="nvim"
-alias cat="bat -p --paging=never"
-alias bathelp='bat --plain --language=help'
+alias cat="bat -pP"
+alias bathelp='bat -p --language=help'
 alias batlog='cat -l log'
 alias cdi="__zoxide_zi"
 
@@ -31,7 +30,7 @@ alias venv="source .env/bin/activate"
 alias m="make"
 alias ap="ansible-playbook"
 
-alias sshhosts="sed -rn 's/^\s*Host\s+(.*)\s*/\1/ip' ~/.ssh/config"
+alias sshhosts="sed -rn 's/^\s*Host\s+(.*)\s*/\1/ip' ~/.ssh/config ~/.ssh/config.d/work"
 
 
 
@@ -81,10 +80,3 @@ export PATH="$PATH:$PYENV_ROOT/bin"
 export PATH="$PATH:$HOME/.rvm/bin"
 
 # ##############################################################################
-
-help() { "$@" --help 2>&1 | bathelp }
-
-diffg() { git diff --name-only --relative --diff-filter=d | xargs bat --diff }
-
-# use for docker logs
-df() { dlf "$@" | batlog }

@@ -1,0 +1,129 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# ansible-playbook to update the dotfiles into
+################################################################################
+
+  # change to local directory
+cd "$(dirname $0)"
+  # load lib
+# shellcheck source=.../default/lib/lib_utils.sh
+. ../lib/lib_utils.sh
+
+cli="""
+use: home
+long: |
+  Deploy home dotfiles repo
+  Using homelab ansible repo
+flags:
+  - use: target
+    short: Target server
+    alias: t
+    type: string
+  - use: yes
+    short: yesman mode (no questions asked, using defaults)
+    alias: y
+    type: bool
+  - use: work
+    short: use work inventory
+    alias: w
+    type: bool
+"""
+#. ../lib/lib_cli.sh
+
+
+dotfiles=~/gwt/marcelofpfelix/dotfiles/main
+homework=~/gwt/marcelofpfelix/homework/main
+
+
+local_copy() {
+
+    # copy the dotfiles to the local directory
+    cp -rT ${dotfiles}/default  ~
+    cp -rT ${dotfiles}/desktop  ~
+    cp -rT ${homework}/work     ~
+    cp -rT ${homework}/workdesk ~
+
+    # ignore jinja2 templates
+    rm ~/.ssh/config.d/work.j2
+    echo "Copied dotfiles to home directory"
+    exit 0
+}
+
+
+home() {
+
+    # ##########################################################################
+    # cli
+    # ##########################################################################
+
+    # parse the cli arguments
+    result=$(echo "$cli" | boa $@)
+    readarray -t args <<<"$result"
+    if [[ ${args[-1]} != "false" ]]; then
+        # print the help message
+        echo "$result"
+        exit 1
+    else
+        cmd=${args[0]}
+        target=${args[1]}
+        yesman=${args[2]}
+        work=${args[3]}
+
+        # print the result
+        println "Running cli" "home" "-t ${target}" "-y ${yesman}" "-w ${work}" n:b:c:b:c
+    fi
+
+    # ##########################################################################
+
+    cd ~/git/marcelofpfelix/homelab/
+
+    # check if $work is true
+    if [ "$work" = "true" ]; then
+        inventory=~/work.ini
+        home_src=$homework
+    else
+        inventory=inventory.ini
+        home_src=$dotfiles
+    fi
+
+    # check if $target is empty
+    if [ -z "$target" ]; then
+        if [ "$yesman" = "true" ]; then
+            local_copy
+        else
+            target=$(grep -v -e '\[' -e '\#' -e '^$' $inventory | gum filter)
+        fi
+    fi
+    inventory=/ansible/inventory.ini
+
+    log note "ansible-playbook home.yml -u $HOME-i $inventory -e \"target=$target\" -e \"home_src=$home_src\"" # service=$service
+    #ansible-playbook home.yml -i $inventory -e "target=$target -e home_src=$home_src" # " service=$service
+    docker run --rm -it -v $(pwd):/ansible -v ~/.ssh/telnyx_id_rsa:/root/.ssh/id_rsa \
+      -v ~/git/marcelofpfelix/ansible-role-home/:/ansible/roles/home:ro \
+      -v /home/marcelof/work.ini:/ansible/inventory.ini \
+      willhallonline/ansible:2.17.4-bookworm-slim ansible-playbook home.yml \
+      -i $inventory -u $HOME -e "target=localhost -e home_src=$home_src" -vvv # " service=$service
+}
+
+
+home "$@"
+#"${CMDS[@]}"
+
+
+"""
+    docker run --rm -it --net host -v ~/git/marcelofpfelix/homelab:/ansible -v ~/.ssh/telnyx_id_rsa:/root/.ssh/id_rsa \
+      -v ~/git/marcelofpfelix/ansible-role-home/:/ansible/roles/home:ro \
+      -v /home/marcelof/work.ini:/ansible/inventory.ini \
+      willhallonline/ansible:2.17.4-bookworm-slim ansible-playbook home.yml \
+      -i custom-inv.ini -u $HOME -e "target=localhost -e home_src=~/gwt/marcelofpfelix/dotfiles/main"
+"""
+
+
+
+    docker run --rm -it --net host -v ~/git/marcelofpfelix/homelab:/ansible -v ~/.ssh/telnyx_id_rsa:/root/.ssh/id_rsa \
+      -v ~/git/marcelofpfelix/ansible-role-home/:/ansible/roles/home:ro \
+      -v /home/marcelof/work.ini:/ansible/inventory.ini \
+      willhallonline/ansible:2.17.4-bookworm-slim ansible-playbook home.yml \
+      -i custom-inv.ini -u $HOME -e "target=localhost -e home_src=~/gwt/marcelofpfelix/dotfiles/main"

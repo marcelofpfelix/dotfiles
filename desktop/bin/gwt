@@ -35,13 +35,23 @@ commands:
         short: search in work user
         alias: w
         type: bool
-
+  - use: add
+    short: add a specific worktree
+    aliases:
+      - a
+    flags:
+      - use: name
+        short: branch name
+        alias: n
+        type: string
 """
 ################################################################################
 
 # should exit as soon as it encounters any non-zero exit code or usage of
 # undefined variables or failed piped commands
 # set -Eeuo pipefail
+
+LOCAL_DIR="$PWD"
   # change to local directory
 cd "$(dirname $0)"
   # load lib
@@ -104,6 +114,20 @@ gwt_clone() {
 
 }
 
+gwt_add() {
+    branch="${ARGS[1]}"
+    log DEBG ${LOCAL_DIR}/.bare/HEAD
+
+    default_branch=$(cat ${LOCAL_DIR}/.bare/HEAD)
+    default_branch="${default_branch##*/}"
+    cd ${LOCAL_DIR}/$default_branch
+    git pull --rebase origin "$default_branch"
+    cd ..
+    git worktree add $branch
+
+    # add option for remote
+    # git worktree add -b PROXY-1373 ./PROXY-1373 origin/PROXY-1373
+}
 
 gwt_switch() {
 

@@ -34,9 +34,10 @@ require('telescope').setup {
 
 -- Enable telescope fzf native, if installed
 pcall(require('telescope').load_extension, 'fzf')
+pcall(require('telescope').load_extension, 'frecency')
 
 -- See `:help telescope.builtin`
-vim.keymap.set('n', '<leader>?', require('telescope.builtin').oldfiles, { desc = '[?] Find recently opened files' })
+vim.keymap.set('n', '<leader>sO', require('telescope.builtin').oldfiles, { desc = '[?] Find recently opened files' })
 vim.keymap.set('n', '<leader>/', function()
   -- You can pass additional configuration to telescope to change theme, layout, etc.
   require('telescope.builtin').current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
@@ -53,9 +54,34 @@ vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { de
 vim.keymap.set('n', '<leader>sb', require('telescope.builtin').buffers, { desc = '[ ] Find existing buffers' })
 vim.keymap.set('n', '<leader>sS', require('telescope.builtin').git_status, { desc = '' })
 vim.keymap.set('n', '<leader>sm', ":Telescope harpoon marks<CR>", { desc = 'Harpoon [M]arks' })
-vim.keymap.set("n", "<Leader>sr", "<CMD>lua require('telescope').extensions.git_worktree.git_worktrees()<CR>", silent)
-vim.keymap.set("n", "<Leader>sR", "<CMD>lua require('telescope').extensions.git_worktree.create_git_worktree()<CR>", silent)
+vim.keymap.set("n", "<Leader>st", "<CMD>:lua require('telescope').extensions.git_worktree.git_worktrees()<CR>", silent)
+vim.keymap.set("n", "<Leader>sT", "<CMD>lua require('telescope').extensions.git_worktree.create_git_worktree()<CR>", silent)
 vim.keymap.set("n", "<Leader>sn", "<CMD>lua require('telescope').extensions.notify.notify()<CR>", silent)
 
 vim.api.nvim_set_keymap("n", "st", ":TodoTelescope<CR>", {noremap=true})
 vim.api.nvim_set_keymap("n", "<Leader><tab>", "<Cmd>lua require('telescope.builtin').commands()<CR>", {noremap=false})
+
+vim.keymap.set("n", "<leader>so", function()
+  require("telescope.builtin").oldfiles({ only_cwd = true })  -- drop only_cwd if you want global MRU
+end, { desc = "Recent files" })
+
+vim.keymap.set("n", "<Leader>sl", function()
+  require("telescope").extensions.frecency.frecency({
+    workspace = "CWD",
+    auto_validate = false,
+    path_display = { "shorten" },
+  })
+end, { silent = true, desc = "[S]earch [L]ast files (frecency, CWD)" })
+
+vim.keymap.set("n", "<Leader>sL", function()
+  require("telescope.builtin").find_files({
+    prompt_title = "Files by Modified Time",
+    find_command = {
+      "rg", "--files",
+      "--hidden", "-g", "!.git",
+      "--sortr=modified",       -- newest first
+    },
+    sorter = require("telescope.sorters").empty(), -- keep fd order
+  })
+end, { desc = "Files sorted by modified time (newest first)" })
+

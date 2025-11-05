@@ -17,6 +17,7 @@ alias ipub="curl ipinfo.io/ip"
 
 alias datei="date +\"%Y-%m-%dT%H:%M:%S%:z\""
 alias dateu="date -u +\"%Y-%m-%d_%H:%M:%S\""
+alias datee="date +'%a-%d %H:%M:%S'"
 
 alias psef="ps -ef | grep" # pgrep -a
 alias diffs="diff -w --side-by-side --suppress-common-lines --color"
@@ -24,8 +25,15 @@ alias cl="clear"
 # for find
 
 # docker
-alias dl="sudo docker logs -t -n 500"
-alias dlf="dl -f"
+# use for docker logs
+dl() { sudo docker logs -t "$@" 2>&1; }
+dlf() { dl -f -n 500 "$@" 2>&1; }
+dla() { dl --detailed "$@" 2>&1; }
+
+# color grep --color=always -E 'BUG|ALERT|CRITICAL|ERROR|WARNING'
+# alias dl="sudo docker logs -t"
+# alias dlf="dl -f -n 500"
+
 alias dstart="sudo docker stop"
 alias dstop="sudo docker start"
 

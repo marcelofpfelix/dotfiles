@@ -2,14 +2,13 @@
 
 ################################################################################
 #                                 FILE INFO
-# use bat to read cheatsheets
+# Daily backup placeholder script
 ################################################################################
 
-cd ~/gwt/marcelofpfelix/dotfiles/main/desktop/che
+echo "[daily-backup] Running backup tasks..."
+# Add your backup commands here
+# Example:
+# rsync -av ~/important/ ~/backup/
 
-# if [ $# -ne 1 ]; then
-#     echo "Usage: $0 <cheatsheet>"
-#     exit 1
-# fi
-
-bat "$1.yml"
+echo "[daily-backup] Backup completed successfully"
+exit 0

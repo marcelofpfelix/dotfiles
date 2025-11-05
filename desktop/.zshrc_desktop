@@ -79,6 +79,10 @@ zstyle ':fzf-tab:*' switch-group '<' '>'
 # zstyle ':fzf-tab:*' fzf-command ftb-tmux-popup
 # ls | ftb-tmux-popup
 
+# move between words
+bindkey "^[[1;5C" forward-word  # ctrl left
+bindkey "^[[1;5D" backward-word # ctrl rigt
+
 
 ################################################################################
 # app completions
@@ -93,7 +97,9 @@ source <(kubectl completion zsh)
 #[[ /usr/local/bin/kubectl ]] && source <(kubectl completion zsh)
 
 # nvm
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 ################################################################################
@@ -104,12 +110,13 @@ source <(kubectl completion zsh)
 # TUNNEL_ORIGIN_CERT="~/.cloudflared/cert.pem"
 
 # zoxide alias
-alias cd="z"
+#alias cd="z"
 alias ll='eza -lA -snew --icons --git --total-size'
 alias l='eza -l -snew --icons --no-user --no-time --no-permissions'
 alias lt='l -T'
 alias ls='ls $LS_OPTIONS -1'
-
+alias lg='ll --git-ignore'
+alias groot='cd $(git rev-parse --show-toplevel)'
 
 # ##############################################################################
 # eval
@@ -124,13 +131,47 @@ eval "$(pyenv virtualenv-init -)"
 #pyenv virtualenvwrapper_lazy
 
 # zoxide
-eval "$(zoxide init zsh)"
+eval "$(/home/marcelof/.local/bin/zoxide init zsh)"
 
 # starship
 eval "$(starship init zsh)"
+
+# atuin
+. "$HOME/.atuin/bin/env"
+
+eval "$(atuin init zsh --disable-up-arrow)"
 
 # copilot
 # not working
 # eval "$(github-copilot-cli alias -- "$0")"
 
 # check https://github.com/marcogreiveldinger/.dotfiles/blob/main/.zsh/.zshrc
+
+# ##############################################################################
+# funtions
+
+#source .zshrc_f
+
+################################################################################
+
+help() {
+    "$@" --help 2>&1 | bathelp
+}
+
+diffg() {
+    git diff --name-only --relative --diff-filter=d | xargs bat --diff
+}
+
+# use for docker logs
+dl() {
+    docker logs -t "$@" 2>&1 | batlog
+}
+
+dlf() {
+    dl -f -n 500 "$@" 2>&1 | batlog
+}
+
+gpull() {
+    branch=${1:-$(git branch --show-current)}
+    git pull --rebase origin $branch
+}

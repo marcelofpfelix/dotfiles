@@ -29,6 +29,7 @@ config.keys = {
     mods = 'CTRL',
     action = wezterm.action.ToggleFullScreen,
   },
+  {key="Insert", mods="SHIFT", action=wezterm.action.PasteFrom("Clipboard")},
 }
 
 config.mouse_bindings = {

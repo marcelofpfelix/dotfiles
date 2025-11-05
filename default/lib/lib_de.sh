@@ -5,7 +5,7 @@
 
 
 exec() {
-    sudo docker exec -it "$container" env PS1='\['"$BBlue"'\]'$(hostname -s)'@\['"$BPurple"'\]'"$container"'\['"$BBlue"'\]:\w \['"$BPurple"'\]\$\['"$nocolor"'\] ' $1
+    sudo docker exec -it "$container" env PS1='\['"$BBlue"'\]'$(hostname -s)'@\['"$BPurple"'\]'"$container"'\['"$BBlue"'\]:\w \['"$BPurple"'\]\$\['"$nocolor"'\] ' env $1
     # /bin/bash $norcstring -i for no profile
 }
 
@@ -20,13 +20,15 @@ de() {
     if [[ -z "$@" ]]; then
         # if $@ is empty run shell
 
-        exec /bin/bash
+        exec bash
         result=$?
         if [ $result -eq 127 ]; then
-            exec /bin/ash
+            exec ash
             result=$?
         elif [ $result -eq 127 ]; then
-            exec /bin/sh
+            exec sh
+        elif [ $result -eq 127 ]; then
+            exec dash
         elif [ $result -eq 127 ]; then
             echo "Shell not available: $container"
         elif [ $result -eq 1 ]; then

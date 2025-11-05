@@ -1,0 +1,17 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# git checkout default branch
+################################################################################
+
+
+main() {
+    # get default branch name
+    default_branch="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
+
+    # checkout default branch
+    git checkout "$default_branch"
+}
+
+main "$@"

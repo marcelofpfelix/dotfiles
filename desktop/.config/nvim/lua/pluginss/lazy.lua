@@ -1,21 +1,12 @@
--- Install lazylazy
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
-  vim.fn.system({
-    "git",
-    "clone",
-    "--filter=blob:none",
-    "https://github.com/folke/lazy.nvim.git",
-    "--branch=stable", -- latest stable release
-    lazypath,
-  })
-end
-vim.opt.rtp:prepend(lazypath)
 
 -- Fixes Notify opacity issues
 vim.o.termguicolors = true
 
 require('lazy').setup({
+
+  { import = "plugins" },
+
+
   {
     "ThePrimeagen/harpoon",
     branch = "harpoon2",
@@ -56,6 +47,7 @@ require('lazy').setup({
     "sourcegraph/sg.nvim",
     dependencies = { "nvim-lua/plenary.nvim" },
   },
+
   {
     "epwalsh/obsidian.nvim",
     version = "*",  -- recommended, use latest release instead of latest commit
@@ -103,7 +95,7 @@ require('lazy').setup({
       "kristijanhusak/vim-dadbod-completion",
     },
     config = function()
-      require("config.dadbod").setup()
+      require("configg.dadbod").setup()
     end,
   },
 
@@ -289,15 +281,19 @@ require('lazy').setup({
     },
   },
 
+--  compare with obsidian and render-markdown
   {
     "OXY2DEV/markview.nvim",
-    ft = "markdown",
+    keys = {
+      { "<leader>mv", "<cmd>Markview Toggle<cr>", desc = "Toggle Markview" },
+    },
     dependencies = {
-      -- You may not need this if you don't lazy load
-      -- Or if the parsers are in your $RUNTIMEPATH
       "nvim-treesitter/nvim-treesitter",
       "nvim-tree/nvim-web-devicons"
     },
+    config = function()
+      require("markview").setup()
+    end,
   },
 
 
@@ -319,6 +315,14 @@ require('lazy').setup({
   'nvim-telescope/telescope-symbols.nvim',
   -- Fuzzy Finder Algorithm which requires local dependencies to be built. Only load if `make` is available
   { 'nvim-telescope/telescope-fzf-native.nvim', build = 'make', cond = vim.fn.executable 'make' == 1 },
+  {
+    "nvim-telescope/telescope-frecency.nvim",
+    -- install the latest stable version
+    version = "*",
+    config = function()
+      require("telescope").load_extension "frecency"
+    end,
+  },
   {
     "folke/twilight.nvim",
     opts = {

@@ -1,0 +1,88 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# This script downloads the latest version of Cursor, installs it to /opt,
+# and creates a symlink in /usr/local/bin
+################################################################################
+
+set -Eeuo pipefail
+
+# Exit if not running as root
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run as root"
+    exit 1
+fi
+
+# Function to get the latest release URL from GitHub
+# $1: repository (format: owner/repo)
+# $2: filter string to match in asset name
+# $3: (optional) specific version tag, defaults to latest
+get_github_release_url() {
+    local repo="$1"
+    local filter="$2"
+    local version="${3:-latest}"
+    local api_url
+    local download_url
+
+    # Construct API URL based on version
+    if [ "$version" != "latest" ]; then
+        version="tags/$version"
+    fi
+
+    api_url="https://github.com/$repo/releases/$version"
+
+    # Get download URL from GitHub API
+    download_url=$( gh api  "$api_url" | \
+        -q ".assets[] | select(.name | test(\"$filter\")) | .browser_download_url" | \
+        head -n1)
+
+    if [ -z "$download_url" ]; then
+        echo "Failed to get download URL for $repo with filter: $filter" >&2
+        return 1
+    fi
+
+    echo "$download_url"
+}
+
+
+
+# Create temp directory
+TEMP_DIR=$(mktemp -d)
+cd "$TEMP_DIR" || exit
+
+echo "Getting latest Cursor version info..."
+# Get the download URL from the API response
+DOWNLOAD_URL=$(curl -s "https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable" | jq -r '.downloadUrl')
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo "Failed to get download URL"
+    exit 1
+fi
+
+echo "Downloading Cursor from: $DOWNLOAD_URL"
+curl -L "$DOWNLOAD_URL" -o cursor.AppImage
+
+
+
+install_appimage() {
+    local app_name="$1"
+    local app_dir="/opt/$app_name"
+
+    echo "Installing $app_name..."
+    # Create app directory if it doesn't exist
+    mkdir -p "$app_dir"
+
+    # Move the AppImage to app directory
+    mv "$app_name.AppImage" "$app_dir/"
+    # Make it executable
+    chmod +x "$app_dir/$app_name.AppImage"
+
+    # Create symlink
+    ln -sf "$app_dir/$app_name.AppImage" "/usr/local/bin/$app_name"
+    # Cleanup
+    rm -rf "$TEMP_DIR"
+
+    echo "$app_name has been installed successfully!"
+}
+
+install_appimage "cursor"

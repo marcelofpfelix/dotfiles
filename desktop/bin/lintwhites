@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+# linelint - runs both trailing whitespace and end-of-file fixers
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# If no arguments provided, use current directory
+if [ $# -eq 0 ]; then
+    set -- "."
+fi
+
+# Collect all files from arguments (handling both files and directories)
+files=()
+for arg in "$@"; do
+    if [ -f "$arg" ]; then
+        # It's a file, add it directly
+        files+=("$arg")
+    elif [ -d "$arg" ]; then
+        # It's a directory, find all files recursively
+        # Exclude .git directories and .gitignore files
+        while IFS= read -r -d '' file; do
+            files+=("$file")
+        done < <(find "$arg" -type f -not -path '*/.git/*' -not -name '.gitignore' -print0)
+    fi
+done
+
+# Filter out binary files, keeping only text files
+text_files=()
+for file in "${files[@]}"; do
+    # Use file command to check if it's a text file
+    # grep -q returns 0 (success) if pattern is found
+    if file -b --mime-type "$file" | grep -q "^text/"; then
+        text_files+=("$file")
+    elif file -b --mime-type "$file" | grep -q "inode/x-empty"; then
+        # Include empty files as they are safe to process
+        text_files+=("$file")
+    fi
+done
+
+# Only run if we have text files to process
+if [ ${#text_files[@]} -gt 0 ]; then
+    # Run trailing whitespace fixer
+    python3 "${SCRIPT_DIR}/trailing_whitespace_fixer.py" "${text_files[@]}"
+
+    # Run end of file fixer
+    python3 "${SCRIPT_DIR}/end_of_file_fixer.py" "${text_files[@]}"
+fi

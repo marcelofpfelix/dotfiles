@@ -5,10 +5,12 @@
 # using https://github.com/marcelofpfelix/boa
 # ##############################################################################
 
+# CLI=${CLI:="use: missing CLI definition"}
+
 # If CLI is set, parse ARGs and CMDS
-if [[ -n "$CLI" ]]; then
+if [[ -n "${CLI+x}" ]]; then
     # parse the cli arguments
-    result=$(echo "$CLI" | boa "$@")
+    result=$(echo "${CLI}" | boa "$@")
     readarray -t ARGS <<<"$result"
     # check if the help flag (last arguent) is present
     if [[ ${ARGS[-1]} != "false" ]]; then
@@ -31,5 +33,7 @@ subc() { #TODO: delete
 }
 
 help() {
-    echo "$CLI" | boa help | bat -p --paging=never -lhelp
+    if [[ -n "${CLI+x}" ]]; then
+        echo "$CLI" | boa help | bat -p --paging=never -lhelp
+    fi
 }

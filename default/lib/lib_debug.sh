@@ -12,8 +12,10 @@
 
 # ##############################################################################
 # Constants - global config
-[[ -z "$LOG_LEVEL" ]] && LOG_LEVEL=1 # default log level is `NOTE`
-[[ -z "$LOG_TAG" ]] && LOG_TAG="11" # default log tag is `✅NOTE` (bits)
+LOG_LEVEL=${LOG_LEVEL:=1}
+LOG_TAG=${LOG_TAG:="11"}
+#[[ -z "$LOG_LEVEL" ]] && LOG_LEVEL=1 # default log level is `NOTE`
+#[[ -z "$LOG_TAG" ]] && LOG_TAG="11" # default log tag is `✅NOTE` (bits)
 
 
 # ##############################################################################
@@ -290,7 +292,7 @@ echo_info() {
 # Sends to the stdout a Debug message
 echo_debug() {
   if [[ $LOG_LEVEL == "DEBUG" ]] ; then
-    printf "[$(date +'%Y-%m-%d_%H:%M:%S')] DEBUG:   %s\n"  "$*"
+    printf "[$(date +'%Y-%m-%d_%H:%M:%S')] DEBG:   %s\n"  "$*"
   fi
 }
 

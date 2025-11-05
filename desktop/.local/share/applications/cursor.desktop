@@ -1,16 +1,16 @@
 [Desktop Entry]
-Name=Obsidian
-Comment=Obsidian md notes
+Name=cursor
+Comment=cursor md notes
 GenericName=Text Editor
-Exec=/usr/local/bin/obsidian --no-sandbox
-Icon=obsidian
+Exec=/usr/local/bin/cursor --no-sandbox
+Icon=cursor
 Type=Application
 StartupNotify=false
 StartupWMClass=Code
 Categories=TextEditor;Development;IDE;
 MimeType=text/plain;inode/directory;application/x-code-workspace;
 Actions=new-empty-window;
-Keywords=obsidian;
+Keywords=cursor;
 
 [Desktop Action new-empty-window]
 Name=New Empty Window
@@ -23,5 +23,5 @@ Name[ko]=새 빈 창
 Name[ru]=Новое пустое окно
 Name[zh_CN]=新建空窗口
 Name[zh_TW]=開新空視窗
-Exec=/usr/local/bin/obsidian
-Icon=obsidian
+Exec=/usr/local/bin/cursor
+Icon=cursor

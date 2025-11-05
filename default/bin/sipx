@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# ##############################################################################
+# custom sip messages
+# ##############################################################################
+
+main() {
+    # Set default size to 1500 if no argument provided
+    if [ $# -eq 0 ]; then
+        length=1500
+    else
+        # Get the length of the first argument
+        length=$1
+    fi
+
+    # Subtract 396 from the length
+    length=$((length - 394 + 14 ))
+
+    # Create a variable with 'x' repeated length times
+    x_string=$(printf 'x%.0s' $(seq 1 $length))
+
+    sipexer  -co -com -fv viabranch:${x_string} -fv ruri:sip:server -fv viaaddr:11.0.0.0 -fv rport:5060 -fv cseqnum:459162 192.76.120.10
+}
+
+main "$@"

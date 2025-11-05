@@ -1,0 +1,14 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# Daily cleanup placeholder script
+################################################################################
+
+echo "[daily-cleanup] Running cleanup tasks..."
+# Add your cleanup commands here
+# Example:
+# find ~/tmp -type f -mtime +30 -delete
+
+echo "[daily-cleanup] Cleanup completed successfully"
+exit 0

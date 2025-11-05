@@ -11,8 +11,12 @@
 # ##############################################################################
 # Constants - global config
 
-[[ -z "$RICHPY" ]] && RICHPY=0 # default richpy format is 0
-[[ -z "$LEMONBAR" ]] && LEMONBAR=0 # default lemonbar format is 0
+
+RICHPY=${RICHPY:=0}
+LEMONBAR=${LEMONBAR:=0}
+
+#[[ -z "$RICHPY" ]] && RICHPY=0 # default richpy format is 0
+#[[ -z "$LEMONBAR" ]] && LEMONBAR=0 # default lemonbar format is 0
 
 
 declare -A color16=(
@@ -75,6 +79,7 @@ function color() {
     escape='\033['
     style='0;3' # default is regular
     color='0m'  # default is black
+    local suffix=''
 
     # check if richpy is enabled
     if [[ $RICHPY -eq 1 ]]; then

@@ -5,7 +5,8 @@
 
 # ##############################################################################
 # Constants - global config
-[[ -z "$NERD" ]] && NERD=1 # default to use nerdfonts
+NERD=${NERD:=1}
+#[[ -z "$NERD" ]] && NERD=1 # default to use nerdfonts
 
 
 

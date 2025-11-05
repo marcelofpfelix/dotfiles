@@ -1,0 +1,64 @@
+#!/bin/bash
+
+################################################################################
+#                                 FILE INFO
+# this script downloads and installs packages
+################################################################################
+
+set -Euo pipefail
+
+# Exit if not running as root
+#if [ "$EUID" -ne 0 ]; then
+#    echo "Please run as root"
+#    exit 1
+#fi
+
+  # change to local directory
+cd "$(dirname $0)"
+# shellcheck source=.../default/lib/lib_utils.sh
+. ../lib/lib_utils.sh
+
+LOG_LEVEL=3
+
+CLI="""
+use: pkg
+long: |
+  manage manual packages installations
+commands:
+  - use: list
+    short: list packages available and their status
+    aliases:
+      - l
+    flags:
+      - use: test
+        short: list packages available and their status
+        alias: l
+        type: string
+"""
+. ../lib/lib_cli.sh
+
+
+pkg() {
+    help
+}
+
+pkg_list() {
+    echo list
+    log ERRO "test list"
+    # no subcommands, running the function
+    repo_url="${ARGS[1]}"
+    # print the result
+    log INFO "Running:" "${CMDS[@]}" "-r ${repo_url}" n:b:c:b:c
+    log ERRO "Running:" "${CMDS[@]}" "-r ${repo_url}" n:b:c:b:c
+}
+
+# run the command selected
+[[ -n "$CMD" ]] && "$CMD"
+# install: installs a package.
+# uses a config to define how to download the package
+# update: goes over packages and updates them if needed
+# list: lists all packages and their status
+
+# define a scructure to define the package
+# alias
+#
