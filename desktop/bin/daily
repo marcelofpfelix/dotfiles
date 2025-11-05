@@ -8,150 +8,117 @@
 
 set -Eeu -o pipefail
 
+  # change to local directory
+cd "$(dirname $0)"
+  # load lib
+# shellcheck source=.../default/lib/lib_utils.sh
+. ../lib/lib_utils.sh
+. ../lib/lib_status.sh
+
 # Configuration
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_NAME="daily"
 MARKER_DIR="/tmp"
 TODAY=$(date +%Y-%m-%d)
 MARKER_FILE="${MARKER_DIR}/daily-run-${TODAY}"
-STATUS_FILE="/tmp/script-status.ini"
-FAILED_SCRIPTS=()
 
 # Daily tasks to run (add your scripts here)
+# Format: "script-name" - script must be in same directory as this script
 DAILY_SCRIPTS=(
     # "daily-backup"
     # "daily-cleanup"
     # "daily-sync"
 )
 
-# Function to log messages
+# Commit message for git operations
+COMMIT_MSG="auto-update"
+
+# Log message helper
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >&2
 }
 
-# Function to update status file for monitoring
-update_status() {
-    local exit_code="$1"
-    local message="$2"
-    local status_line="${SCRIPT_NAME}: ${exit_code} ${message}"
-
-    # Use flock for thread-safe file operations
-    (
-        flock -x 200
-
-        # Create file if it doesn't exist
-        touch "$STATUS_FILE"
-
-        # Check if line exists
-        if grep -q "^${SCRIPT_NAME}:" "$STATUS_FILE" 2>/dev/null; then
-            # Update existing line
-            sed -i "s|^${SCRIPT_NAME}:.*|${status_line}|" "$STATUS_FILE"
-        else
-            # Append new line
-            echo "$status_line" >> "$STATUS_FILE"
-        fi
-    ) 200>"${STATUS_FILE}.lock"
-}
-
-# Function to check if already run today
+# Check if already run today
 check_already_run() {
     if [ -f "$MARKER_FILE" ]; then
-        log "ERROR: Daily script already executed today ($(date +%Y-%m-%d))"
-        log "Marker file exists: $MARKER_FILE"
+        log "ERROR: Already executed today (${TODAY})"
         update_status 1 "Already executed today"
         exit 1
     fi
 }
 
-# Function to create marker file
-create_marker() {
-    touch "$MARKER_FILE"
-    log "Created marker file: $MARKER_FILE"
-}
-
-# Function to clean old marker files
+# Clean up old marker files (older than 7 days)
 cleanup_old_markers() {
     find "$MARKER_DIR" -name "daily-run-*" -type f -mtime +7 -delete 2>/dev/null || true
 }
 
-# Function to run a single script
+# Run a single daily script
 run_script() {
     local script="$1"
     local script_path="${SCRIPT_DIR}/${script}"
 
+    # Validate script exists and is executable
     if [ ! -f "$script_path" ]; then
         log "WARNING: Script not found: $script_path"
-        FAILED_SCRIPTS+=("$script (not found)")
         return 1
     fi
-
     if [ ! -x "$script_path" ]; then
         log "WARNING: Script not executable: $script_path"
-        FAILED_SCRIPTS+=("$script (not executable)")
         return 1
     fi
 
+    # Execute script
     log "Running: $script"
     if "$script_path"; then
         log "SUCCESS: $script"
         return 0
     else
-        local exit_code=$?
-        log "FAILED: $script (exit code: $exit_code)"
-        FAILED_SCRIPTS+=("$script (exit $exit_code)")
+        log "FAILED: $script (exit code: $?)"
         return 1
     fi
 }
 
 # Main execution
 main() {
-    log "Starting daily maintenance script"
+    log "Starting daily maintenance"
 
     # Check if already run today
     check_already_run
 
-    # Create marker file immediately to prevent concurrent runs
-    create_marker
+    # Create marker file to prevent concurrent runs
+    touch "$MARKER_FILE"
+    log "Created marker: $MARKER_FILE"
 
-    # Clean up old marker files
+    # Clean up old markers
     cleanup_old_markers
 
-    # Check if there are any scripts to run
+    # Handle empty script list
     if [ ${#DAILY_SCRIPTS[@]} -eq 0 ]; then
         log "WARNING: No daily scripts configured"
-        log "Edit $0 and add scripts to DAILY_SCRIPTS array"
         update_status 0 "OK (no scripts configured)"
         exit 0
     fi
 
     # Run all configured scripts
+    local failed_scripts=()
     for script in "${DAILY_SCRIPTS[@]}"; do
-        # Skip empty entries
+        # Skip empty entries and comments
         [ -z "$script" ] && continue
-
-        # Skip comments
         [[ "$script" =~ ^#.* ]] && continue
 
-        # Run script and continue even on failure
-        run_script "$script" || true
+        # Run script and track failures
+        run_script "$script" || failed_scripts+=("$script")
     done
 
     # Report results
-    if [ ${#FAILED_SCRIPTS[@]} -gt 0 ]; then
-        log "ERROR: ${#FAILED_SCRIPTS[@]} script(s) failed:"
-        local error_summary="${#FAILED_SCRIPTS[@]} script(s) failed:"
-        for failed in "${FAILED_SCRIPTS[@]}"; do
-            log "  - $failed"
-            error_summary="${error_summary} ${failed};"
-        done
-        update_status 1 "$error_summary"
+    if [ ${#failed_scripts[@]} -gt 0 ]; then
+        log "ERROR: ${#failed_scripts[@]} script(s) failed: ${failed_scripts[*]}"
+        update_status 1 "Failed: ${failed_scripts[*]}"
         exit 1
     else
-        log "SUCCESS: All daily scripts completed successfully"
+        log "SUCCESS: All scripts completed"
         update_status 0 "OK"
         exit 0
     fi
 }
 
-# Run main function
 main

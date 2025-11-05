@@ -3,189 +3,107 @@
 ################################################################################
 #                                 FILE INFO
 # Sync git repositories (supports both worktree and normal repos)
-# Format: "path" or "path:branch" (use "path:default" to explicitly use default branch)
+#
+# Configuration format:
+#   "path"          - sync using auto-detected default branch
+#   "path:branch"   - sync using specified branch
+#   "path:default"  - explicitly use auto-detected default branch
 ################################################################################
 
 set -Eeu -o pipefail
 
-# Repository configuration
-# Format: "path" or "path:branch"
-# - "path" uses the default branch
-# - "path:branch" uses the specified branch
-# - "path:default" explicitly uses the default branch
+  # change to local directory
+cd "$(dirname $0)"
+  # load lib
+# shellcheck source=.../default/lib/lib_utils.sh
+. ../lib/lib_utils.sh
+. ../lib/lib_status.sh
+. ../lib/lib_git.sh
+
+# Configuration
+SCRIPT_NAME="git-sync"
+COMMIT_MSG="auto-update"
+
+# Repositories to sync
 REPOS=(
     "$HOME/gwt/marcelofpfelix/dotfiles/main"
     "$HOME/gwt/marcelofpfelix/homework/main"
 )
 
-# Commit message
-COMMIT_MSG="auto-update"
-
-# Script name for status file
-SCRIPT_NAME="git-sync"
-STATUS_FILE="/tmp/script-status.ini"
-
-# Function to log messages
+# Log message helper
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
 }
 
-# Function to update status file
-update_status() {
-    local exit_code="$1"
-    local message="$2"
-    local status_line="${SCRIPT_NAME}: ${exit_code} ${message}"
-
-    (
-        flock -x 200
-        touch "$STATUS_FILE"
-        if grep -q "^${SCRIPT_NAME}:" "$STATUS_FILE" 2>/dev/null; then
-            sed -i "s|^${SCRIPT_NAME}:.*|${status_line}|" "$STATUS_FILE"
-        else
-            echo "$status_line" >> "$STATUS_FILE"
-        fi
-    ) 200>"${STATUS_FILE}.lock"
-}
-
-# Function to detect if repository is a worktree
-is_worktree() {
-    if [ -f ".git" ]; then
-        # Check if .git is a file (not directory) and contains gitdir reference
-        grep -q "^gitdir:" .git 2>/dev/null
-        return $?
-    fi
-    return 1
-}
-
-# Function to get .bare directory path for worktree
-get_bare_dir() {
-    if [ -f ".git" ]; then
-        # Extract the gitdir path and find the .bare directory
-        local gitdir=$(grep "^gitdir:" .git | cut -d' ' -f2)
-        # The gitdir points to .bare/worktrees/branch, so we need to go up two levels
-        local bare_dir=$(dirname $(dirname "$gitdir"))
-        echo "$bare_dir"
-    fi
-}
-
-# Function to get default branch for worktree
-get_worktree_default_branch() {
-    local bare_dir=$(get_bare_dir)
-    if [ -n "$bare_dir" ] && [ -f "$bare_dir/HEAD" ]; then
-        local ref=$(cat "$bare_dir/HEAD")
-        echo "${ref##*/}"
-    else
-        echo "main"
-    fi
-}
-
-# Function to get default branch for normal repo
-get_normal_default_branch() {
-    # Try to get from remote HEAD
-    local branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-    if [ -n "$branch" ]; then
-        echo "$branch"
-        return
-    fi
-
-    # Fallback: query remote
-    branch=$(git remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')
-    if [ -n "$branch" ]; then
-        echo "$branch"
-        return
-    fi
-
-    # Last resort
-    echo "main"
-}
-
-# Function to get current branch
-get_current_branch() {
-    git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ""
-}
-
-# Function to sync a repository
+# Sync a single repository
 sync_repo() {
     local repo_path="$1"
     local configured_branch="$2"
 
+    # Validate repository exists
     if [ ! -d "$repo_path" ]; then
-        log "ERROR: Repository $repo_path does not exist"
+        log "ERROR: Repository not found: $repo_path"
         return 1
     fi
 
     cd "$repo_path" || {
-        log "ERROR: Failed to change directory to $repo_path"
+        log "ERROR: Cannot access: $repo_path"
         return 1
     }
 
-    log "Processing: $repo_path"
-
-    # Detect repository type and get default branch
-    local default_branch
-    if is_worktree; then
-        log "  Type: Worktree"
-        default_branch=$(get_worktree_default_branch)
-    else
-        log "  Type: Normal"
-        default_branch=$(get_normal_default_branch)
-    fi
+    log "Syncing: $repo_path"
 
     # Determine target branch
     local target_branch
     if [ -z "$configured_branch" ] || [ "$configured_branch" = "default" ]; then
-        target_branch="$default_branch"
+        target_branch=$(get_default_branch)
         log "  Branch: $target_branch (default)"
     else
         target_branch="$configured_branch"
         log "  Branch: $target_branch (configured)"
     fi
 
-    # Get current branch
+    # Verify we're on the target branch
     local current_branch=$(get_current_branch)
-
-    # Check if we're on the target branch
     if [ "$current_branch" != "$target_branch" ]; then
-        log "  WARNING: Current branch ($current_branch) differs from target ($target_branch)"
-        log "  Skipping repository"
+        log "  WARNING: On '$current_branch', expected '$target_branch' - skipping"
         return 0
     fi
 
-    # Fetch updates
-    log "  Fetching from origin..."
-    if ! git fetch origin "$target_branch" 2>&1; then
-        log "  ERROR: Failed to fetch from origin"
+    # Sync repository
+    log "  Fetching updates..."
+    git fetch origin "$target_branch" 2>&1 || {
+        log "  ERROR: Fetch failed"
         return 1
-    fi
+    }
 
-    # Pull changes
     log "  Pulling changes..."
-    if ! git pull origin "$target_branch" 2>&1; then
-        log "  ERROR: Failed to pull changes"
+    git pull origin "$target_branch" 2>&1 || {
+        log "  ERROR: Pull failed"
         return 1
-    fi
+    }
 
     # Stage all changes
     git add .
 
-    # Check if there are any changes to commit
-    if git diff-index --quiet HEAD -- 2>/dev/null; then
-        log "  No changes to commit"
-    else
+    # Commit and push if there are changes
+    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
         log "  Committing changes..."
-        if ! git commit -m "$COMMIT_MSG" 2>&1; then
-            log "  ERROR: Failed to commit changes"
+        git commit -m "$COMMIT_MSG" 2>&1 || {
+            log "  ERROR: Commit failed"
             return 1
-        fi
+        }
 
         log "  Pushing changes..."
-        if ! git push origin "$target_branch" 2>&1; then
-            log "  ERROR: Failed to push changes"
+        git push origin "$target_branch" 2>&1 || {
+            log "  ERROR: Push failed"
             return 1
-        fi
+        }
+        log "  ✓ Synced with changes"
+    else
+        log "  ✓ Already up to date"
     fi
 
-    log "  ✓ Success"
     return 0
 }
 
@@ -194,24 +112,24 @@ main() {
     log "Starting git-sync"
 
     local failed_repos=()
-    local total_repos=0
-    local success_count=0
+    local total=0
+    local success=0
 
+    # Process each repository
     for repo_config in "${REPOS[@]}"; do
-        total_repos=$((total_repos + 1))
+        total=$((total + 1))
 
-        # Parse repo path and branch
+        # Parse configuration: "path" or "path:branch"
         local repo_path="${repo_config%%:*}"
         local branch=""
-        if [[ "$repo_config" == *:* ]]; then
-            branch="${repo_config#*:}"
-        fi
+        [[ "$repo_config" == *:* ]] && branch="${repo_config#*:}"
 
         # Expand variables in path
         repo_path=$(eval echo "$repo_path")
 
+        # Sync repository
         if sync_repo "$repo_path" "$branch"; then
-            success_count=$((success_count + 1))
+            success=$((success + 1))
         else
             failed_repos+=("$repo_path")
         fi
@@ -220,13 +138,10 @@ main() {
     done
 
     # Report results
-    log "Processed $success_count/$total_repos repositories successfully"
+    log "Completed: $success/$total repositories"
 
     if [ ${#failed_repos[@]} -gt 0 ]; then
-        log "Failed repositories:"
-        for repo in "${failed_repos[@]}"; do
-            log "  - $repo"
-        done
+        log "Failed: ${failed_repos[*]}"
         update_status 1 "Failed: ${failed_repos[*]}"
         exit 1
     else
@@ -236,5 +151,4 @@ main() {
     fi
 }
 
-# Run main function
 main
