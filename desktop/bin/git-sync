@@ -10,14 +10,12 @@
 #   "path:default"  - explicitly use auto-detected default branch
 ################################################################################
 
-#set -Eeu -o pipefail
-
+set -Eeuo pipefail
 
 cd "$(dirname "$0")" || exit 1
 LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
 . "$LIBS_DIR/lib_utils.sh"
 
-log NOTE Hello
 # Configuration
 SCRIPT_NAME="git-sync"
 COMMIT_MSG="auto-update"
@@ -35,12 +33,12 @@ sync_repo() {
 
     # Validate repository exists
     if [ ! -d "$repo_path" ]; then
-        log INFO "ERROR: Repository not found: $repo_path"
+        log ERRO " Repository not found: $repo_path"
         return 1
     fi
 
     cd "$repo_path" || {
-        log INFO "ERROR: Cannot access: $repo_path"
+        log ERRO "Cannot access: $repo_path"
         return 1
     }
 
@@ -50,29 +48,29 @@ sync_repo() {
     local target_branch
     if [ -z "$configured_branch" ] || [ "$configured_branch" = "default" ]; then
         target_branch=$(get_default_branch)
-        log INFO "  Branch: $target_branch (default)"
+        log INFO "Branch: $target_branch (default)"
     else
         target_branch="$configured_branch"
-        log INFO "  Branch: $target_branch (configured)"
+        log INFO "Branch: $target_branch (configured)"
     fi
 
     # Verify we're on the target branch
     local current_branch=$(get_current_branch)
     if [ "$current_branch" != "$target_branch" ]; then
-        log INFO "  WARNING: On '$current_branch', expected '$target_branch' - skipping"
+        log WARN "On '$current_branch', expected '$target_branch' - skipping"
         return 0
     fi
 
     # Sync repository
     log INFO "  Fetching updates..."
     git fetch origin "$target_branch" 2>&1 || {
-        log INFO "  ERROR: Fetch failed"
+        log ERRO "Fetch failed"
         return 1
     }
 
     log INFO "  Pulling changes..."
     git pull origin "$target_branch" 2>&1 || {
-        log INFO "  ERROR: Pull failed"
+        log ERRO "Pull failed"
         return 1
     }
 
@@ -102,11 +100,7 @@ sync_repo() {
 
 # Main execution
 main() {
-    echo x1x
-    log note "ansib"
-    log INFO "Starting git-sync"
 
-    echo yy
     local failed_repos=()
     local total=0
     local success=0
@@ -137,7 +131,7 @@ main() {
     log INFO "Completed: $success/$total repositories"
 
     if [ ${#failed_repos[@]} -gt 0 ]; then
-        log INFO "Failed: ${failed_repos[*]}"
+        log ERRO "${failed_repos[*]}"
         update_status 1 "Failed: ${failed_repos[*]}"
         exit 1
     else

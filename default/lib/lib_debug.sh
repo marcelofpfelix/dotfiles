@@ -171,9 +171,12 @@ function log() {
     local level
     local cid
     local tag
-    read cid level tag < <(log_level $1)
+    local level
+    # || true to be compatible with set -e
+    level=$(log_level "$1") || true
+    read cid level tag <<< "$level"
 
-    #print key
+  #print key
     println "\t$tag:\t" $cid,$level,,,0
 
     shift
@@ -200,11 +203,25 @@ function log() {
 # - file, line number and function name (global config to enable)
 
 
+# ##############################################################################
+
+# Enhanced error handler
+error_handler() {
+  local exit_code=$?
+  local line_no=${BASH_LINENO[0]}
+  local func=${FUNCNAME[1]:-MAIN}
+  local src_file=${BASH_SOURCE[1]:-$0}
+
+  echo "❌ Error in ${src_file}:${line_no} (function: ${func})"
+  echo "   Exit code: ${exit_code}"
+  echo "   Command: ${BASH_COMMAND}"
+}
+
+trap error_handler ERR
 
 
 
-
-
+# ##############################################################################
 
 
 
