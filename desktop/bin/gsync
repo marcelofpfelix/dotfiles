@@ -15,16 +15,11 @@ set -Eeuo pipefail
 cd "$(dirname "$0")" || exit 1
 LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
 . "$LIBS_DIR/lib_utils.sh"
+. "$LIBS_DIR/lib_gsync.sh"
 
 # Configuration
-SCRIPT_NAME="git-sync"
 COMMIT_MSG="auto-update"
 
-# Repositories to sync
-REPOS=(
-    "$HOME/gwt/marcelofpfelix/dotfiles/main"
-    "$HOME/gwt/marcelofpfelix/homework/main"
-)
 
 # Sync a single repository
 sync_repo() {

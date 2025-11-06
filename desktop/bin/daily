@@ -6,14 +6,13 @@
 # Runs once per day, calling all configured daily tasks
 ################################################################################
 
-set -Eeu -o pipefail
+set -Eeuo pipefail
 
 cd "$(dirname "$0")" || exit 1
 LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
 . "$LIBS_DIR/lib_utils.sh"
 
 # Configuration
-SCRIPT_NAME="daily"
 MARKER_DIR="/tmp"
 TODAY=$(date +%Y-%m-%d)
 MARKER_FILE="${MARKER_DIR}/daily-run-${TODAY}"
