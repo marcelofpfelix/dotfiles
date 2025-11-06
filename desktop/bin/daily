@@ -8,12 +8,9 @@
 
 set -Eeu -o pipefail
 
-  # change to local directory
-cd "$(dirname $0)"
-  # load lib
-# shellcheck source=.../default/lib/lib_utils.sh
-. ../lib/lib_utils.sh
-. ../lib/lib_status.sh
+cd "$(dirname "$0")" || exit 1
+LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+. "$LIBS_DIR/lib_utils.sh"
 
 # Configuration
 SCRIPT_NAME="daily"

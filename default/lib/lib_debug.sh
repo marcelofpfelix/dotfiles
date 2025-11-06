@@ -6,8 +6,9 @@
 # ##############################################################################
 
 # include libraries
-. ../lib/lib_colors.sh
-. ../lib/lib_icon.sh
+LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+. "$LIBS_DIR/lib_colors.sh"
+. "$LIBS_DIR/lib_icon.sh"
 
 
 # ##############################################################################

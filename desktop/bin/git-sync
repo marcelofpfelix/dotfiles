@@ -10,16 +10,14 @@
 #   "path:default"  - explicitly use auto-detected default branch
 ################################################################################
 
-set -Eeu -o pipefail
+#set -Eeu -o pipefail
 
-  # change to local directory
-cd "$(dirname $0)"
-  # load lib
-# shellcheck source=.../default/lib/lib_utils.sh
-. ../lib/lib_utils.sh
-. ../lib/lib_status.sh
-. ../lib/lib_git.sh
 
+cd "$(dirname "$0")" || exit 1
+LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+. "$LIBS_DIR/lib_utils.sh"
+
+log NOTE Hello
 # Configuration
 SCRIPT_NAME="git-sync"
 COMMIT_MSG="auto-update"
@@ -30,11 +28,6 @@ REPOS=(
     "$HOME/gwt/marcelofpfelix/homework/main"
 )
 
-# Log message helper
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
-}
-
 # Sync a single repository
 sync_repo() {
     local repo_path="$1"
@@ -42,44 +35,44 @@ sync_repo() {
 
     # Validate repository exists
     if [ ! -d "$repo_path" ]; then
-        log "ERROR: Repository not found: $repo_path"
+        log INFO "ERROR: Repository not found: $repo_path"
         return 1
     fi
 
     cd "$repo_path" || {
-        log "ERROR: Cannot access: $repo_path"
+        log INFO "ERROR: Cannot access: $repo_path"
         return 1
     }
 
-    log "Syncing: $repo_path"
+    log INFO "Syncing: $repo_path"
 
     # Determine target branch
     local target_branch
     if [ -z "$configured_branch" ] || [ "$configured_branch" = "default" ]; then
         target_branch=$(get_default_branch)
-        log "  Branch: $target_branch (default)"
+        log INFO "  Branch: $target_branch (default)"
     else
         target_branch="$configured_branch"
-        log "  Branch: $target_branch (configured)"
+        log INFO "  Branch: $target_branch (configured)"
     fi
 
     # Verify we're on the target branch
     local current_branch=$(get_current_branch)
     if [ "$current_branch" != "$target_branch" ]; then
-        log "  WARNING: On '$current_branch', expected '$target_branch' - skipping"
+        log INFO "  WARNING: On '$current_branch', expected '$target_branch' - skipping"
         return 0
     fi
 
     # Sync repository
-    log "  Fetching updates..."
+    log INFO "  Fetching updates..."
     git fetch origin "$target_branch" 2>&1 || {
-        log "  ERROR: Fetch failed"
+        log INFO "  ERROR: Fetch failed"
         return 1
     }
 
-    log "  Pulling changes..."
+    log INFO "  Pulling changes..."
     git pull origin "$target_branch" 2>&1 || {
-        log "  ERROR: Pull failed"
+        log INFO "  ERROR: Pull failed"
         return 1
     }
 
@@ -88,20 +81,20 @@ sync_repo() {
 
     # Commit and push if there are changes
     if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-        log "  Committing changes..."
+        log INFO "  Committing changes..."
         git commit -m "$COMMIT_MSG" 2>&1 || {
-            log "  ERROR: Commit failed"
+            log INFO "  ERROR: Commit failed"
             return 1
         }
 
-        log "  Pushing changes..."
+        log INFO "  Pushing changes..."
         git push origin "$target_branch" 2>&1 || {
-            log "  ERROR: Push failed"
+            log INFO "  ERROR: Push failed"
             return 1
         }
-        log "  ✓ Synced with changes"
+        log INFO "  ✓ Synced with changes"
     else
-        log "  ✓ Already up to date"
+        log INFO "  ✓ Already up to date"
     fi
 
     return 0
@@ -109,8 +102,11 @@ sync_repo() {
 
 # Main execution
 main() {
-    log "Starting git-sync"
+    echo x1x
+    log note "ansib"
+    log INFO "Starting git-sync"
 
+    echo yy
     local failed_repos=()
     local total=0
     local success=0
@@ -138,14 +134,14 @@ main() {
     done
 
     # Report results
-    log "Completed: $success/$total repositories"
+    log INFO "Completed: $success/$total repositories"
 
     if [ ${#failed_repos[@]} -gt 0 ]; then
-        log "Failed: ${failed_repos[*]}"
+        log INFO "Failed: ${failed_repos[*]}"
         update_status 1 "Failed: ${failed_repos[*]}"
         exit 1
     else
-        log "All repositories synced successfully"
+        log INFO "All repositories synced successfully"
         update_status 0 "OK"
         exit 0
     fi

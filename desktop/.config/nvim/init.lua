@@ -29,4 +29,3 @@ require('pluginss.zenmode')
 require('pluginss.neogit')
 require('pluginss.codesnap')
 require('pluginss.harpoon')
-

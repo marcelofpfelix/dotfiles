@@ -84,4 +84,3 @@ vim.keymap.set("n", "<Leader>sL", function()
     sorter = require("telescope.sorters").empty(), -- keep fd order
   })
 end, { desc = "Files sorted by modified time (newest first)" })
-

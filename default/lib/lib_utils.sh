@@ -3,10 +3,12 @@
 # lib with utility functions
 ################################################################################
 
-
-# include libraries
-. ../lib/lib_debug.sh
-. ../lib/lib_cli.sh
+# Load libraries
+LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+. "$LIBS_DIR/lib_debug.sh"
+. "$LIBS_DIR/lib_cli.sh"
+. "$LIBS_DIR/lib_git.sh"
+. "$LIBS_DIR/lib_status.sh"
 
 
 # ##############################################################################
