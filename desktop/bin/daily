@@ -19,10 +19,10 @@ MARKER_FILE="${MARKER_DIR}/daily-run-${TODAY}"
 
 # Daily tasks to run (add your scripts here)
 # Format: "script-name" - script must be in same directory as this script
+SCRIPT_DIR="$HOME/bin"
 DAILY_SCRIPTS=(
-    # "daily-backup"
-    # "daily-cleanup"
-    # "daily-sync"
+    gsync
+    wiki
 )
 
 # Commit message for git operations

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+# Directories
+DAILY_DIR="${HOME}/git/marcelofpfelix/wiki/resources/daily"
+ARCHIVE_DIR="${HOME}/git/marcelofpfelix/wiki/resources/archive/daily"
+
+# Ensure directories exist
+mkdir -p "$DAILY_DIR" "$ARCHIVE_DIR"
+
+# Today's file
+TODAY=$(date +%Y-%m-%d)
+TODAY_FILE="${DAILY_DIR}/${TODAY}.md"
+
+# Create today's file if not exists
+if [ ! -f "$TODAY_FILE" ]; then
+    echo "# Daily Notes for ${TODAY}" > "$TODAY_FILE"
+fi
+
+# Move files older than 15 days to archive
+find "$DAILY_DIR" -maxdepth 1 -type f -name "*.md" | while read -r file; do
+    filename=$(basename "$file" .md)
+    # Validate filename format YYYY-MM-DD
+    if [[ "$filename" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        file_date=$(date -d "$filename" +%s 2>/dev/null)
+        cutoff_date=$(date -d "15 days ago" +%s)
+
+        if [ "$file_date" -le "$cutoff_date" ]; then
+            mv "$file" "$ARCHIVE_DIR/"
+        fi
+    fi
+done
