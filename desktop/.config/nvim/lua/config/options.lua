@@ -60,5 +60,5 @@ vim.opt.updatetime = 200                                -- CursorHold/Swap write
 vim.opt.virtualedit = "block"                           -- free-cursor in visual block mode
 vim.opt.wildmode = "longest:full,full"                  -- command-line completion behavior
 vim.opt.winminwidth = 5                                 -- minimum window width
-vim.opt.wrap = false                                    -- no soft wrapping
+vim.opt.wrap = true                                     -- no soft wrapping
 -- vim.opt.swapfile = false

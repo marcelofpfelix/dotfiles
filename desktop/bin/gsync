@@ -75,16 +75,21 @@ sync_repo() {
     # Commit and push if there are changes
     if ! git diff-index --quiet HEAD -- 2>/dev/null; then
         log INFO "  Committing changes..."
-        git commit -m "$COMMIT_MSG" 2>&1 || {
-            log INFO "  ERROR: Commit failed"
+        local commit_output
+        if ! commit_output=$(git commit -m "$COMMIT_MSG" 2>&1); then
+            log ERRO "  Commit failed"
+            log DEBG "$commit_output"
+            git reset HEAD . 2>/dev/null || true  # Cleanup: unstage changes
             return 1
-        }
+        fi
 
         log INFO "  Pushing changes..."
-        git push origin "$target_branch" 2>&1 || {
-            log INFO "  ERROR: Push failed"
+        local push_output
+        if ! push_output=$(git push origin "$target_branch" 2>&1); then
+            log ERRO "  Push failed"
+            log DEBG "$push_output"
             return 1
-        }
+        fi
         log INFO "  ✓ Synced with changes"
     else
         log INFO "  ✓ Already up to date"
