@@ -70,7 +70,7 @@ sync_repo() {
 
     # run pre-commit
     if [ -f ".pre-commit-config.yaml" ]; then
-        uvx --python pre-commit run --show-diff-on-failure --color=always --all-files
+        uvx pre-commit run --show-diff-on-failure --color=always --all-files
     fi
     # Stage all changes
     git add .

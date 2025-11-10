@@ -33,4 +33,3 @@ if [ "$has_errors" -eq 1 ]; then
 else
     println
 fi
-
