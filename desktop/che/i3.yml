@@ -32,12 +32,12 @@ layout:
 
 workspaces:
     $mod+0-9: switch to another workspace
-    $mod+Shift+0-9:	move a window to another workspace
+    $mod+Shift+0-9: move a window to another workspace
     $mod+Ctrl+>: move workspace to another monitor
 
 apps:
-    $mod+d:	open application launcher (dmenu)
-    $mod+Shift+q:	kill a window
+    $mod+d: open application launcher (dmenu)
+    $mod+Shift+q: kill a window
 
 exit:
     $mod+Shift+c: reload the configuration file
