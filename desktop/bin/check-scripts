@@ -5,12 +5,13 @@
 # Example script to parse and monitor /tmp/script-status.ini
 ################################################################################
 
-set -Eeuo pipefail
+#set -Eeuo pipefail
 
 cd "$(dirname "$0")" || exit 1
 LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
 . "$LIBS_DIR/lib_utils.sh"
 
+LEMONBAR=1
 STATUS_FILE="/tmp/script-status.ini"
 
 if [ ! -f "$STATUS_FILE" ]; then
@@ -21,30 +22,15 @@ fi
 has_errors=0
 
 while IFS=': ' read -r script_name exit_code message; do
-    if [ "$exit_code" = "0" ]; then
-        echo "✓ $script_name: $message"
-
-    else
-        echo "✗ $script_name: (exit $exit_code) $message"
+    if [ "$exit_code" != "0" ]; then
         has_errors=1
     fi
 done < "$STATUS_FILE"
 
-echo
-if [ $has_errors -eq 1 ]; then
-    echo "Status: ERRORS DETECTED"
-    exit 1
-else
-    echo "Status: ALL OK"
-    exit 0
-fi
-
 if [ "$has_errors" -eq 1 ]; then
-    println
+    println "$(icon erro)" r
 
 else
-    # safe is open
-    println "$(icon unlock)" y
-
+    println
 fi
 

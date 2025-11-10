@@ -20,7 +20,6 @@ LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
 # Configuration
 COMMIT_MSG="auto-update"
 
-
 # Sync a single repository
 sync_repo() {
     local repo_path="$1"

@@ -13,7 +13,7 @@ STATUS_FILE="${STATUS_FILE:-/tmp/script-status.ini}"
 update_status() {
     local exit_code="$1"
     local message="$2"
-    local script_name="${3:-${SCRIPT_NAME:-unknown}}"
+    local script_name="$(basename "$0")"  # "${3:-${SCRIPT_NAME:-$filename}}"
     local status_line="${script_name}: ${exit_code} ${message}"
 
     # Use flock for thread-safe file operations

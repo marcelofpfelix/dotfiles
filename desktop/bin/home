@@ -37,17 +37,18 @@ flags:
 . ../lib/lib_cli.sh
 
 
-dotfiles=~/gwt/marcelofpfelix/dotfiles/main
-homework=~/gwt/marcelofpfelix/homework/main
+dotfiles=~/git/marcelofpfelix/dotfiles
+homework=~/git/marcelofpfelix/homework
+workdir=~/git/team-telnyx/tel-proxy/home
 
 
 local_copy() {
-
     # copy the dotfiles to the local directory
     cp -rT ${dotfiles}/default  ~
     cp -rT ${dotfiles}/desktop  ~
-    cp -rT ${homework}/work     ~
     cp -rT ${homework}/workdesk ~
+    cp -rT ${workdir}/laptop       ~
+    cp -rT ${workdir}/tanker       ~
 
     # ignore jinja2 templates
     rm ~/.ssh/config.d/work.j2

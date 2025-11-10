@@ -121,6 +121,7 @@ function println() {
     local tabs=${settings[2]:-0}
     local split=${settings[3]:-' '}
     local newline=${settings[4]:-1}
+    local msg=$1 # "${1:-message_required}"
 
     # if the verbose level is above the current level, then return
     if (( $level > $LOG_LEVEL )); then
@@ -132,7 +133,7 @@ function println() {
     done
 
     # print the first string
-    printc "$1" ${colors[0]}
+    printc "$msg" ${colors[0]}
     # loop through the strings
     for ((i = 2; i < $#; i++ )); do
         printc "${split}${!i}" ${colors[i-1]}
