@@ -1,11 +1,11 @@
 ################################################################################
 #                                 FILE INFO
-# Library for managing script status reporting to /tmp/script-status.ini
+# Library for managing script status reporting
 # Used for monitoring script execution status across multiple scripts
 ################################################################################
 
 # Status file location
-STATUS_FILE="${STATUS_FILE:-/tmp/script-status.ini}"
+STATUS_FILE="${STATUS_FILE:-$HOME/script-status.ini}"
 
 # Update status file for monitoring
 # Usage: update_status <exit_code> <message> [script_name]

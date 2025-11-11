@@ -12,7 +12,7 @@ LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
 . "$LIBS_DIR/lib_utils.sh"
 
 LEMONBAR=1
-STATUS_FILE="/tmp/script-status.ini"
+STATUS_FILE="$HOME/script-status.ini"
 
 if [ ! -f "$STATUS_FILE" ]; then
     log ERRO "No status file found at $STATUS_FILE"
