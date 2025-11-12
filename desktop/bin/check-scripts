@@ -21,11 +21,19 @@ fi
 
 has_errors=0
 
-while IFS=': ' read -r script_name exit_code message; do
-    if [ "$exit_code" != "0" ]; then
-        has_errors=1
-    fi
-done < "$STATUS_FILE"
+# Check if status file has today's date
+today_date="# $(date +%Y%m%d)"
+first_line=$(head -n 1 "$STATUS_FILE")
+
+if [ "$first_line" != "$today_date" ]; then
+    has_errors=1
+else
+    while IFS=': ' read -r script_name exit_code message; do
+        if [ "$exit_code" != "0" ]; then
+            has_errors=1
+        fi
+    done < "$STATUS_FILE"
+fi
 
 if [ "$has_errors" -eq 1 ]; then
     println "$(icon erro)" r
