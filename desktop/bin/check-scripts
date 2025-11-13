@@ -29,6 +29,9 @@ if [ "$first_line" != "$today_date" ]; then
     has_errors=1
 else
     while IFS=': ' read -r script_name exit_code message; do
+        # Skip comment lines
+        [[ "$script_name" =~ ^# ]] && continue
+
         if [ "$exit_code" != "0" ]; then
             has_errors=1
         fi
