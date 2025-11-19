@@ -14,7 +14,7 @@ main() {
     git checkout "$default_branch"
     git fetch
     # pull
-    git pull
+    git pull origin "$default_branch"
     # check if pull was successful
     if [ $? -ne 0 ]; then
         echo "Exiting, no branch created." && exit
