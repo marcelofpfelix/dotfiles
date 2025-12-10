@@ -4,18 +4,23 @@
 # Inserts a blank line between shell prompts
 add_newline = false
 
-# A minimal left prompt
-format = """$directory$character"""
+format = """$fill# $all
+$directory$character"""
+
 palette = "catppuccin_mocha"
 
 # needs https://github.com/akinomyoga/ble.sh
-# move the rest of the prompt to the right
-right_format = """$all"""
+# move the rest of the prompt to the right in the same line as >
+#right_format = """$all"""
 command_timeout = 1000
 
 # Replace the '❯' symbol in the prompt with '➜'
 #[character] # The name of the module we are configuring is 'character'
 #success_symbol = '[➜](bold green)' # The 'success_symbol' segment is being set to '➜' with the color 'bold green'
+
+# force prompt info to show on the right
+[fill]
+symbol = ' '
 
 # Disable the package module, hiding it from the prompt completely
 [package]
