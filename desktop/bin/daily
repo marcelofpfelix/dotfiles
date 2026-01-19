@@ -16,6 +16,7 @@ LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
 MARKER_DIR="/tmp"
 TODAY=$(date +%Y-%m-%d)
 MARKER_FILE="${MARKER_DIR}/daily-run-${TODAY}"
+FORCE_RUN=false
 
 # Daily tasks to run (add your scripts here)
 # Format: "script-name" - script must be in same directory as this script
@@ -36,9 +37,14 @@ log() {
 # Check if already run today
 check_already_run() {
     if [ -f "$MARKER_FILE" ]; then
-        log "ERROR: Already executed today (${TODAY})"
-        update_status 1 "Already executed today"
-        exit 1
+        if [ "$FORCE_RUN" = true ]; then
+            log "Force run: Removing existing marker file"
+            rm -f "$MARKER_FILE"
+        else
+            log "ERROR: Already executed today (${TODAY})"
+            update_status 1 "Already executed today"
+            exit 1
+        fi
     fi
 }
 
@@ -71,6 +77,29 @@ run_script() {
         log "FAILED: $script (exit code: $?)"
         return 1
     fi
+}
+
+# Parse command line arguments
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -f|--force)
+                FORCE_RUN=true
+                shift
+                ;;
+            -h|--help)
+                echo "Usage: $0 [-f|--force] [-h|--help]"
+                echo "  -f, --force    Force run even if already executed today"
+                echo "  -h, --help     Show this help message"
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $1" >&2
+                echo "Use -h or --help for usage information" >&2
+                exit 1
+                ;;
+        esac
+    done
 }
 
 # Main execution
@@ -117,4 +146,6 @@ main() {
     fi
 }
 
+# Parse command line arguments and run main
+parse_args "$@"
 main
