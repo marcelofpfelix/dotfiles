@@ -11,7 +11,6 @@ alias la='ls $LS_OPTIONS -1A'
 alias ll='ls $LS_OPTIONS -lArth'
 alias l='ls $LS_OPTIONS -lArth'
 
-alias ips="ip -c -br -4 a"
 alias digs="dig +short"
 alias ipub="curl ipinfo.io/ip"
 
@@ -64,12 +63,6 @@ export PATH="$PATH:$HOME/bin"
 
 ### utils
 # default interface
-LINK=$(ip r | grep '^default' | grep -oP '(?<=dev\s)\w+' | head -n 1)
 
 
-################################################################################
-# others
-################################################################################
-
-# To use different colors for different file extensions
-eval "$(dircolors)"
+# ##############################################################################

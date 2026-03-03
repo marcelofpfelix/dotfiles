@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Monitor network connections and display those with a queue size over 3,000,000
 

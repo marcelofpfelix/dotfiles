@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Define the list of container names to exclude
 exclude=("debian" "ubuntu")

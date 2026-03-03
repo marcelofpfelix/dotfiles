@@ -29,11 +29,6 @@ unsetopt nomatch
 # https://apple.stackexchange.com/questions/405246/zsh-comment-character
 setopt interactive_comments
 
-# rye
-source "$HOME/.rye/env"
-# Make sure ~/.zfunc is added to fpath, before compinit.
-rye self completion -s zsh > ~/.zfunc/_rye
-
 # Completions.
 autoload -Uz compinit && compinit
 autoload -U +X bashcompinit && bashcompinit
@@ -118,27 +113,30 @@ alias ls='ls $LS_OPTIONS -1'
 alias lg='ll --git-ignore'
 alias groot='cd $(git rev-parse --show-toplevel)'
 
+alias o=openclaw
+alias ou='openclaw tui'
+
+
 # ##############################################################################
 # eval
 # ##############################################################################
 # should be at the end section
 
 
-# pyenv
-eval "$(pyenv init --path)"
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
-#pyenv virtualenvwrapper_lazy
+# uv
+eval "$(uvx --generate-shell-completion zsh)"
 
 # zoxide
-eval "$(/home/marcelof/.local/bin/zoxide init zsh)"
+eval "$(zoxide init zsh)"
 
 # starship
 eval "$(starship init zsh)"
 
 # atuin
-. "$HOME/.atuin/bin/env"
-
+local FOUND_ATUIN=$+commands[atuin]
+if [[ $FOUND_ATUIN -eq 1 ]]; then
+  source <(atuin init zsh)
+fi
 eval "$(atuin init zsh --disable-up-arrow)"
 
 # copilot
