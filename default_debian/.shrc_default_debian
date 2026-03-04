@@ -8,5 +8,3 @@ LINK=$(ip r | grep '^default' | grep -oP '(?<=dev\s)\w+' | head -n 1)
 
 # To use different colors for different file extensions
 eval "$(dircolors)"
-
-
