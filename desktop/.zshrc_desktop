@@ -135,9 +135,9 @@ eval "$(starship init zsh)"
 # atuin
 local FOUND_ATUIN=$+commands[atuin]
 if [[ $FOUND_ATUIN -eq 1 ]]; then
-  source <(atuin init zsh)
+    eval "$(atuin init zsh --disable-up-arrow)"
+    # source <(atuin init zsh)
 fi
-eval "$(atuin init zsh --disable-up-arrow)"
 
 # copilot
 # not working
