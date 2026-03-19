@@ -93,7 +93,7 @@ home() {
     fi
 
     log note "ansible-playbook home.yml -i $inventory -e \"target=$target\" -e \"home_src=$home_src\" $flags" # service=$service
-    ansible-playbook home.yml -i $inventory -e "target=$target -e home_src=$home_src $flags" # " service=$service
+    uv run ansible-playbook home.yml -i $inventory -e "target=$target -e home_src=$home_src $flags" # " service=$service
 
 }
 

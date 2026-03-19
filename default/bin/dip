@@ -5,13 +5,19 @@
 # docker ips
 ################################################################################
 
-main() {
+get_ip() {
+  sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$1"
+}
 
-  sudo docker ps | awk 'NR>1 {print $NF }' | sort | \
-  while read -r did; do
-    printf "%-30s" "$did"
-    sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$did"
-  done
+main() {
+  if [[ -n "$1" ]]; then
+    get_ip "$1"
+  else
+    sudo docker ps | awk 'NR>1 {print $NF }' | sort | \
+    while read -r did; do
+      printf "%-30s %s\n" "$did" "$(get_ip "$did")"
+    done
+  fi
 }
 
 main "$@"
