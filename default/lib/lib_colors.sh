@@ -14,6 +14,7 @@
 
 RICHPY=${RICHPY:=0}
 LEMONBAR=${LEMONBAR:=0}
+NO_COLOR=${NO_COLOR:-}
 
 #[[ -z "$RICHPY" ]] && RICHPY=0 # default richpy format is 0
 #[[ -z "$LEMONBAR" ]] && LEMONBAR=0 # default lemonbar format is 0
@@ -56,6 +57,12 @@ declare -A color16=(
 # Args:
 #     [1]: (str) id of the color
 function color() {
+    # respect NO_COLOR convention (https://no-color.org)
+    if [[ -n "$NO_COLOR" ]]; then
+        printf ''
+        return
+    fi
+
     # colours
     declare -A cid=(
         ['k']='0m'      # Black
@@ -250,6 +257,18 @@ On_IPurple='\033[0;105m'  # Purple
 On_ICyan='\033[0;106m'    # Cyan
 On_IWhite='\033[0;107m'   # White
 
+# respect NO_COLOR convention (https://no-color.org)
+if [[ -n "$NO_COLOR" ]]; then
+    nocolor='' bold=''
+    Black='' Red='' Green='' Yellow='' Blue='' Purple='' Cyan='' White=''
+    BBlack='' BRed='' BGreen='' BYellow='' BBlue='' BPurple='' BCyan='' BWhite=''
+    UBlack='' URed='' UGreen='' UYellow='' UBlue='' UPurple='' UCyan='' UWhite=''
+    On_Black='' On_Red='' On_Green='' On_Yellow='' On_Blue='' On_Purple='' On_Cyan='' On_White=''
+    IBlack='' IRed='' IGreen='' IYellow='' IBlue='' IPurple='' ICyan='' IWhite=''
+    BIBlack='' BIRed='' BIGreen='' BIYellow='' BIBlue='' BIPurple='' BICyan='' BIWhite=''
+    On_IBlack='' On_IRed='' On_IGreen='' On_IYellow='' On_IBlue='' On_IPurple='' On_ICyan='' On_IWhite=''
+fi
+
 declare -A COLOR=(
     ['n']='\033[0m'         # No Style
     ['bn']='\033[1m'        # Bold
@@ -405,6 +424,11 @@ declare -A RPCOLOR=(
 
 )
 
+# respect NO_COLOR for associative arrays
+if [[ -n "$NO_COLOR" ]]; then
+    for key in "${!COLOR[@]}"; do COLOR["$key"]=''; done
+    for key in "${!RPCOLOR[@]}"; do RPCOLOR["$key"]=''; done
+fi
 
 # ##############################################################################
 # use color themes
