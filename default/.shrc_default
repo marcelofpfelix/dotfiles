@@ -36,6 +36,7 @@ dla() { dl --detailed "$@" 2>&1; }
 alias dstart="sudo docker stop"
 alias dstop="sudo docker start"
 
+alias ips="ip -c -br -4 a"
 
 ################################################################################
 # export
@@ -58,11 +59,17 @@ export hostname="`hostname -s`"
 # bat
 export BAT_THEME="Catppuccin Mocha"
 
+# default interface
+LINK=$(ip r | awk '/^default/ {print $5}' | head -n1)
+export LINK
+
 # add ~/bin to path
 export PATH="$PATH:$HOME/bin"
 
 ### utils
-# default interface
-
 
 # ##############################################################################
+
+# consider
+# if [[ "$OSTYPE" == darwin* ]]; then
+#   eval "$(gdircolors)"

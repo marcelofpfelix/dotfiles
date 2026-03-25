@@ -53,6 +53,11 @@ function icon() {
             ['net_crit']='󰅛 '
             ['dns_crit']='󰱟 '
             ['dns_warn']='󰲚 '
+            ['docker']=' '
+            ['darwin']=' '
+            ['debian']=' '
+            ['mem']=' '
+            ['cpu']=' '
         )
     else
         # colours
