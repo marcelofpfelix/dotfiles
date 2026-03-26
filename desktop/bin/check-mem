@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# check memory usage percentage
+################################################################################
+
+set -Eeuo pipefail
+
+  # change to local directory
+cd "$(dirname "$0")" || exit
+
+show_status() {
+  local mem_pct
+  case "$(uname)" in
+    Linux)
+      mem_pct=$(awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {printf "%2.0f", (t-a)*100/t}' /proc/meminfo)
+      ;;
+    Darwin)
+      local page_size total used
+      page_size=$(sysctl -n hw.pagesize)
+      total=$(sysctl -n hw.memsize)
+      used=$(vm_stat | awk -v ps="$page_size" '
+        /Pages active/   {a=$NF+0}
+        /Pages wired/    {w=$NF+0}
+        /Pages compressed/ {c=$NF+0}
+        END {print (a+w+c)*ps}')
+      mem_pct=$(( used * 100 / total ))
+      ;;
+  esac
+
+  if (( mem_pct >= 85 )); then
+    printc "$(icon mem)" r
+  elif (( mem_pct >= 60 )); then
+    printc "$(icon mem)" y
+  else
+    printc "$(icon mem)" g
+  fi
+  printf "%2d\n" "$mem_pct"
+
+  if (( mem_pct >= 85 )); then
+    exit 2
+  elif (( mem_pct >= 60 )); then
+    exit 1
+  fi
+}
+
+main() {
+  LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+  . "$LIBS_DIR/lib_utils.sh"
+  . "$LIBS_DIR/lib_icon.sh"
+
+  show_status
+}
+
+main "$@"

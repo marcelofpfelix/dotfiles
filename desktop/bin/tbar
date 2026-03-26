@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# tmux status bar module - runs scripts and displays output with catppuccin styling
+################################################################################
+
+set -Eeuo pipefail
+
+  # change to local directory
+cd "$(dirname "$0")" || exit
+
+set -o pipefail
+
+# Default scripts to run (override by passing arguments)
+DEFAULT_SCRIPTS=(check-docker vpn check-claw check-cpu check-mem)
+SCRIPTS=("${@:-${DEFAULT_SCRIPTS[@]}}")
+
+EXIT_CODE=0
+OUTPUTS=()
+
+for script in "${SCRIPTS[@]}"; do
+  if out=$($script 2>&1 | tr -d '\n'); then
+    code=0
+  else
+    code=$?
+  fi
+  (( code > EXIT_CODE )) && EXIT_CODE=$code
+  [[ -n "$out" ]] && OUTPUTS+=("$out")
+done
+
+OUTPUT="${OUTPUTS[*]}"
+
+# Catppuccin mocha colors
+MAUVE="#cba6f7"
+GREEN="#a6e3a1"
+RED="#f38ba8"
+YELLOW="#f9e2af"
+CRUST="#11111b"
+SURFACE="#313244"
+FG="#cdd6f4"
+
+# Separators
+LEFT_SEP=""
+RIGHT_SEP=""
+
+case $EXIT_CODE in
+  0)
+    COLOR=$GREEN
+    ICON=""
+    ;;
+  1)
+    COLOR=$YELLOW
+    ICON=""
+    ;;
+  *)
+    COLOR=$RED
+    ICON=""
+    ;;
+esac
+
+# Output full catppuccin-style module
+echo "#[fg=$COLOR]${LEFT_SEP}#[fg=$CRUST,bg=$COLOR]$ICON #[fg=$FG,bg=$SURFACE] $OUTPUT #[fg=$SURFACE]${RIGHT_SEP}"

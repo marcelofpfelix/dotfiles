@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# check if openclaw gateway is running
+################################################################################
+
+set -Eeuo pipefail
+
+  # change to local directory
+cd "$(dirname "$0")" || exit
+
+CLAW_PORT="18789"
+
+show_status() {
+  if ss -t -l -n | grep -q ":${CLAW_PORT}"; then
+    # printc "$(icon robot)" g
+    printf "\n"
+  else
+    printc "$(icon robot_crit)" r
+    printf "\n"
+    return 2
+  fi
+}
+
+main() {
+  LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+  . "$LIBS_DIR/lib_utils.sh"
+  . "$LIBS_DIR/lib_icon.sh"
+  . "$LIBS_DIR/lib_status.sh"
+
+  if show_status; then
+    code=0
+  else
+    code=$?
+  fi
+  notify_on_failure "check-claw" "$code"
+  exit "$code"
+}
+
+main "$@"

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# check docker containers status
+################################################################################
+
+set -Eeuo pipefail
+
+  # change to local directory
+cd "$(dirname "$0")" || exit
+
+DOCKER_EXPECTED=${DOCKER_EXPECTED:-0}
+
+show_status() {
+  local running stopped
+  running=$(docker ps -q 2>/dev/null | wc -l | tr -d ' \t')
+  stopped=$(docker ps -q --filter "status=exited" 2>/dev/null | wc -l | tr -d ' \t')
+
+  if (( stopped > 0 )); then
+    printc "$(icon docker)" r
+  elif (( DOCKER_EXPECTED > 0 && running != DOCKER_EXPECTED )); then
+    printc "$(icon docker)" y
+  else
+    printc "$(icon docker)" g
+  fi
+  printc "${running}" n
+  if (( stopped > 0 )); then
+    printc "/${stopped}" r
+  fi
+  printf "\n"
+
+  if (( stopped > 0 )); then
+    return 2
+  elif (( DOCKER_EXPECTED > 0 && running != DOCKER_EXPECTED )); then
+    return 1
+  fi
+}
+
+main() {
+  LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+  . "$LIBS_DIR/lib_utils.sh"
+  . "$LIBS_DIR/lib_icon.sh"
+  . "$LIBS_DIR/lib_status.sh"
+
+  if show_status; then
+    code=0
+  else
+    code=$?
+  fi
+  notify_on_failure "check-docker" "$code"
+  exit "$code"
+}
+
+main "$@"

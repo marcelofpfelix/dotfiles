@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# check cpu usage percentage
+################################################################################
+
+set -Eeuo pipefail
+
+  # change to local directory
+cd "$(dirname "$0")" || exit
+
+show_status() {
+  local cpu_pct
+  case "$(uname)" in
+    Linux)
+      read -r _ u1 n1 s1 i1 _ < /proc/stat
+      sleep 1
+      read -r _ u2 n2 s2 i2 _ < /proc/stat
+      local active=$(( (u2-u1) + (n2-n1) + (s2-s1) ))
+      local total=$(( active + (i2-i1) ))
+      cpu_pct=$(( active * 100 / total ))
+      ;;
+    Darwin)
+      cpu_pct=$(top -l 2 -n 0 -s 1 | awk '/^CPU usage/ {gsub(/%/,""); print int($3+$5)}' | tail -1)
+      ;;
+  esac
+
+  if (( cpu_pct >= 85 )); then
+    printc "$(icon cpu)" r
+  elif (( cpu_pct >= 60 )); then
+    printc "$(icon cpu)" y
+  else
+    printc "$(icon cpu)" g
+  fi
+  printf "%2d\n" "$cpu_pct"
+
+  if (( cpu_pct >= 85 )); then
+    exit 2
+  elif (( cpu_pct >= 60 )); then
+    exit 1
+  fi
+}
+
+main() {
+  LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+  . "$LIBS_DIR/lib_utils.sh"
+  . "$LIBS_DIR/lib_icon.sh"
+
+  show_status
+}
+
+main "$@"

@@ -40,7 +40,7 @@ fi
 
 if [ "$has_errors" -eq 1 ]; then
     println "$(icon erro)" r
-
+    exit 1
 else
     println
 fi

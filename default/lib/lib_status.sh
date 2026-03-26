@@ -40,3 +40,39 @@ update_status() {
         fi
     ) 200>"${STATUS_FILE}.lock"
 }
+
+# Directory for tracking last exit codes per script
+TBAR_STATUS_DIR="${TBAR_STATUS_DIR:-/tmp/tbar-status}"
+
+# Notify via telegram on state change to critical (exit code > 1)
+# Usage: notify_on_failure <script_name> <exit_code>
+# Example: notify_on_failure "check-docker" 2
+notify_on_failure() {
+    local script_name="$1"
+    local exit_code="$2"
+    local state_file="${TBAR_STATUS_DIR}/${script_name}"
+    local prev_code=0
+
+    mkdir -p "$TBAR_STATUS_DIR"
+
+    if [[ -f "$state_file" ]]; then
+        prev_code=$(<"$state_file")
+    fi
+
+    echo "$exit_code" > "$state_file"
+
+    # Only notify on state change
+    if [[ "$exit_code" == "$prev_code" ]]; then
+        return 0
+    fi
+
+    # Notify on transition to critical (exit code > 1)
+    if (( exit_code > 1 )); then
+        telemsg "[ALERT] ${script_name} is failing (exit code: ${exit_code})" 2>/dev/null || true
+    fi
+
+    # Notify on recovery (from critical back to ok)
+    # if (( prev_code > 1 && exit_code == 0 )); then
+    #     telemsg "[OK] ${script_name} recovered" 2>/dev/null || true
+    # fi
+}
