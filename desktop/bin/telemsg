@@ -30,12 +30,11 @@ def main():
     # Send via Telegram Bot API
     url = f"https://api.telegram.org/bot{token}/sendMessage"
 
-   data = json.dumps({"chat_id": chat_id, "text": text}).encode()
-   payload = {"chat_id": chat_id, "text": text}
-   topic_id = os.environ.get("TELEGRAM_TOPIC_ID")
-   if topic_id:
-       payload["message_thread_id"] = int(topic_id)
-   data = json.dumps(payload).encode()
+    payload = {"chat_id": chat_id, "text": text}
+    topic_id = os.environ.get("TELEGRAM_TOPIC_ID")
+    if topic_id:
+        payload["message_thread_id"] = int(topic_id)
+    data = json.dumps(payload).encode()
 
 
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
@@ -51,4 +50,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
