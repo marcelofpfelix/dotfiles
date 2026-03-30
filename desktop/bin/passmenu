@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+
+# passmenu - dmenu/rofi-based interface to gopass
+#
+# Modes:
+#   (default)    Copy password to clipboard
+#   --type       Type password via xdotool/ydotool
+#   --user       Type the "username" field via xdotool/ydotool
+#   --name       Type the entry name via xdotool/ydotool
+#
+# Environment:
+#   PASSMENU_BACKEND   Password manager command (default: gopass)
+#   PASSMENU_DMENU     Override dmenu command (e.g. "bemenu" or "rofi -dmenu")
+#   PASSMENU_USER_KEY  Key name for username field (default: username)
+#
+# Usage:
+#   passmenu [--type|--user|--name] [dmenu arguments...]
+
+set -euo pipefail
+
+backend="${PASSMENU_BACKEND:-gopass}"
+user_key="${PASSMENU_USER_KEY:-username}"
+
+# Parse mode flag
+mode="copy"
+case "${1:-}" in
+	--type) mode="type-pass"; shift ;;
+	--user) mode="type-user"; shift ;;
+	--name) mode="type-name"; shift ;;
+esac
+
+# Determine dmenu and typing tool
+if [[ -n "${PASSMENU_DMENU:-}" ]]; then
+	# shellcheck disable=SC2206
+	dmenu=($PASSMENU_DMENU)
+elif command -v rofi &>/dev/null; then
+	dmenu=(rofi -dmenu)
+elif [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v bemenu &>/dev/null; then
+	dmenu=(bemenu)
+elif command -v dmenu &>/dev/null; then
+	dmenu=(dmenu)
+else
+	echo "Error: No menu tool found. Install rofi, bemenu, or dmenu." >&2
+	exit 1
+fi
+
+if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+	xdotool="ydotool type --file -"
+elif [[ -n "${DISPLAY:-}" ]]; then
+	xdotool="xdotool type --clearmodifiers --file -"
+else
+	# Typing modes need a display; copy mode may still work headless
+	if [[ "$mode" != "copy" ]]; then
+		echo "Error: No Wayland or X11 display detected for typing." >&2
+		exit 1
+	fi
+fi
+
+# List entries and prompt the user
+entry=$("$backend" ls --flat | "${dmenu[@]}" "$@") || exit
+[[ -n "$entry" ]] || exit
+
+case "$mode" in
+	copy)
+		"$backend" show -c "$entry" 2>/dev/null
+		;;
+	type-pass)
+		"$backend" show -o "$entry" | tr -d '\n' | $xdotool
+		;;
+	type-user)
+		"$backend" show -f "$entry" "$user_key" | head -n 1 | tr -d '\n' | $xdotool
+		;;
+	type-name)
+		printf '%s' "${entry##*/}" | $xdotool
+		;;
+esac
