@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Gopass clipboard clear helper.
+# Receives the entry name as $1 and the checksum on stdin.
+# Removes the password entry from GPaste.
+
+gpaste-client delete-password "$1"

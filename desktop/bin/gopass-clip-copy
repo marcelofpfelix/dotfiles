@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Gopass clipboard copy helper.
+# Receives the entry name as $1 and the secret on stdin.
+# Uses GPaste's password support to hide the secret in the clipboard manager.
+
+gpaste-client add-password "$1"

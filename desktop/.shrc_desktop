@@ -25,6 +25,8 @@ alias cdi="__zoxide_zi"
 alias k="kubectl"
 alias d="docker"
 
+alias gpast="gpaste-client"
+alias passs="gopass"
 
 alias venv="source .env/bin/activate"
 alias m="make"
@@ -78,5 +80,11 @@ export PATH="$PATH:$PYENV_ROOT/bin"
 . "$HOME/.cargo/env"
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change
 export PATH="$PATH:$HOME/.rvm/bin"
+
+# gopass clipboard integration (hide secrets from clipboard manager history)
+export GOPASS_CLIPBOARD_COPY_CMD="$HOME/bin/gopass-clip-copy"
+export GOPASS_CLIPBOARD_CLEAR_CMD="$HOME/bin/gopass-clip-clear"
+https://github.com/gopasspw/gopass/blob/master/docs/usecases/gpaste.md
+
 
 # ##############################################################################
