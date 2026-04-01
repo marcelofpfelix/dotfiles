@@ -61,6 +61,7 @@ function icon() {
             ['debian']=' '
             ['mem']=' '
             ['cpu']=' '
+            ['temp']='󰔐 '
         )
     else
         # colours
@@ -80,6 +81,7 @@ function icon() {
             ['net_crit']='🦍'
             ['dns_crit']='🐒'
             ['dns_warn']='🦥'
+            ['temp']='🌡️ '
         )
     fi
 

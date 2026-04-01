@@ -14,6 +14,7 @@ alias gc='git commit'
 alias gcam='git commit -am'
 alias gl='git log --graph --pretty=format:"%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset" --abbrev-commit'
 
+alias ssh='~/bin/ssh'
 
 # tool replacements
 alias vi="nvim"
@@ -84,7 +85,7 @@ export PATH="$PATH:$HOME/.rvm/bin"
 # gopass clipboard integration (hide secrets from clipboard manager history)
 export GOPASS_CLIPBOARD_COPY_CMD="$HOME/bin/gopass-clip-copy"
 export GOPASS_CLIPBOARD_CLEAR_CMD="$HOME/bin/gopass-clip-clear"
-https://github.com/gopasspw/gopass/blob/master/docs/usecases/gpaste.md
+# https://github.com/gopasspw/gopass/blob/master/docs/usecases/gpaste.md
 
 
 # ##############################################################################

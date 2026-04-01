@@ -121,7 +121,7 @@ alias ou='openclaw tui'
 # eval
 # ##############################################################################
 # should be at the end section
-
+eval "$(direnv hook zsh)"
 
 # uv
 eval "$(uvx --generate-shell-completion zsh)"

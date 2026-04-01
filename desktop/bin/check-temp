@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# check cpu temperature (Linux only, requires lm-sensors)
+################################################################################
+
+set -Eeuo pipefail
+
+  # change to local directory
+cd "$(dirname "$0")" || exit
+
+show_status() {
+  local temp_raw temp_int
+
+  temp_raw=$(sensors | grep temp1 | head -n1 | awk '{print $2}' | tr -d '+°C')
+  temp_int=${temp_raw%.*}
+
+  if (( temp_int >= 80 )); then
+    printc "$(icon temp)" r
+  elif (( temp_int >= 60 )); then
+    printc "$(icon temp)" y
+  else
+    printc "$(icon temp)" g
+  fi
+  printf "%2d\n" "$temp_int"
+
+  if (( temp_int >= 80 )); then
+    exit 2
+  elif (( temp_int >= 60 )); then
+    exit 1
+  fi
+}
+
+main() {
+  LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+  . "$LIBS_DIR/lib_utils.sh"
+  . "$LIBS_DIR/lib_icon.sh"
+
+  show_status
+}
+
+main "$@"
