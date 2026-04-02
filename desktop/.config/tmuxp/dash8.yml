@@ -12,19 +12,19 @@ windows:
   panes:
     - environment:
         LC_PANE_ROW: '1'
-      shell_command: ssdm ${SERVER_1} LC_LAYOUT=dash LC_SERVICE=${SERVICE} LC_PANE_ROW=1
+      shell_command: ssh ${SERVER_1}
     - environment:
         LC_PANE_ROW: '1'
         LC_SERVICE: ${SERVICE}
-      shell_command: ssdm ${SERVER_2} LC_LAYOUT=dash LC_SERVICE=${SERVICE} LC_PANE_ROW=1
+      shell_command: ssh ${SERVER_2}
     - environment:
         LC_PANE_ROW: '1'
-      shell_command: ssdm ${SERVER_3} LC_LAYOUT=dash LC_SERVICE=${SERVICE} LC_PANE_ROW=1
+      shell_command: ssh ${SERVER_3}
     - environment:
         LC_PANE_ROW: '1'
-      shell_command: ssdm ${SERVER_4} LC_LAYOUT=dash LC_SERVICE=${SERVICE} LC_PANE_ROW=1
+      shell_command: ssh ${SERVER_4}
     - focus: 'true'
-      shell_command: ssdm ${SERVER_1} LC_LAYOUT=dash LC_SERVICE=${SERVICE}
-    - ssdm ${SERVER_2} LC_LAYOUT=dash LC_SERVICE=${SERVICE}
-    - ssdm ${SERVER_3} LC_LAYOUT=dash LC_SERVICE=${SERVICE}
-    - ssdm ${SERVER_4} LC_LAYOUT=dash LC_SERVICE=${SERVICE}
+      shell_command: ssh ${SERVER_1}
+    - ssh ${SERVER_2}
+    - ssh ${SERVER_3}
+    - ssh ${SERVER_4}

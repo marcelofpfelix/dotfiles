@@ -33,6 +33,10 @@ flags:
     short: fast deploy
     alias: f
     type: bool
+  - use: dst
+    short: override home_dst (default /opt/telproxy)
+    alias: d
+    type: string
 """
 . ../lib/lib_cli.sh
 
@@ -63,8 +67,9 @@ home() {
     yesman=${ARGS[2]}
     work=${ARGS[3]}
     fast=${ARGS[4]}
+    dst=${ARGS[5]}
 
-    println "Running cli" "home" "-t ${target}" "-y ${yesman}" "-w ${work}" "-f ${fast}" n:b:c:b:c
+    println "Running cli" "home" "-t ${target}" "-y ${yesman}" "-w ${work}" "-f ${fast}" "-d ${dst}" n:b:c:b:c:c
 
     cd ~/git/marcelofpfelix/homelab/
 
@@ -78,9 +83,13 @@ home() {
     fi
 
     if [ "$fast" = "true" ]; then
-        flags=""
+        flags=" -e set_ssh=false -e set_shrc=false -e set_shrc_remote=true"
     else
         flags=" -e set_ssh=true -e set_shrc=true"
+    fi
+
+    if [ -n "$dst" ]; then
+        flags="$flags -e home_dst=$dst"
     fi
 
     # check if $target is empty
@@ -93,7 +102,7 @@ home() {
     fi
 
     log note "ansible-playbook home.yml -i $inventory -e \"target=$target\" -e \"home_src=$home_src\" $flags" # service=$service
-    uv run ansible-playbook home.yml -i $inventory -e "target=$target -e home_src=$home_src $flags" # " service=$service
+    uv run ansible-playbook home.yml -i $inventory -e "target=$target" -e "home_src=$home_src" $flags # service=$service
 
 }
 
