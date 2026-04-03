@@ -2,6 +2,22 @@
 
 # Gopass clipboard clear helper.
 # Receives the entry name as $1 and the checksum on stdin.
-# Removes the password entry from GPaste.
+# Removes the password entry from the clipboard manager.
+#
+# Controlled by CLIP_BACKEND env var (gpaste or copyq).
 
-gpaste-client delete-password "$1"
+BACKEND="${CLIP_BACKEND:-gpaste}"
+
+case "$BACKEND" in
+    gpaste)
+        gpaste-client delete-password "$1"
+        ;;
+    copyq)
+        # clear the clipboard content
+        copyq copy -- ""
+        ;;
+    *)
+        echo "gopass-clip-clear: unknown CLIP_BACKEND: $BACKEND" >&2
+        exit 1
+        ;;
+esac

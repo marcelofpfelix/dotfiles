@@ -132,6 +132,9 @@ eval "$(zoxide init zsh)"
 # starship
 eval "$(starship init zsh)"
 
+# television (ctrl+t autocomplete, ctrl+r left for atuin)
+eval "$(tv init zsh | grep -v "bindkey '\\\\^R'")"
+
 # atuin
 local FOUND_ATUIN=$+commands[atuin]
 if [[ $FOUND_ATUIN -eq 1 ]]; then

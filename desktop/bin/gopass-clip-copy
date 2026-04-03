@@ -2,6 +2,25 @@
 
 # Gopass clipboard copy helper.
 # Receives the entry name as $1 and the secret on stdin.
-# Uses GPaste's password support to hide the secret in the clipboard manager.
+# Hides the secret from clipboard manager history.
+#
+# Controlled by CLIP_BACKEND env var (gpaste or copyq).
 
-gpaste-client add-password "$1"
+BACKEND="${CLIP_BACKEND:-gpaste}"
+
+case "$BACKEND" in
+    gpaste)
+        gpaste-client add-password "$1"
+        ;;
+    copyq)
+        # disable monitoring so the secret is not recorded in history,
+        # copy via stdin, then re-enable monitoring
+        copyq disable
+        copyq copy -- "$(cat)"
+        copyq enable
+        ;;
+    *)
+        echo "gopass-clip-copy: unknown CLIP_BACKEND: $BACKEND" >&2
+        exit 1
+        ;;
+esac

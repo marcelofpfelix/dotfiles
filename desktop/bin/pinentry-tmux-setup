@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Creates a tmux window dedicated to pinentry prompts and saves its TTY.
+# Use with pinentry-tmux wrapper for gpg-agent.
+#
+# Usage: pinentry-tmux-setup [session_name]
+
+set -euo pipefail
+
+SESSION="${1:-0}"
+WINDOW="pinentry"
+TTY_FILE="$HOME/.pinentry_tty"
+
+# create the pinentry window if it doesn't exist
+if ! tmux list-windows -t "$SESSION" -F '#{window_name}' 2>/dev/null | grep -q "^${WINDOW}$"; then
+    tmux new-window -d -t "$SESSION" -n "$WINDOW"
+fi
+
+# save the pane TTY
+PINENTRY_TTY=$(tmux display-message -p -t "${SESSION}:${WINDOW}.0" '#{pane_tty}')
+echo "$PINENTRY_TTY" > "$TTY_FILE"
+
+echo "pinentry TTY: $PINENTRY_TTY (saved to $TTY_FILE)"

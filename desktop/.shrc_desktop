@@ -82,6 +82,12 @@ export PATH="$PATH:$PYENV_ROOT/bin"
 # Add RVM to PATH for scripting. Make sure this is the last PATH variable change
 export PATH="$PATH:$HOME/.rvm/bin"
 
+# gpg
+export GPG_TTY=$(tty)
+
+# clipboard backend: gpaste or copyq
+export CLIP_BACKEND="gpaste"
+
 # gopass clipboard integration (hide secrets from clipboard manager history)
 export GOPASS_CLIPBOARD_COPY_CMD="$HOME/bin/gopass-clip-copy"
 export GOPASS_CLIPBOARD_CLEAR_CMD="$HOME/bin/gopass-clip-clear"
