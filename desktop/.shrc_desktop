@@ -27,6 +27,7 @@ alias k="kubectl"
 alias d="docker"
 
 alias gpast="gpaste-client"
+alias gopass="$HOME/bin/gopass-audit"
 alias passs="gopass"
 
 alias venv="source .env/bin/activate"

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Wrapper around gopass that logs all invocations to syslog for auditing.
+# Symlink or alias this as 'gopass' to capture read access, which gopass
+# itself does not track (writes are already in git history).
+#
+# View logs:
+#   journalctl -t gopass-audit                # all entries
+#   journalctl -t gopass-audit --since today   # today only
+#   journalctl -t gopass-audit --grep "show"   # reads only
+
+exec > >(logger -t gopass-audit) 2>&1
+
+logger -t gopass-audit "user=$USER action=${1:-} entry=${2:-} args=$*"
+exec /usr/bin/gopass "$@"

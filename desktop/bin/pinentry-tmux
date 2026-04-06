@@ -1,20 +1,22 @@
 #!/bin/bash
 
 # Custom pinentry wrapper that redirects prompts to a dedicated tmux pane.
-# Falls back to the current TTY if the pinentry pane is not available.
+# Falls back to pinentry-gnome3 (GUI dialog) if the pane is not available.
 #
 # Configure in ~/.gnupg/gpg-agent.conf:
-#   pinentry-program /path/to/pinentry-tmux
+#   pinentry-program /home/marcelof/bin/pinentry-tmux
+#
+# To set up the dedicated tmux pane:
+#   pinentry-tmux-setup [session]
 
 TTY_FILE="$HOME/.pinentry_tty"
 
 if [[ -f "$TTY_FILE" ]]; then
     PINENTRY_TTY=$(cat "$TTY_FILE")
-    # verify the TTY still exists
     if [[ -e "$PINENTRY_TTY" ]]; then
         exec pinentry-tty --ttyname "$PINENTRY_TTY" "$@"
     fi
 fi
 
-# fallback to default pinentry-tty on current terminal
-exec pinentry-tty "$@"
+# fallback: open a GUI dialog instead of hoping for a valid TTY
+exec pinentry-gnome3 "$@"
