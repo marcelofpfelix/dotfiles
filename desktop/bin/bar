@@ -5,11 +5,16 @@
 # bar to show in polybar
 ################################################################################
 
-# scripts to run
-alerts
-check-time
-check-resolv
-check-safe
+export LEMONBAR=1
 
-# use ENV var from POLY
-# or define here!
+# scripts to run (collected into a single space-separated line)
+SCRIPTS=(check-docker check-temp)
+#SCRIPTS+=(alerts check-time check-resolv check-safe)
+
+OUTPUTS=()
+for script in "${SCRIPTS[@]}"; do
+  out=$("$script" 2>&1 | tr -d '\n')
+  [[ -n "$out" ]] && OUTPUTS+=("$out")
+done
+
+echo "${OUTPUTS[*]}"
