@@ -9,7 +9,5 @@
 #   journalctl -t gopass-audit --since today   # today only
 #   journalctl -t gopass-audit --grep "show"   # reads only
 
-exec > >(logger -t gopass-audit) 2>&1
-
 logger -t gopass-audit "user=$USER action=${1:-} entry=${2:-} args=$*"
 exec /usr/bin/gopass "$@"
