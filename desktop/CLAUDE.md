@@ -17,6 +17,7 @@ These rules ensure maintainability, safety, and developer velocity.
 
 - **(MUST)** Follow TDD: scaffold stub -> write failing test -> implement
 - **(SHOULD)** Use lean code: Minimal repetition, composable functions, self-documenting
+- **(SHOULD)** Use dry kiss yagni solid principles
 - **(SHOULD)** Choose libraries and frameworks that are actively maintained and widely supported
 - **(SHOULD)** Keep dependencies minimal and explain why each one is used
 - **(SHOULD)** Keep the code simple and readable
