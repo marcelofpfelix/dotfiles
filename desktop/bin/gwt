@@ -49,9 +49,10 @@ commands:
 
 # should exit as soon as it encounters any non-zero exit code or usage of
 # undefined variables or failed piped commands
-# set -Eeuo pipefail
+set -Ee -o pipefail
 
 LOCAL_DIR="$PWD"
+RAW_ARGS=("$@")
   # change to local directory
 cd "$(dirname $0)"
   # load lib
@@ -115,15 +116,25 @@ gwt_clone() {
 }
 
 gwt_add() {
-    branch="${ARGS[1]}"
-    log DEBG ${LOCAL_DIR}/.bare/HEAD
+    branch="${ARGS[1]:-${RAW_ARGS[1]:-}}"
+    if [[ -z "$branch" ]]; then
+        log ERRO "Missing branch name. Usage: gwt add <branch> or gwt add -n <branch>"
+        exit 2
+    fi
 
-    default_branch=$(cat ${LOCAL_DIR}/.bare/HEAD)
+    log DEBG "${LOCAL_DIR}/.bare/HEAD"
+
+    default_branch=$(cat "${LOCAL_DIR}/.bare/HEAD")
     default_branch="${default_branch##*/}"
-    cd ${LOCAL_DIR}/$default_branch
-    git pull --rebase origin "$default_branch"
-    cd ..
-    git worktree add $branch
+    cd "${LOCAL_DIR}"
+    git fetch origin
+    if git show-ref --verify --quiet "refs/heads/${branch}"; then
+        git worktree add "$branch" "$branch"
+    elif git show-ref --verify --quiet "refs/remotes/origin/${branch}"; then
+        git worktree add "$branch" "origin/$branch"
+    else
+        git worktree add -b "$branch" "$branch" "origin/$default_branch"
+    fi
 
     # add option for remote
     # git worktree add -b PROXY-1373 ./PROXY-1373 origin/PROXY-1373
