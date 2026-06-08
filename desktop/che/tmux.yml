@@ -60,3 +60,35 @@ cli_session:
 
 cli-commands:
     kill-server: Kill the server; all sessions and windows will be terminated
+
+agent-monitor:
+    A: Pick and focus a Codex, Claude Code, or OpenCode pane
+    M-A: Show Codex, Claude Code, and OpenCode pane states in a popup
+    E: Show native hook events in a popup
+    status: agent-tmux status
+    status-cached: agent-tmux status --cached
+    status-blocked: agent-tmux status --state blocked
+    group-session: agent-tmux group session
+    group-repo: agent-tmux group repo
+    bar: agent-tmux bar
+    bar-counts: AGENT_TMUX_BAR_MODE=counts agent-tmux bar
+    bar-agents: AGENT_TMUX_BAR_MODE=agents agent-tmux bar
+    bar-sessions: AGENT_TMUX_BAR_MODE=sessions agent-tmux bar
+    bar-repos: AGENT_TMUX_BAR_MODE=repos agent-tmux bar
+    window-icon: agent-tmux window-icon "#{session_name}:#{window_index}"
+    focus: agent-tmux focus %pane_id
+    switch: agent-tmux switch
+    open: agent-tmux open codex ~/git/repo
+    open-new: agent-tmux open --new --session dev --name codex:repo codex ~/git/repo
+    restart: agent-tmux restart %pane_id
+    keys: agent-tmux keys
+    switcher-keys: Enter focus, C-r refresh, C-e send Enter, C-n rename window, C-k kill pane, C-y copy, C-w open path, C-x restart
+    why: agent-tmux why %pane_id
+    events: agent-tmux events
+    events-clear: agent-tmux events-clear
+    notify: agent-tmux notify
+    notify-test: agent-tmux notify-test
+    notify-debug: agent-tmux notify-debug
+    doctor: agent-tmux doctor
+    cache-clear: agent-tmux cache-clear
+    watch: agent-tmux watch

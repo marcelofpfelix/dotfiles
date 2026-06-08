@@ -7,7 +7,7 @@
 
 # CLI=${CLI:="use: missing CLI definition"}
 
-# If CLI is set, parse ARGs and CMDS
+# If CLI is set, parse ARGs and expose CMD/CMDS for older scripts.
 if [[ -n "${CLI+x}" ]]; then
     # parse the cli arguments
     result=$(echo "${CLI}" | boa "$@")
@@ -20,11 +20,11 @@ if [[ -n "${CLI+x}" ]]; then
     fi
     # replace spaces with _
     CMD="${ARGS[0]// /_}"
-    read -a CMDS <<< "${ARGS[0]}" #TODO: delete
+    read -a CMDS <<< "${ARGS[0]}"
 fi
 
 # check if the subcommand is present and run it
-subc() { #TODO: delete
+subc() {
     # if arguments over 1 run subcommand
     if [ $# -gt 0 ]; then
         $@

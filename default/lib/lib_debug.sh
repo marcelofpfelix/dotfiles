@@ -15,6 +15,9 @@ LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
 # Constants - global config
 LOG_LEVEL=${LOG_LEVEL:=1}
 LOG_TAG=${LOG_TAG:="11"}
+LOG_TIME_FORMAT=${LOG_TIME_FORMAT:-}
+LOG_CONTEXT=${LOG_CONTEXT:-0}
+LOG_INDENT=${LOG_INDENT:-1}
 #[[ -z "$LOG_LEVEL" ]] && LOG_LEVEL=1 # default log level is `NOTE`
 #[[ -z "$LOG_TAG" ]] && LOG_TAG="11" # default log tag is `✅NOTE` (bits)
 
@@ -172,13 +175,25 @@ function log() {
     local level
     local cid
     local tag
-    local level
+    local prefix=""
+    local indent=""
+    local src_file
     # || true to be compatible with set -e
     level=$(log_level "$1") || true
     read cid level tag <<< "$level"
 
-  #print key
-    println "\t$tag:\t" $cid,$level,,,0
+    if [[ -n "$LOG_TIME_FORMAT" ]]; then
+        prefix+="$(date +"$LOG_TIME_FORMAT") "
+    fi
+    if [[ "$LOG_CONTEXT" == "1" ]]; then
+        src_file="${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}"
+        prefix+="${src_file##*/}:${BASH_LINENO[0]}:${FUNCNAME[1]:-MAIN} "
+    fi
+    if [[ "$LOG_INDENT" == "1" ]]; then
+        indent=$'\t'
+    fi
+
+    println "${indent}${prefix}${tag}:\t" $cid,$level,,,0
 
     shift
 
@@ -197,11 +212,6 @@ function log() {
     println "${@}" "n,${level}"
 
 }
-#TODO:
-# - add date_time (global config to enable/format)
-# - add emoji to the log level (global config to enable)
-# - no identention (global config to enable)
-# - file, line number and function name (global config to enable)
 
 
 # ##############################################################################

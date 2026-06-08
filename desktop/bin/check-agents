@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# tbar module for tmux agent panes.
+################################################################################
+
+set -Eeuo pipefail
+
+agent-tmux notify
+agent-tmux bar-plain

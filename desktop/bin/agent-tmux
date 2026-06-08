@@ -1,0 +1,1151 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# tmux agent status/notification helper for Codex, Claude Code, OpenCode, and Hermes.
+################################################################################
+
+set -Eeuo pipefail
+
+AGENT_TMUX_STATE_DIR="${AGENT_TMUX_STATE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/agent-tmux}"
+AGENT_TMUX_BAR_MODE="${AGENT_TMUX_BAR_MODE:-compact}"
+AGENT_TMUX_CACHE_TTL="${AGENT_TMUX_CACHE_TTL:-5}"
+AGENT_TMUX_IDLE_SECONDS="${AGENT_TMUX_IDLE_SECONDS:-45}"
+AGENT_TMUX_CAPTURE_LINES="${AGENT_TMUX_CAPTURE_LINES:-80}"
+AGENT_TMUX_NOTIFY="${AGENT_TMUX_NOTIFY:-auto}"
+AGENT_TMUX_NOTIFY_STATES="${AGENT_TMUX_NOTIFY_STATES:-blocked}"
+AGENT_TMUX_NOTIFY_COOLDOWN="${AGENT_TMUX_NOTIFY_COOLDOWN:-300}"
+AGENT_TMUX_EVENT_MAX_AGE="${AGENT_TMUX_EVENT_MAX_AGE:-43200}"
+AGENT_TMUX_WINDOW_ICON_STYLE="${AGENT_TMUX_WINDOW_ICON_STYLE:-circle}"
+AGENT_TMUX_WINDOW_ICON_TEXT_FG="${AGENT_TMUX_WINDOW_ICON_TEXT_FG:-#cdd6f4}"
+AGENT_TMUX_AGENT_RE="${AGENT_TMUX_AGENT_RE:-^(codex|claude|claudecode|opencode|hermes)$}"
+AGENT_TMUX_AGENT_ARG_RE="${AGENT_TMUX_AGENT_ARG_RE:-(^|[[:space:]/])(codex|claude|claudecode|opencode|hermes)([[:space:]/]|$)}"
+AGENT_TMUX_BLOCKED_RE="${AGENT_TMUX_BLOCKED_RE:-(do you want to (allow|run|execute|continue)|allow .*[?]|approve .*[?]|confirm .*[?]|continue[?]|waiting for (your )?(approval|permission|input)|choose an option|esc to cancel|yes/no|\\by/n\\b|\\[[YyNn]/[YyNn]\\])}"
+AGENT_TMUX_FREE_RE="${AGENT_TMUX_FREE_RE:-(^>|^❯|esc to exit|type a message|ask me anything|ready for input)}"
+PROCESS_TABLE=""
+
+usage() {
+  cat <<'EOF'
+use: agent-tmux [status|group|bar|bar-plain|window-icon|focus|switch|open|restart|keys|notify|notify-test|notify-debug|why|events|events-clear|doctor|cache-clear|watch]
+
+commands:
+  status   list agent panes with state, location, and current command
+  group    summarize by session or repo: agent-tmux group session|repo
+  bar      compact tmux status-bar output with tmux colors
+  bar-plain compact status text without tmux formatting
+  window-icon print a Nerd Font status icon for a tmux window
+  focus    switch tmux client to a pane id, for example %91
+  switch   choose an agent pane with fzf/gum and focus it
+  open     open an agent in a new tmux window: agent-tmux open codex [dir]
+  restart  restart a pane opened by agent-tmux open
+  keys     show switcher key bindings
+  notify   scan once and notify when a pane changes state
+  notify-test send a test notification through the configured notifier
+  notify-debug show notification config and state
+  why      explain classification for a pane id, for example %91
+  events   list native hook event state
+  events-clear remove native hook event state
+  doctor   check tmux, picker, notifier, and agent command availability
+  cache-clear remove cached scan and pane state files
+  watch    run notify repeatedly; AGENT_TMUX_INTERVAL controls seconds
+
+env:
+  AGENT_TMUX_IDLE_SECONDS     seconds without pane output before free (default: 45)
+  AGENT_TMUX_BAR_MODE         compact, counts, or agents (default: compact)
+  AGENT_TMUX_CACHE_TTL        seconds to cache bar scans (default: 5)
+  AGENT_TMUX_CAPTURE_LINES    pane lines used for prompt detection (default: 80)
+  AGENT_TMUX_NOTIFY           auto, notify-send, telemsg, or another command
+  AGENT_TMUX_NOTIFY_STATES    comma-list of states to notify (default: blocked)
+  AGENT_TMUX_NOTIFY_COOLDOWN  seconds before repeating same pane/state (default: 300)
+  AGENT_TMUX_EVENT_MAX_AGE    max seconds to trust hook state (default: 43200)
+  AGENT_TMUX_WINDOW_ICON_STYLE circle or nerd (default: circle)
+  AGENT_TMUX_AGENT_RE         command regex for agent panes
+  AGENT_TMUX_AGENT_ARG_RE     process-argument regex for wrapped agents
+  AGENT_TMUX_BLOCKED_RE       pane-text regex for actionable blocked prompts
+  AGENT_TMUX_FREE_RE          pane-text regex for explicit idle/free prompts
+EOF
+}
+
+keys() {
+  cat <<'EOF'
+agent-tmux switch keys:
+  Enter   focus selected pane
+  Ctrl-r  refresh pane list
+  Ctrl-e  send Enter to selected pane, then focus it
+  Ctrl-n  rename selected pane's window
+  Ctrl-k  confirm and kill selected pane
+  Ctrl-y  copy pane id and path to tmux buffer
+  Ctrl-w  open selected pane path in a new tmux window
+  Ctrl-x  restart pane launched by agent-tmux open
+EOF
+}
+
+hash_id() {
+  printf '%s' "$1" | cksum | awk '{print $1}'
+}
+
+human_duration() {
+  local seconds="${1:-}"
+  [[ "$seconds" =~ ^[0-9]+$ ]] || return 0
+  if (( seconds <= 0 )); then
+    return 0
+  elif (( seconds < 60 )); then
+    printf '%ss' "$seconds"
+  elif (( seconds < 3600 )); then
+    printf '%sm' "$(( seconds / 60 ))"
+  else
+    printf '%sh' "$(( seconds / 3600 ))"
+  fi
+}
+
+cache_file() {
+  printf '%s/scan.tsv' "$AGENT_TMUX_STATE_DIR"
+}
+
+cache_valid() {
+  local file="$1" now modified
+
+  [[ -f "$file" ]] || return 1
+  now="$(date +%s)"
+  modified="$(stat -c %Y "$file" 2>/dev/null || printf 0)"
+  (( now - modified <= AGENT_TMUX_CACHE_TTL ))
+}
+
+cache_clear() {
+  mkdir -p "$AGENT_TMUX_STATE_DIR"
+  find "$AGENT_TMUX_STATE_DIR" -maxdepth 1 \( -name 'scan.tsv' -o -name 'pane-*.seen' -o -name 'event-state.tsv' -o -name 'events.jsonl' \) -delete
+}
+
+event_state_file() {
+  printf '%s/event-state.tsv' "$AGENT_TMUX_STATE_DIR"
+}
+
+event_log_file() {
+  printf '%s/events.jsonl' "$AGENT_TMUX_STATE_DIR"
+}
+
+events_clear() {
+  mkdir -p "$AGENT_TMUX_STATE_DIR"
+  rm -f "$(event_state_file)" "$(event_log_file)"
+}
+
+events() {
+  local file
+  file="$(event_state_file)"
+  if [[ ! -s "$file" ]]; then
+    printf 'no agent events\n'
+    return 1
+  fi
+
+  sort "$file" | awk -F '\t' '
+    {
+      printf "%-8s %-8s age:%ss duration:%ss %-20s %s\n",
+        $3, $1, systime() - $5, $7, $4, $2
+      if ($9 != "") {
+        printf "  repo: %s\n", $9
+      }
+      if ($8 != "") {
+        printf "  %s\n", $8
+      }
+    }'
+}
+
+repo_root() {
+  local path="$1"
+  git -C "$path" rev-parse --show-toplevel 2>/dev/null || true
+}
+
+event_meta_for() {
+  local agent="$1" path="$2" fallback="$3" file root now
+  file="$(event_state_file)"
+
+  [[ -s "$file" ]] || {
+    printf '%s\t\t\t\t\t' "$fallback"
+    return 0
+  }
+
+  root="$(repo_root "$path")"
+  now="$(date +%s)"
+  awk -F '\t' \
+    -v agent="$agent" \
+    -v path="$path" \
+    -v root="$root" \
+    -v fallback="$fallback" \
+    -v now="$now" \
+    -v max_age="$AGENT_TMUX_EVENT_MAX_AGE" '
+      $1 == agent && (now - $5) <= max_age {
+        if ($2 == path) {
+          exact = $0
+        } else if (root != "" && $9 == root && root_match == "") {
+          root_match = $0
+        }
+      }
+      END {
+        row = exact != "" ? exact : root_match
+        if (row == "") {
+          printf "%s\t\t\t\t\t", fallback
+          exit
+        }
+        split(row, f, "\t")
+        printf "%s\t%s\t%s\t%s\t%s\t%s", f[3], now - f[5], f[7], f[4], f[8], f[2]
+      }' "$file"
+}
+
+notify_send() {
+  local message="$1"
+
+  if [[ "$AGENT_TMUX_NOTIFY" == "auto" ]]; then
+    if command -v notify-send >/dev/null 2>&1 &&
+      notify-send "tmux agent" "$message" >/dev/null 2>&1; then
+      return 0
+    fi
+    if command -v terminal-notifier >/dev/null 2>&1 &&
+      terminal-notifier -title "tmux agent" -message "$message" >/dev/null 2>&1; then
+      return 0
+    fi
+    if command -v telemsg >/dev/null 2>&1 &&
+      telemsg "$message" >/dev/null 2>&1; then
+      return 0
+    fi
+    return 0
+  fi
+
+  if command -v "$AGENT_TMUX_NOTIFY" >/dev/null 2>&1 &&
+    "$AGENT_TMUX_NOTIFY" "$message" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send "tmux agent" "$message" >/dev/null 2>&1 || true
+  fi
+}
+
+redact_secrets() {
+  sed -E \
+    -e 's/(Authorization: Bearer )[A-Za-z0-9._~+\/=-]+/\1[REDACTED]/g' \
+    -e 's/(Bearer )[A-Za-z0-9._~+\/=-]+/\1[REDACTED]/g' \
+    -e 's/(IKEY_)[A-Za-z0-9._~-]+/\1[REDACTED]/g'
+}
+
+pane_text() {
+  local pane_id="$1"
+  tmux capture-pane -p -t "$pane_id" -S "-${AGENT_TMUX_CAPTURE_LINES}" 2>/dev/null || true
+}
+
+agent_name() {
+  local cmd="$1"
+
+  case "$cmd" in
+    claude|claudecode) printf 'claude' ;;
+    codex) printf 'codex' ;;
+    opencode) printf 'opencode' ;;
+    hermes) printf 'hermes' ;;
+    *) printf '%s' "$cmd" ;;
+  esac
+}
+
+pane_agent() {
+  local cmd="$1"
+  local tty="$2"
+  local tty_name proc_lines
+
+  if [[ "$cmd" =~ $AGENT_TMUX_AGENT_RE ]]; then
+    agent_name "$cmd"
+    return 0
+  fi
+
+  tty_name="${tty#/dev/}"
+  proc_lines="$(awk -v tty="$tty_name" '$1 == tty {$1=""; print}' <<<"$PROCESS_TABLE")"
+
+  if grep -Eiq '(^[[:space:]]*claude(code)?[[:space:]]|/claude(code)?([[:space:]/]|$))' <<<"$proc_lines"; then
+    printf 'claude'
+  elif grep -Eiq '(^[[:space:]]*codex[[:space:]]|/codex([[:space:]/]|$))' <<<"$proc_lines"; then
+    printf 'codex'
+  elif grep -Eiq '(^[[:space:]]*opencode[[:space:]]|/opencode([[:space:]/]|$))' <<<"$proc_lines"; then
+    printf 'opencode'
+  elif grep -Eiq '(^[[:space:]]*hermes[[:space:]]|/hermes([[:space:]/]|$))' <<<"$proc_lines"; then
+    printf 'hermes'
+  elif grep -Eiq "$AGENT_TMUX_AGENT_ARG_RE" <<<"$proc_lines"; then
+    agent_name "$(grep -Eio "$AGENT_TMUX_AGENT_ARG_RE" <<<"$proc_lines" | head -n 1 | tr -d ' /')"
+  else
+    return 1
+  fi
+}
+
+classify_pane() {
+  local pane_id="$1"
+  local cmd="$2"
+  local dead="$3"
+  local text fingerprint state_file now last_seen last_fingerprint
+
+  if [[ "$dead" == "1" ]]; then
+    printf 'dead'
+    return 0
+  fi
+
+  text="$(pane_text "$pane_id")"
+
+  if tail -n 20 <<<"$text" |
+    grep -Eiv 'AGENT_TMUX_BLOCKED_RE|^[[:space:]]*[0-9]+[[:space:]]*[+-]|`' |
+    grep -Eiq "$AGENT_TMUX_BLOCKED_RE"; then
+    printf 'blocked'
+    return 0
+  fi
+
+  if tail -n 10 <<<"$text" | grep -Eiq "$AGENT_TMUX_FREE_RE"; then
+    printf 'free'
+    return 0
+  fi
+
+  mkdir -p "$AGENT_TMUX_STATE_DIR"
+  now="$(date +%s)"
+  fingerprint="$(printf '%s' "$text" | cksum | awk '{print $1}')"
+  state_file="${AGENT_TMUX_STATE_DIR}/pane-$(hash_id "$pane_id").seen"
+
+  if [[ -f "$state_file" ]]; then
+    IFS=' ' read -r last_seen last_fingerprint <"$state_file" || true
+  else
+    last_seen=0
+    last_fingerprint=""
+  fi
+
+  if [[ "$fingerprint" != "$last_fingerprint" ]]; then
+    printf '%s %s\n' "$now" "$fingerprint" >"$state_file"
+    printf 'running'
+    return 0
+  fi
+
+  if (( now - last_seen >= AGENT_TMUX_IDLE_SECONDS )); then
+    printf 'free'
+  else
+    printf 'running'
+  fi
+}
+
+scan_panes() {
+  if ! command -v tmux >/dev/null 2>&1; then
+    return 127
+  fi
+
+  PROCESS_TABLE="$(ps -eo tty=,comm=,args= 2>/dev/null || true)"
+
+  tmux list-panes -a -F '#{pane_id}	#{pane_tty}	#{session_name}	#{window_index}	#{window_name}	#{pane_current_command}	#{pane_current_path}	#{pane_dead}' 2>/dev/null |
+    while IFS=$'\t' read -r pane_id tty session window_index window_name cmd path dead; do
+      agent="$(pane_agent "$cmd" "$tty")" || continue
+      state="$(classify_pane "$pane_id" "$cmd" "$dead")"
+      IFS=$'\t' read -r state event_age event_duration event_name event_message event_path <<<"$(event_meta_for "$agent" "$path" "$state")"
+      printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+        "$state" \
+        "$agent" \
+        "$pane_id" "$session" "$window_index" "$window_name" "$path" \
+        "$event_age" "$event_duration" "$event_name" "$event_message"
+    done
+}
+
+scan_panes_cached() {
+  local file tmp
+  file="$(cache_file)"
+
+  if cache_valid "$file"; then
+    cat "$file"
+    return 0
+  fi
+
+  mkdir -p "$AGENT_TMUX_STATE_DIR"
+  tmp="${file}.$$"
+  scan_panes >"$tmp"
+  mv "$tmp" "$file"
+  cat "$file"
+}
+
+filter_rows() {
+  local state="" agent="" session="" arg
+
+  while [[ $# -gt 0 ]]; do
+    arg="$1"
+    case "$arg" in
+      --state)
+        state="${2:-}"
+        shift 2
+        ;;
+      --agent)
+        agent="${2:-}"
+        shift 2
+        ;;
+      --session)
+        session="${2:-}"
+        shift 2
+        ;;
+      *)
+        shift
+        ;;
+    esac
+  done
+
+  awk -F '\t' -v state="$state" -v agent="$agent" -v session="$session" '
+    (state == "" || $1 == state) &&
+    (agent == "" || $2 == agent) &&
+    (session == "" || $4 == session)'
+}
+
+status() {
+  local rows source="fresh" group_by="" args=()
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --cached)
+        source="cached"
+        shift
+        ;;
+      --fresh)
+        source="fresh"
+        shift
+        ;;
+      --group)
+        group_by="${2:-session}"
+        shift 2
+        ;;
+      --state|--agent|--session)
+        args+=("$1" "${2:-}")
+        shift 2
+        ;;
+      *)
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [[ "$source" == "cached" ]]; then
+    rows="$(scan_panes_cached || true)"
+  else
+    rows="$(scan_panes || true)"
+  fi
+  rows="$(printf '%s\n' "$rows" | filter_rows "${args[@]}")"
+
+  if [[ -z "$rows" ]]; then
+    printf 'no agent panes\n'
+    return 1
+  fi
+
+  if [[ -n "$group_by" ]]; then
+    group_rows "$group_by" <<<"$rows"
+  else
+    printf '%s\n' "$rows" | format_rows
+  fi
+}
+
+repo_name() {
+  local path="$1"
+  if git -C "$path" rev-parse --show-toplevel >/dev/null 2>&1; then
+    basename "$(git -C "$path" rev-parse --show-toplevel)"
+  else
+    basename "$path"
+  fi
+}
+
+group_rows() {
+  local mode="${1:-session}" rows line state agent pane_id session window_index window path event_age event_duration event_name event_message key tmp
+  rows="$(cat)"
+  [[ -n "$rows" ]] || return 0
+  tmp="$(mktemp)"
+  while IFS=$'\t' read -r state agent pane_id session window_index window path event_age event_duration event_name event_message; do
+    case "$mode" in
+      repo) key="$(repo_name "$path")" ;;
+      session) key="$session" ;;
+      *) key="$session" ;;
+    esac
+    printf '%s\t%s\n' "$key" "$state" >>"$tmp"
+  done <<<"$rows"
+  awk -F '\t' '
+    {total[$1]++; if ($2 == "blocked") blocked[$1]++; if ($2 == "running") running[$1]++; if ($2 == "free") free[$1]++; if ($2 == "dead") dead[$1]++}
+    END {
+      for (key in total) {
+        printf "%-24s total:%d blocked:%d running:%d free:%d dead:%d\n", key, total[key], blocked[key]+0, running[key]+0, free[key]+0, dead[key]+0
+      }
+    }' "$tmp" | sort
+  rm -f "$tmp"
+}
+
+bar_plain() {
+  local rows mode
+  rows="$(scan_panes_cached || true)"
+  mode="${1:-$AGENT_TMUX_BAR_MODE}"
+
+  if [[ -z "$rows" ]]; then
+    return 0
+  fi
+
+  bar_text_from_rows "$rows" "$mode"
+}
+
+bar_text_from_rows() {
+  local rows="$1"
+  local mode="${2:-compact}"
+  local blocked free running dead total priority_state priority_age priority_label
+
+  total="$(printf '%s\n' "$rows" | wc -l | tr -d ' \t')"
+  blocked="$(grep -c '^blocked' <<<"$rows" || true)"
+  free="$(grep -c '^free' <<<"$rows" || true)"
+  running="$(grep -c '^running' <<<"$rows" || true)"
+  dead="$(grep -c '^dead' <<<"$rows" || true)"
+
+  case "$mode" in
+    counts)
+      printf ' %s 󰔟 %s  %s' "$blocked" "$running" "$free"
+      if (( dead > 0 )); then
+        printf '  %s' "$dead"
+      fi
+      ;;
+    agents)
+      printf '%s\n' "$rows" |
+        awk -F '\t' '
+          {total[$2]++; if ($1 == "blocked") blocked[$2]++}
+          END {
+            first = 1
+            for (agent in total) {
+              if (!first) printf " "
+              printf "%s:%d", agent, total[agent]
+              if (blocked[agent] > 0) printf "/%d", blocked[agent]
+              first = 0
+            }
+          }'
+      ;;
+    sessions)
+      printf '%s\n' "$rows" |
+        awk -F '\t' '
+          {total[$4]++; if ($1 == "blocked") blocked[$4]++}
+          END {
+            first = 1
+            for (session in total) {
+              if (!first) printf " "
+              printf "%s:%d", session, total[session]
+              if (blocked[session] > 0) printf "/%d", blocked[session]
+              first = 0
+            }
+          }'
+      ;;
+    repos)
+      while IFS=$'\t' read -r _state _agent _pane_id _session _window_index _window path _event_age _event_duration _event_name _event_message; do
+        printf '%s\t%s\n' "$(repo_name "$path")" "$_state"
+      done <<<"$rows" |
+        awk -F '\t' '
+          {total[$1]++; if ($2 == "blocked") blocked[$1]++}
+          END {
+            first = 1
+            for (repo in total) {
+              if (!first) printf " "
+              printf "%s:%d", repo, total[repo]
+              if (blocked[repo] > 0) printf "/%d", blocked[repo]
+              first = 0
+            }
+          }'
+      ;;
+    compact)
+      if (( blocked > 0 )); then
+        priority_state="blocked"
+        printf 'agent:%s blocked:%s' "$total" "$blocked"
+      elif (( running > 0 )); then
+        priority_state="running"
+        printf 'agent:%s running:%s' "$total" "$running"
+      elif (( dead > 0 )); then
+        priority_state="dead"
+        printf 'agent:%s dead:%s' "$total" "$dead"
+      else
+        priority_state="free"
+        printf 'agent:%s free:%s' "$total" "$free"
+      fi
+      priority_age="$(printf '%s\n' "$rows" | awk -F '\t' -v state="$priority_state" '
+        $1 == state {
+          seconds = $9 > 0 ? $9 : $8
+          if (seconds > max) max = seconds
+        }
+        END { if (max > 0) print max }')"
+      priority_label="$(human_duration "$priority_age")"
+      [[ -n "$priority_label" ]] && printf ' %s' "$priority_label"
+      ;;
+    *)
+      printf 'agent-tmux: unknown bar mode: %s\n' "$mode" >&2
+      return 2
+      ;;
+  esac
+
+  if (( blocked > 0 )); then
+    return 2
+  elif (( running > 0 )); then
+    return 1
+  elif (( dead > 0 )); then
+    return 2
+  else
+    return 0
+  fi
+}
+
+bar() {
+  local text code color icon bg fg
+
+  code=0
+  text="$(bar_plain)" || code=$?
+  [[ -n "$text" ]] || return 0
+
+  bg="#313244"
+  fg="#cdd6f4"
+  case "$code" in
+    0)
+      color="#a6e3a1"
+      icon=""
+      ;;
+    1)
+      color="#f9e2af"
+      icon="󰔟"
+      ;;
+    *)
+      color="#f38ba8"
+      icon=""
+      ;;
+  esac
+
+  printf '#[fg=%s]#[fg=#11111b,bg=%s]%s #[fg=%s,bg=%s] %s #[default]' \
+    "$color" "$color" "$icon" "$fg" "$bg" "$text"
+  return "$code"
+}
+
+window_icon() {
+  local window_id="${1:-}" rows states color marker
+
+  rows="$(scan_panes_cached || true)"
+  [[ -n "$rows" ]] || return 0
+
+  if [[ -n "$window_id" ]]; then
+    states="$(printf '%s\n' "$rows" | awk -F '	' -v window_id="$window_id" '
+      $4 ":" $5 == window_id || $5 == window_id {print $1}
+    ')"
+  else
+    states="$(printf '%s\n' "$rows" | awk -F '	' '{print $1}')"
+  fi
+
+  [[ -n "$states" ]] || return 0
+  if grep -qx 'blocked' <<<"$states"; then
+    color="#f38ba8"
+    marker=""
+  elif grep -qx 'running' <<<"$states"; then
+    color="#f9e2af"
+    marker="󰔟"
+  elif grep -qx 'dead' <<<"$states"; then
+    color="#f38ba8"
+    marker=""
+  else
+    color="#a6e3a1"
+    marker=""
+  fi
+
+  case "$AGENT_TMUX_WINDOW_ICON_STYLE" in
+    nerd)
+      printf '#[fg=%s]%s#[fg=%s] ' "$color" "$marker" "$AGENT_TMUX_WINDOW_ICON_TEXT_FG"
+      ;;
+    circle|*)
+      printf '#[fg=%s]●#[fg=%s] ' "$color" "$AGENT_TMUX_WINDOW_ICON_TEXT_FG"
+      ;;
+  esac
+}
+
+focus() {
+  local pane_id="${1:-}" session window_index
+
+  if [[ -z "$pane_id" ]]; then
+    printf 'usage: agent-tmux focus %%pane_id\n' >&2
+    return 2
+  fi
+
+  if [[ "$pane_id" != %* ]]; then
+    pane_id="%${pane_id}"
+  fi
+
+  session="$(tmux display-message -p -t "$pane_id" '#{session_name}' 2>/dev/null || true)"
+  if [[ -z "$session" ]]; then
+    printf 'agent-tmux: pane not found: %s\n' "$pane_id" >&2
+    return 1
+  fi
+  window_index="$(tmux display-message -p -t "$pane_id" '#{window_index}')"
+
+  tmux switch-client -t "$session" 2>/dev/null || true
+  tmux select-window -t "${session}:${window_index}"
+  tmux select-pane -t "$pane_id"
+}
+
+format_rows() {
+  awk -F '\t' '
+    function rank(state) {
+      if (state == "blocked") return 1
+      if (state == "running") return 2
+      if (state == "free") return 3
+      if (state == "dead") return 4
+      return 5
+    }
+    function duration(seconds) {
+      if (seconds == "" || seconds <= 0) return ""
+      if (seconds < 60) return seconds "s"
+      if (seconds < 3600) return int(seconds / 60) "m"
+      return int(seconds / 3600) "h"
+    }
+    {
+      state = $1
+      if ($8 != "" || $9 != "") {
+        seconds = $9 > 0 ? $9 : $8
+        age = duration(seconds)
+        if (age != "") state = state "(" age ")"
+      }
+      printf "%d\t%-12s %-8s %-8s %-18s %-18s %s\n", rank($1), state, $2, $3, $4 ":" $5 "." substr($3, 2), $6, $7
+    }' |
+    sort -k1,1n -k7,7 |
+    cut -f2-
+}
+
+switch_rows() {
+  scan_panes | format_rows
+}
+
+rename_pane_window() {
+  local pane_id="$1" session window_index current new_name
+
+  session="$(tmux display-message -p -t "$pane_id" '#{session_name}' 2>/dev/null || true)"
+  [[ -n "$session" ]] || return 1
+  window_index="$(tmux display-message -p -t "$pane_id" '#{window_index}')"
+  current="$(tmux display-message -p -t "$pane_id" '#{window_name}')"
+
+  printf 'new window name [%s]: ' "$current" >/dev/tty
+  IFS= read -r new_name </dev/tty || return 1
+  [[ -n "$new_name" ]] || return 1
+  tmux rename-window -t "${session}:${window_index}" "$new_name"
+}
+
+open_agent() {
+  local agent="codex" dir="$PWD" session="${AGENT_TMUX_OPEN_SESSION:-}" name="" force_new=0 command pane_id existing arg
+
+  while [[ $# -gt 0 ]]; do
+    arg="$1"
+    case "$arg" in
+      --new)
+        force_new=1
+        shift
+        ;;
+      --name)
+        name="${2:-}"
+        shift 2
+        ;;
+      --session)
+        session="${2:-}"
+        shift 2
+        ;;
+      codex|claude|claudecode|opencode|hermes)
+        agent="$arg"
+        shift
+        ;;
+      *)
+        dir="$arg"
+        shift
+        ;;
+    esac
+  done
+
+  case "$agent" in
+    codex|claude|claudecode|opencode|hermes) ;;
+    *)
+      printf 'agent-tmux: unsupported agent: %s\n' "$agent" >&2
+      return 2
+      ;;
+  esac
+
+  agent="$(agent_name "$agent")"
+  if ! command -v "$agent" >/dev/null 2>&1; then
+    printf 'agent-tmux: command not found: %s\n' "$agent" >&2
+    return 127
+  fi
+
+  if [[ ! -d "$dir" ]]; then
+    printf 'agent-tmux: directory not found: %s\n' "$dir" >&2
+    return 1
+  fi
+
+  dir="$(cd "$dir" && pwd)"
+  name="${name:-${AGENT_TMUX_OPEN_NAME:-${agent}:$(basename "$dir")}}"
+  command="cd $(printf '%q' "$dir") && exec $(printf '%q' "$agent")"
+
+  if (( force_new == 0 )); then
+    existing="$(find_opened_pane "$agent" "$dir" || true)"
+    if [[ -n "$existing" ]]; then
+      focus "$existing"
+      return
+    fi
+  fi
+
+  if [[ -n "$session" ]]; then
+    pane_id="$(tmux new-window -P -F '#{pane_id}' -t "${session}:" -n "$name" "$command")"
+  else
+    pane_id="$(tmux new-window -P -F '#{pane_id}' -n "$name" "$command")"
+  fi
+  store_open_metadata "$pane_id" "$agent" "$dir" "$command"
+}
+
+find_opened_pane() {
+  local agent="$1" dir="$2"
+  tmux list-panes -a -F '#{pane_id}	#{@agent_tmux_agent}	#{@agent_tmux_path}' 2>/dev/null |
+    awk -F '\t' -v agent="$agent" -v dir="$dir" '$2 == agent && $3 == dir {print $1; exit}'
+}
+
+store_open_metadata() {
+  local pane_id="$1" agent="$2" dir="$3" command="$4" session window_index
+
+  session="$(tmux display-message -p -t "$pane_id" '#{session_name}')"
+  window_index="$(tmux display-message -p -t "$pane_id" '#{window_index}')"
+  tmux set-option -w -t "${session}:${window_index}" -q @agent_tmux_agent "$agent"
+  tmux set-option -w -t "${session}:${window_index}" -q @agent_tmux_path "$dir"
+  tmux set-option -w -t "${session}:${window_index}" -q @agent_tmux_command "$command"
+}
+
+restart_pane() {
+  local pane_id="${1:-}" session window_index command
+
+  if [[ -z "$pane_id" ]]; then
+    printf 'usage: agent-tmux restart %%pane_id\n' >&2
+    return 2
+  fi
+  [[ "$pane_id" == %* ]] || pane_id="%${pane_id}"
+
+  session="$(tmux display-message -p -t "$pane_id" '#{session_name}' 2>/dev/null || true)"
+  if [[ -z "$session" ]]; then
+    printf 'agent-tmux: pane not found: %s\n' "$pane_id" >&2
+    return 1
+  fi
+  window_index="$(tmux display-message -p -t "$pane_id" '#{window_index}')"
+  command="$(tmux show-option -wqv -t "${session}:${window_index}" @agent_tmux_command)"
+  if [[ -z "$command" ]]; then
+    printf 'agent-tmux: pane has no agent-tmux open metadata: %s\n' "$pane_id" >&2
+    return 1
+  fi
+  tmux respawn-pane -k -t "$pane_id" "$command"
+}
+
+switch_pane() {
+  local rows choice key selected pane_id selected_path
+
+  while true; do
+    rows="$(scan_panes || true)"
+
+    if [[ -z "$rows" ]]; then
+      printf 'no agent panes\n' >&2
+      return 1
+    fi
+
+    if command -v fzf >/dev/null 2>&1; then
+      choice="$(printf '%s\n' "$rows" |
+        format_rows |
+        fzf \
+          --prompt='agent> ' \
+          --height=80% \
+          --reverse \
+          --border \
+          --preview='tmux capture-pane -p -t {3} -S -30 2>/dev/null' \
+          --preview-window='down,45%,border-top' \
+          --header='enter focus | C-e enter | C-n rename | C-k kill | C-y copy | C-w path | C-x restart | C-r refresh' \
+          --expect=enter,ctrl-e,ctrl-n,ctrl-k,ctrl-y,ctrl-w,ctrl-x,ctrl-r)"
+      key="$(sed -n '1p' <<<"$choice")"
+      selected="$(sed -n '2p' <<<"$choice")"
+    elif command -v gum >/dev/null 2>&1; then
+      selected="$(printf '%s\n' "$rows" | format_rows | gum filter --placeholder='agent')"
+      key="enter"
+    else
+      printf '%s\n' "$rows" | format_rows
+      printf 'agent-tmux: install fzf or gum for interactive switching\n' >&2
+      return 2
+    fi
+
+    [[ -n "${selected:-}" ]] || return 1
+    pane_id="$(awk '{print $3}' <<<"$selected")"
+    selected_path="$(awk '{print $6}' <<<"$selected")"
+
+    case "${key:-enter}" in
+      ctrl-r)
+        continue
+        ;;
+      ctrl-e)
+        tmux send-keys -t "$pane_id" Enter
+        focus "$pane_id"
+        return
+        ;;
+      ctrl-n)
+        rename_pane_window "$pane_id"
+        continue
+        ;;
+      ctrl-k)
+        printf 'kill pane %s? [y/N] ' "$pane_id" >/dev/tty
+        IFS= read -r confirm </dev/tty || return 1
+        case "$confirm" in
+          y|Y|yes|YES) tmux kill-pane -t "$pane_id" ;;
+        esac
+        continue
+        ;;
+      ctrl-y)
+        tmux set-buffer "$pane_id $selected_path"
+        continue
+        ;;
+      ctrl-w)
+        tmux new-window -c "$selected_path" -n "$(basename "$selected_path")"
+        continue
+        ;;
+      ctrl-x)
+        restart_pane "$pane_id" || printf 'restart failed for %s\n' "$pane_id" >/dev/tty
+        continue
+        ;;
+      *)
+        focus "$pane_id"
+        return
+        ;;
+    esac
+  done
+}
+
+notify_state_enabled() {
+  local state="$1"
+  case ",${AGENT_TMUX_NOTIFY_STATES}," in
+    *,"$state",*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+event_notify_enabled() {
+  case "${AGENT_TMUX_EVENT_NOTIFY:-1}" in
+    0|false|False|FALSE|no|No|NO|off|Off|OFF) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+notify_cooldown_ok() {
+  local stamp_file="$1" now last
+
+  now="$(date +%s)"
+  last=0
+  [[ -f "$stamp_file" ]] && last="$(<"$stamp_file")"
+  if (( now - last < AGENT_TMUX_NOTIFY_COOLDOWN )); then
+    return 1
+  fi
+  printf '%s\n' "$now" >"$stamp_file"
+}
+
+why_pane() {
+  local pane_id="${1:-}" row tty session window_index window cmd path dead tty_name proc_lines agent text
+  local filtered blocked_line fingerprint state_file last_seen last_fingerprint now age state reason
+  local event_state event_age event_duration event_name event_message event_path
+
+  if [[ -z "$pane_id" ]]; then
+    printf 'usage: agent-tmux why %%pane_id\n' >&2
+    return 2
+  fi
+  [[ "$pane_id" == %* ]] || pane_id="%${pane_id}"
+
+  row="$(tmux list-panes -a -F '#{pane_id}	#{pane_tty}	#{session_name}	#{window_index}	#{window_name}	#{pane_current_command}	#{pane_current_path}	#{pane_dead}' |
+    awk -F '\t' -v pane="$pane_id" '$1 == pane {print; exit}')"
+  if [[ -z "$row" ]]; then
+    printf 'agent-tmux: pane not found: %s\n' "$pane_id" >&2
+    return 1
+  fi
+
+  IFS=$'\t' read -r pane_id tty session window_index window cmd path dead <<<"$row"
+  PROCESS_TABLE="$(ps -eo tty=,comm=,args= 2>/dev/null || true)"
+  tty_name="${tty#/dev/}"
+  proc_lines="$(awk -v tty="$tty_name" '$1 == tty {$1=""; print}' <<<"$PROCESS_TABLE")"
+  agent="$(pane_agent "$cmd" "$tty" || true)"
+  text="$(pane_text "$pane_id")"
+  filtered="$(tail -n 20 <<<"$text" | grep -Eiv 'AGENT_TMUX_BLOCKED_RE|^[[:space:]]*[0-9]+[[:space:]]*[+-]|`' || true)"
+  blocked_line="$(grep -Ei "$AGENT_TMUX_BLOCKED_RE" <<<"$filtered" | tail -n 1 || true)"
+
+  now="$(date +%s)"
+  fingerprint="$(printf '%s' "$text" | cksum | awk '{print $1}')"
+  state_file="${AGENT_TMUX_STATE_DIR}/pane-$(hash_id "$pane_id").seen"
+  last_seen=0
+  last_fingerprint=""
+  [[ -f "$state_file" ]] && IFS=' ' read -r last_seen last_fingerprint <"$state_file"
+  age=$(( now - last_seen ))
+
+  if [[ "$dead" == "1" ]]; then
+    state="dead"
+    reason="tmux reports pane_dead=1"
+  elif [[ -n "$blocked_line" ]]; then
+    state="blocked"
+    reason="matched blocked prompt text"
+  elif [[ "$fingerprint" != "$last_fingerprint" ]]; then
+    state="running"
+    reason="pane output changed since last scan"
+  elif (( age >= AGENT_TMUX_IDLE_SECONDS )); then
+    state="free"
+    reason="pane output unchanged for ${age}s"
+  else
+    state="running"
+    reason="pane output unchanged for ${age}s, below idle threshold"
+  fi
+
+  if [[ -n "${agent:-}" ]]; then
+    IFS=$'\t' read -r event_state event_age event_duration event_name event_message event_path <<<"$(event_meta_for "$agent" "$path" "$state")"
+    if [[ "$event_state" != "$state" ]]; then
+      state="$event_state"
+      reason="native hook event state for this agent/path or repo"
+    fi
+  fi
+
+  printf 'pane: %s\n' "$pane_id"
+  printf 'location: %s:%s.%s\n' "$session" "$window_index" "${pane_id#%}"
+  printf 'window: %s\n' "$window"
+  printf 'path: %s\n' "$path"
+  printf 'tmux_command: %s\n' "$cmd"
+  printf 'detected_agent: %s\n' "${agent:-none}"
+  printf 'state: %s\n' "$state"
+  printf 'reason: %s\n' "$reason"
+  if [[ -n "${event_name:-}" ]]; then
+    printf 'hook_event: %s\n' "$event_name"
+    printf 'hook_age: %ss\n' "${event_age:-0}"
+    printf 'hook_duration: %ss\n' "${event_duration:-0}"
+    printf 'hook_path: %s\n' "${event_path:-none}"
+    printf 'hook_message: %s\n' "${event_message:-none}"
+  fi
+  printf 'idle_age: %ss\n' "$age"
+  printf 'blocked_match: %s\n' "${blocked_line:-none}"
+  printf 'processes:\n'
+  printf '%s\n' "${proc_lines:-none}" | redact_secrets | sed 's/^/  /'
+}
+
+notify() {
+  local rows state agent pane_id session window_index window path event_age event_duration event_name event_message
+  local key state_file stamp_file previous seconds label suffix
+  rows="$(scan_panes || true)"
+  [[ -n "$rows" ]] || return 0
+
+  mkdir -p "$AGENT_TMUX_STATE_DIR"
+
+  while IFS=$'\t' read -r state agent pane_id session window_index window path event_age event_duration event_name event_message; do
+    key="$(hash_id "$agent|$pane_id")"
+    state_file="${AGENT_TMUX_STATE_DIR}/notify-${key}.state"
+    previous=""
+    [[ -f "$state_file" ]] && previous="$(<"$state_file")"
+    printf '%s\n' "$state" >"$state_file"
+
+    [[ "$state" == "$previous" ]] && continue
+    [[ -n "$event_name" ]] && event_notify_enabled && continue
+    notify_state_enabled "$state" || continue
+
+    stamp_file="${AGENT_TMUX_STATE_DIR}/notify-${key}-${state}.stamp"
+    notify_cooldown_ok "$stamp_file" || continue
+    seconds="${event_duration:-0}"
+    if [[ ! "$seconds" =~ ^[0-9]+$ || "$seconds" == "0" ]]; then
+      seconds="${event_age:-0}"
+    fi
+    label="$(human_duration "$seconds")"
+    suffix=""
+    [[ -n "$label" ]] && suffix=" for ${label}"
+
+    case "$state" in
+      blocked)
+        notify_send "[$agent] blocked${suffix} in ${session}:${window_index}.${pane_id#%} ($window)"
+        ;;
+      free)
+        notify_send "[$agent] free${suffix} in ${session}:${window_index}.${pane_id#%} ($window)"
+        ;;
+      dead)
+        notify_send "[$agent] pane ended in ${session}:${window_index}.${pane_id#%} ($window)"
+        ;;
+    esac
+  done <<<"$rows"
+}
+
+notify_test() {
+  notify_send "test notification from agent-tmux"
+}
+
+notify_debug() {
+  local file
+  printf 'AGENT_TMUX_NOTIFY=%s\n' "$AGENT_TMUX_NOTIFY"
+  printf 'AGENT_TMUX_NOTIFY_STATES=%s\n' "$AGENT_TMUX_NOTIFY_STATES"
+  printf 'AGENT_TMUX_NOTIFY_COOLDOWN=%s\n' "$AGENT_TMUX_NOTIFY_COOLDOWN"
+  printf 'AGENT_TMUX_EVENT_NOTIFY=%s\n' "${AGENT_TMUX_EVENT_NOTIFY:-1}"
+  printf 'DISPLAY=%s\n' "${DISPLAY:-}"
+  printf 'WAYLAND_DISPLAY=%s\n' "${WAYLAND_DISPLAY:-}"
+  printf 'DBUS_SESSION_BUS_ADDRESS=%s\n' "${DBUS_SESSION_BUS_ADDRESS:-}"
+  printf 'notifiers:\n'
+  for cmd in notify-send terminal-notifier telemsg; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      printf '  %s: %s\n' "$cmd" "$(command -v "$cmd")"
+    else
+      printf '  %s: missing\n' "$cmd"
+    fi
+  done
+  printf 'state_dir: %s\n' "$AGENT_TMUX_STATE_DIR"
+  printf 'event_state_file: %s\n' "$(event_state_file)"
+  printf 'event_log_file: %s\n' "$(event_log_file)"
+  printf 'notify_state_files:\n'
+  for file in "$AGENT_TMUX_STATE_DIR"/notify-*; do
+    [[ -e "$file" ]] || continue
+    printf '  %s\n' "$(basename "$file")"
+  done
+}
+
+doctor() {
+  local ok=0 cmd
+  for cmd in tmux ps awk grep sed sort cut cksum; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      printf 'ok   %s %s\n' "$cmd" "$(command -v "$cmd")"
+    else
+      printf 'miss %s\n' "$cmd"
+      ok=1
+    fi
+  done
+  for cmd in fzf gum notify-send telemsg agent-event codex claude opencode hermes; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      printf 'ok   %s %s\n' "$cmd" "$(command -v "$cmd")"
+    else
+      printf 'warn %s missing\n' "$cmd"
+    fi
+  done
+  return "$ok"
+}
+
+watch() {
+  local interval="${AGENT_TMUX_INTERVAL:-10}"
+
+  while true; do
+    notify
+    sleep "$interval"
+  done
+}
+
+main() {
+  local cmd="${1:-status}"
+  [[ $# -gt 0 ]] && shift
+
+  case "$cmd" in
+    status|list) status "$@" ;;
+    group) group_rows "${1:-session}" <<<"$(scan_panes || true)" ;;
+    bar) bar "$@" ;;
+    bar-plain) bar_plain "$@" ;;
+    window-icon) window_icon "$@" ;;
+    focus) focus "$@" ;;
+    switch) switch_pane "$@" ;;
+    open) open_agent "$@" ;;
+    restart) restart_pane "$@" ;;
+    keys) keys "$@" ;;
+    notify) notify "$@" ;;
+    notify-test) notify_test "$@" ;;
+    notify-debug) notify_debug "$@" ;;
+    why) why_pane "$@" ;;
+    events) events "$@" ;;
+    events-clear) events_clear "$@" ;;
+    doctor) doctor "$@" ;;
+    cache-clear) cache_clear "$@" ;;
+    watch) watch "$@" ;;
+    -h|--help|help) usage ;;
+    *)
+      usage >&2
+      return 2
+      ;;
+  esac
+}
+
+main "$@"

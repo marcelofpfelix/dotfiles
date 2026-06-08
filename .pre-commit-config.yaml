@@ -11,3 +11,16 @@ repos:
     rev: v8.29.0
     hooks:
     -   id: gitleaks
+-   repo: local
+    hooks:
+    -   id: check-bin-executables
+        name: check bin executable bits
+        entry: default/bin/check-bin-executables
+        language: system
+        pass_filenames: false
+    -   id: act-ci
+        name: run GitHub Actions locally with act
+        entry: act -W .github/workflows/ci.yml
+        language: system
+        pass_filenames: false
+        stages: [manual]

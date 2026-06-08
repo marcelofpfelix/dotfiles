@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+use: check-bin-executables [--fix]
+
+Checks files in default/bin and desktop/bin. Any file with a shebang must be
+executable. With --fix, missing executable bits are applied with chmod +x.
+EOF
+}
+
+fix=0
+case "${1:-}" in
+    --fix)
+        fix=1
+        shift
+        ;;
+    -h|--help)
+        usage
+        exit 0
+        ;;
+esac
+
+if [[ $# -gt 0 ]]; then
+    usage >&2
+    exit 2
+fi
+
+root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+missing=()
+
+while IFS= read -r -d '' file; do
+    rel="${file#"$root"/}"
+    [[ -f "$file" ]] || continue
+    IFS= read -r first_line <"$file" || first_line=""
+    [[ "$first_line" == '#!'* ]] || continue
+    [[ -x "$file" ]] && continue
+
+    if (( fix )); then
+        chmod +x "$file"
+        printf 'fixed %s\n' "$rel"
+    else
+        missing+=("$rel")
+    fi
+done < <(find "$root/default/bin" "$root/desktop/bin" -maxdepth 1 -type f -print0)
+
+if (( ${#missing[@]} > 0 )); then
+    printf 'missing executable bit:\n' >&2
+    printf '  %s\n' "${missing[@]}" >&2
+    printf '\nrun: check-bin-executables --fix\n' >&2
+    exit 1
+fi

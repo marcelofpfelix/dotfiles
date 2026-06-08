@@ -33,14 +33,6 @@ do
 done
 
 
-#TODO
-# stop containers, except for a specific list
-# same for netrworks and
-
-
-
-
-
 # docker image prune --all --filter "until=30d"
 
 

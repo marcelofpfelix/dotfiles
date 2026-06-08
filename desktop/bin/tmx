@@ -16,11 +16,6 @@ commands:
 ################################################################################
 
 
-# TODO:
-# test for popup tmux
-    # with ftb-tmux-popup or fzf-tmux
-# kill existing window before opening a new one
-
 # change to local directory
 cd "$(dirname $0)"
 # load lib
