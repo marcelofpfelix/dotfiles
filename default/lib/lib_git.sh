@@ -10,6 +10,40 @@ is_worktree() {
     [ -f ".git" ] && grep -q "^gitdir:" .git 2>/dev/null
 }
 
+git_repo_path_bool() {
+    case "${1:-false}" in
+        1|true|TRUE|yes|YES|y|Y|on|ON) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+git_repo_path() {
+    local owner="${1:?owner is required}"
+    local repo="${2:?repo is required}"
+    local subpath="${3:-}"
+    local git_root="${GIT_REPOS_ROOT:-$HOME/git}"
+    local gwt_root="${GWT_REPOS_ROOT:-$HOME/gwt}"
+    local path
+
+    if git_repo_path_bool "${WORKTREE:-false}"; then
+        path="$gwt_root/$owner/$repo/main"
+    else
+        path="$git_root/$owner/$repo"
+    fi
+
+    if [ -n "$subpath" ]; then
+        path="$path/${subpath#/}"
+    fi
+
+    printf '%s\n' "$path"
+}
+
+git_repo_cd() {
+    local path
+    path="$(git_repo_path "$@")" || return
+    cd "$path" || return
+}
+
 # Get current branch name
 get_current_branch() {
     git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ""

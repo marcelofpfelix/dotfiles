@@ -41,9 +41,10 @@ flags:
 . ../lib/lib_cli.sh
 
 
-dotfiles=~/git/marcelofpfelix/dotfiles
-homework=~/git/marcelofpfelix/homework
-workdir=~/git/team-telnyx/tel-proxy/home
+dotfiles="$(git_repo_path marcelofpfelix dotfiles)"
+homework="$(git_repo_path marcelofpfelix homework)"
+workdir="$(git_repo_path team-telnyx tel-proxy home)"
+homelab="$(git_repo_path marcelofpfelix homelab)"
 
 
 local_copy() {
@@ -71,7 +72,7 @@ home() {
 
     println "Running cli" "home" "-t ${target}" "-y ${yesman}" "-w ${work}" "-f ${fast}" "-d ${dst}" n:b:c:b:c:c
 
-    cd ~/git/marcelofpfelix/homelab/
+    cd "$homelab" || exit
 
     # check if $work is true
     if [ "$work" = "true" ]; then

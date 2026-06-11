@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 
+LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+. "$LIBS_DIR/lib_git.sh"
+
+wiki_dir="$(git_repo_path marcelofpfelix wiki)"
+
 # Directories
-DAILY_DIR="${HOME}/git/marcelofpfelix/wiki/resources/daily"
-ARCHIVE_DIR="${HOME}/git/marcelofpfelix/wiki/resources/archive/daily"
+DAILY_DIR="${wiki_dir}/resources/daily"
+ARCHIVE_DIR="${wiki_dir}/resources/archive/daily"
 
 # Ensure directories exist
 mkdir -p "$DAILY_DIR" "$ARCHIVE_DIR"
