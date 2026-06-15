@@ -2,147 +2,362 @@
 
 ################################################################################
 #                                 FILE INFO
-# Sync git repositories (supports both worktree and normal repos)
-#
-# Configuration format:
-#   "path"          - sync using auto-detected default branch
-#   "path:branch"   - sync using specified branch
-#   "path:default"  - explicitly use auto-detected default branch
+# sync configured git repositories
 ################################################################################
 
 set -Eeuo pipefail
 
-cd "$(dirname "$0")" || exit 1
-LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+CLI="""
+use: gsync
+short: sync configured git repositories
+long: |
+  Sync configured git repositories. Reads ~/.config/gsync/repos.conf by default.
+flags:
+  - use: config
+    short: config name or file
+    alias: c
+    type: string
+  - use: repo
+    short: repo ref or repo spec
+    alias: r
+    type: string
+  - use: write
+    short: pull, commit, and push local changes
+    type: bool
+  - use: read
+    short: pull only
+    type: bool
+  - use: verbose
+    short: print clone and sync paths
+    alias: v
+    type: bool
+"""
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/../lib/lib_utils.sh" ]; then
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/../lib}"
+elif [ -f "$SCRIPT_DIR/../../default/lib/lib_utils.sh" ]; then
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/../../default/lib}"
+else
+    LIBS_DIR="${LIBS_DIR:-$HOME/lib}"
+fi
+
 . "$LIBS_DIR/lib_utils.sh"
-. "$LIBS_DIR/lib_gsync.sh"
+. "$LIBS_DIR/lib_config.sh"
 
-# Configuration
-COMMIT_MSG="auto-update"
+gsync_init() {
+    DEFAULT_CONFIG_DIR="${GSYNC_CONFIG_DIR:-$HOME/.config/gsync}"
+    DEFAULT_CONFIG="${GSYNC_CONFIG:-$DEFAULT_CONFIG_DIR/repos.conf}"
+    DEFAULT_GIT="${GSYNC_GIT:-github.com}"
+    DEFAULT_ORG="${GSYNC_ORG:-}"
+    DEFAULT_WORKTREE="${GSYNC_WORKTREE:-false}"
+    DEFAULT_MODE="${GSYNC_MODE:-read}"
+    DEFAULT_BRANCH="${GSYNC_BRANCH:-main}"
+    DEFAULT_COMMIT_MSG="${GSYNC_COMMIT_MSG:-auto-update}"
+    RUN_PRE_COMMIT="${GSYNC_PRE_COMMIT:-true}"
+    GSYNC_VERBOSE="${GSYNC_VERBOSE:-false}"
 
-# Sync a single repository
-sync_repo() {
-    local repo_path="$1"
-    local configured_branch="$2"
+    CONFIG_FILES=()
+    REPO_LINES=()
+    REPO_DEFAULT_GITS=()
+    REPO_DEFAULT_ORGS=()
+    REPO_DEFAULT_WORKTREES=()
+    REPO_DEFAULT_MODES=()
+    REPO_DEFAULT_BRANCHES=()
+    REPO_DEFAULT_COMMIT_MSGS=()
+    REPO_DEFAULT_PRE_COMMITS=()
+    FAILED_REPOS=()
+    TOTAL=0
+    SUCCESS=0
+}
 
-    # Validate repository exists
-    if [ ! -d "$repo_path" ]; then
-        log ERRO " Repository not found: $repo_path"
+gsync_usage() {
+    cat <<EOF
+Usage:
+  gsync
+  gsync --config NAME_OR_FILE
+  gsync --repo REPO
+
+Default config:
+  $DEFAULT_CONFIG
+
+Config:
+  git=github.com
+  org=marcelofpfelix
+  worktree=false
+  mode=read
+  branch=main
+
+  repo dotfiles
+  repo team-telnyx/tel-proxy worktree=true
+  repo owner=github.com/marcelofpfelix/dotfiles worktree=false mode=read branch=main
+
+Defaults can appear anywhere in a config file. A repo uses the defaults active
+when its line was read.
+EOF
+}
+
+gsync_info() {
+    git_bool "$GSYNC_VERBOSE" && printf '%s\n' "$*"
+}
+
+gsync_add_repo_line() {
+    REPO_LINES+=("${1:?repo line is required}")
+    REPO_DEFAULT_GITS+=("$DEFAULT_GIT")
+    REPO_DEFAULT_ORGS+=("$DEFAULT_ORG")
+    REPO_DEFAULT_WORKTREES+=("$DEFAULT_WORKTREE")
+    REPO_DEFAULT_MODES+=("$DEFAULT_MODE")
+    REPO_DEFAULT_BRANCHES+=("$DEFAULT_BRANCH")
+    REPO_DEFAULT_COMMIT_MSGS+=("$DEFAULT_COMMIT_MSG")
+    REPO_DEFAULT_PRE_COMMITS+=("$RUN_PRE_COMMIT")
+}
+
+gsync_apply_default() {
+    local key="${1:?key is required}" value="${2:-}"
+
+    case "$key" in
+        git|host) DEFAULT_GIT="$value" ;;
+        org|owner) DEFAULT_ORG="$value" ;;
+        worktree) DEFAULT_WORKTREE="$value" ;;
+        mode) DEFAULT_MODE="$value" ;;
+        branch) DEFAULT_BRANCH="$value" ;;
+        commit_msg|commit-message|message) DEFAULT_COMMIT_MSG="$value" ;;
+        pre_commit|pre-commit) RUN_PRE_COMMIT="$value" ;;
+        *) log WARN "Ignoring unknown default setting: $key" ;;
+    esac
+}
+
+gsync_read_config_line() {
+    local key="$1" value="$2"
+
+    if [ -z "$key" ]; then
+        case "$value" in
+            repo\ *) gsync_add_repo_line "${value#repo }" ;;
+            *) log WARN "Ignoring config line: $value" ;;
+        esac
+        return
+    fi
+
+    gsync_apply_default "$key" "$value"
+}
+
+gsync_read_config_file() {
+    local config_file="${1:?config file is required}"
+
+    config_file="$(config_resolve_file "$config_file" "$DEFAULT_CONFIG_DIR")"
+    if [ ! -f "$config_file" ]; then
+        log ERRO "Config not found: $config_file"
         return 1
     fi
 
-    cd "$repo_path" || {
-        log ERRO "Cannot access: $repo_path"
+    config_read_kv_file "$config_file" gsync_read_config_line
+}
+
+gsync_parse_repo_ref() {
+    local ref="${1:?repo ref is required}" rest
+
+    ref="${ref%.git}"
+    ref="${ref#git@}"
+    ref="${ref#https://}"
+    ref="${ref#http://}"
+    ref="${ref/:/\/}"
+
+    REPO_HOST="${REPO_HOST:-$DEFAULT_GIT}"
+    REPO_ORG="${REPO_ORG:-$DEFAULT_ORG}"
+    REPO_NAME=""
+
+    case "$ref" in
+        */*/*)
+            REPO_HOST="${ref%%/*}"
+            rest="${ref#*/}"
+            REPO_ORG="${rest%%/*}"
+            REPO_NAME="${rest#*/}"
+            ;;
+        */*)
+            REPO_ORG="${ref%%/*}"
+            REPO_NAME="${ref#*/}"
+            ;;
+        *) REPO_NAME="$ref" ;;
+    esac
+
+    if [ -z "$REPO_ORG" ] || [ -z "$REPO_NAME" ]; then
+        log ERRO "Repo needs org/repo or a configured org=: $ref"
         return 1
-    }
+    fi
+}
 
-    log INFO "Syncing: $repo_path"
+gsync_parse_repo_spec() {
+    local spec="${1:?repo spec is required}"
+    local default_git="${2:-$DEFAULT_GIT}" default_org="${3:-$DEFAULT_ORG}"
+    local default_worktree="${4:-$DEFAULT_WORKTREE}" default_mode="${5:-$DEFAULT_MODE}"
+    local default_branch="${6:-$DEFAULT_BRANCH}" default_commit_msg="${7:-$DEFAULT_COMMIT_MSG}"
+    local ref="" token key value
 
-    # Determine target branch
-    local target_branch
-    if [ -z "$configured_branch" ] || [ "$configured_branch" = "default" ]; then
-        target_branch=$(get_default_branch)
-        log INFO "Branch: $target_branch (default)"
+    REPO_HOST="$default_git"
+    REPO_ORG="$default_org"
+    REPO_NAME=""
+    REPO_WORKTREE="$default_worktree"
+    REPO_MODE="$default_mode"
+    REPO_BRANCH="$default_branch"
+    REPO_COMMIT_MSG="$default_commit_msg"
+
+    for token in $spec; do
+        if [[ "$token" == *"="* ]]; then
+            key="${token%%=*}"
+            value="${token#*=}"
+            case "$key" in
+                repo|ref|owner) ref="$value" ;;
+                worktree) REPO_WORKTREE="$value" ;;
+                mode) REPO_MODE="$value" ;;
+                branch) REPO_BRANCH="$value" ;;
+                commit_msg|commit-message|message) REPO_COMMIT_MSG="$value" ;;
+                *) log WARN "Ignoring unknown repo setting: $key" ;;
+            esac
+        elif [ -z "$ref" ]; then
+            ref="$token"
+        else
+            log WARN "Ignoring extra repo token: $token"
+        fi
+    done
+
+    [ -n "$ref" ] || { log ERRO "Repo line needs a repo ref: $spec"; return 1; }
+    gsync_parse_repo_ref "$ref" || return
+
+    case "$REPO_MODE" in
+        read|write) ;;
+        *) log ERRO "Invalid mode '$REPO_MODE' for: $spec"; return 1 ;;
+    esac
+
+    if ! git_bool "$REPO_WORKTREE" && [ "$REPO_WORKTREE" != "false" ]; then
+        log ERRO "Invalid worktree '$REPO_WORKTREE' for: $spec"
+        return 1
+    fi
+
+    REPO_URL="$(git_repo_url "$REPO_ORG" "$REPO_NAME" "$REPO_HOST")"
+    if git_bool "$REPO_WORKTREE"; then
+        REPO_PATH="${GWT_REPOS_ROOT:-$HOME/gwt}/$REPO_ORG/$REPO_NAME/$REPO_BRANCH"
     else
-        target_branch="$configured_branch"
-        log INFO "Branch: $target_branch (configured)"
+        REPO_PATH="$(WORKTREE=false git_repo_path "$REPO_ORG" "$REPO_NAME")"
+    fi
+}
+
+gsync_sync_repo() {
+    local spec="${1:?repo spec is required}"
+    local default_git="${2:-$DEFAULT_GIT}" default_org="${3:-$DEFAULT_ORG}"
+    local default_worktree="${4:-$DEFAULT_WORKTREE}" default_mode="${5:-$DEFAULT_MODE}"
+    local default_branch="${6:-$DEFAULT_BRANCH}" default_commit_msg="${7:-$DEFAULT_COMMIT_MSG}"
+    local default_pre_commit="${8:-$RUN_PRE_COMMIT}"
+
+    gsync_parse_repo_spec "$spec" "$default_git" "$default_org" "$default_worktree" "$default_mode" "$default_branch" "$default_commit_msg" || return
+
+    if [ ! -d "$REPO_PATH" ]; then
+        gsync_info "clone $REPO_PATH"
+        GITFLAGS=--quiet git_repo_ensure "$REPO_ORG" "$REPO_NAME" "$REPO_PATH" "$REPO_URL" "$REPO_WORKTREE" "$REPO_BRANCH" || return
     fi
 
-    # Verify we're on the target branch
-    local current_branch=$(get_current_branch)
-    if [ "$current_branch" != "$target_branch" ]; then
-        log WARN "On '$current_branch', expected '$target_branch' - skipping"
+    if ! git -C "$REPO_PATH" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        log ERRO "Not a git repository: $REPO_PATH"
+        return 1
+    fi
+
+    gsync_info "sync $REPO_PATH"
+    cd "$REPO_PATH" || return
+
+    if [ "$(git_current_branch)" != "$REPO_BRANCH" ]; then
+        printf 'SKIP %s/%s branch=%s current=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH" "$(git_current_branch)"
         return 0
     fi
 
-    # Sync repository
-    log INFO "  Fetching updates..."
-    git fetch origin "$target_branch" 2>&1 || {
-        log ERRO "Fetch failed"
-        return 1
-    }
+    git fetch --quiet origin "$REPO_BRANCH" || return
+    git pull --quiet origin "$REPO_BRANCH" || return
 
-    log INFO "  Pulling changes..."
-    git pull origin "$target_branch" 2>&1 || {
-        log ERRO "Pull failed"
-        return 1
-    }
-
-    # run pre-commit
-    if [ -f ".pre-commit-config.yaml" ]; then
-        log INFO "  Running pre-commit..."
-        uvx pre-commit run --show-diff-on-failure --color=always --all-files
+    if [ "$REPO_MODE" = "read" ]; then
+        printf 'OK %s/%s mode=read branch=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
+        return 0
     fi
-    # Stage all changes
+
+    if [ "$default_pre_commit" = "true" ] && [ -f ".pre-commit-config.yaml" ]; then
+        if command -v uvx >/dev/null 2>&1; then
+            uvx pre-commit run --show-diff-on-failure --color=always --all-files
+        else
+            log WARN "uvx not found; skipping pre-commit"
+        fi
+    fi
+
     git add .
-
-    # Commit and push if there are changes
     if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-        log INFO "  Committing changes..."
-        local commit_output
-        if ! commit_output=$(git commit -m "$COMMIT_MSG" 2>&1); then
-            log ERRO "  Commit failed"
-            log DEBG "$commit_output"
-            git reset HEAD . 2>/dev/null || true  # Cleanup: unstage changes
+        git commit -m "$REPO_COMMIT_MSG" || {
+            git reset HEAD . 2>/dev/null || true
             return 1
-        fi
-
-        log INFO "  Pushing changes..."
-        local push_output
-        if ! push_output=$(git push origin "$target_branch" 2>&1); then
-            log ERRO "  Push failed"
-            log DEBG "$push_output"
-            return 1
-        fi
-        log INFO "  ✓ Synced with changes"
+        }
+        git push origin "$REPO_BRANCH" || return
+        printf 'OK %s/%s mode=write branch=%s changed=true\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
     else
-        log INFO "  ✓ Already up to date"
+        printf 'OK %s/%s mode=write branch=%s changed=false\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
     fi
-
-    return 0
 }
 
-# Main execution
-main() {
+gsync_parse_args() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --config|-c) CONFIG_FILES+=("${2:?--config requires a name or file}"); shift 2 ;;
+            --repo|-r) gsync_add_repo_line "${2:?--repo requires a repo ref}"; shift 2 ;;
+            --write) DEFAULT_MODE=write; shift ;;
+            --read) DEFAULT_MODE=read; shift ;;
+            --verbose|-v) GSYNC_VERBOSE=true; shift ;;
+            --help|-h) gsync_usage; exit 0 ;;
+            *) gsync_add_repo_line "$1"; shift ;;
+        esac
+    done
+}
 
-    local failed_repos=()
-    local total=0
-    local success=0
+gsync_load_default_config() {
+    if [ "${#CONFIG_FILES[@]}" -eq 0 ] && [ "${#REPO_LINES[@]}" -eq 0 ] && [ -f "$DEFAULT_CONFIG" ]; then
+        CONFIG_FILES+=("$DEFAULT_CONFIG")
+    fi
+}
 
-    # Process each repository
-    for repo_config in "${REPOS[@]}"; do
-        total=$((total + 1))
+gsync_main() {
+    gsync_init
+    gsync_parse_args "$@"
+    gsync_load_default_config
 
-        # Parse configuration: "path" or "path:branch"
-        local repo_path="${repo_config%%:*}"
-        local branch=""
-        [[ "$repo_config" == *:* ]] && branch="${repo_config#*:}"
-
-        # Expand variables in path
-        repo_path=$(eval echo "$repo_path")
-
-        # Sync repository
-        if sync_repo "$repo_path" "$branch"; then
-            success=$((success + 1))
-        else
-            failed_repos+=("$repo_path")
-        fi
-
-        echo
+    local config_file repo_line index
+    for config_file in "${CONFIG_FILES[@]}"; do
+        gsync_read_config_file "$config_file"
     done
 
-    # Report results
-    log INFO "Completed: $success/$total repositories"
-
-    if [ ${#failed_repos[@]} -gt 0 ]; then
-        log ERRO "${failed_repos[*]}"
-        update_status 1 "Failed: ${failed_repos[*]}"
-        exit 1
-    else
-        log INFO "All repositories synced successfully"
-        update_status 0 "OK"
-        exit 0
+    if [ "${#REPO_LINES[@]}" -eq 0 ]; then
+        gsync_usage
+        exit 2
     fi
+
+    for index in "${!REPO_LINES[@]}"; do
+        repo_line="${REPO_LINES[$index]}"
+        TOTAL=$((TOTAL + 1))
+        if gsync_sync_repo \
+            "$repo_line" \
+            "${REPO_DEFAULT_GITS[$index]}" \
+            "${REPO_DEFAULT_ORGS[$index]}" \
+            "${REPO_DEFAULT_WORKTREES[$index]}" \
+            "${REPO_DEFAULT_MODES[$index]}" \
+            "${REPO_DEFAULT_BRANCHES[$index]}" \
+            "${REPO_DEFAULT_COMMIT_MSGS[$index]}" \
+            "${REPO_DEFAULT_PRE_COMMITS[$index]}"; then
+            SUCCESS=$((SUCCESS + 1))
+        else
+            FAILED_REPOS+=("$repo_line")
+        fi
+    done
+
+    if [ "${#FAILED_REPOS[@]}" -gt 0 ]; then
+        printf 'FAIL completed=%s/%s failed=%s\n' "$SUCCESS" "$TOTAL" "${FAILED_REPOS[*]}" >&2
+        update_status 1 "Failed: ${FAILED_REPOS[*]}" "gsync" || true
+        exit 1
+    fi
+
+    printf 'DONE completed=%s/%s\n' "$SUCCESS" "$TOTAL"
+    update_status 0 "OK" "gsync" || true
 }
 
-main
+gsync_main "$@"

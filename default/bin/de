@@ -6,14 +6,32 @@
 ################################################################################
 
 # change to local directory
-cd "$(dirname $0)"
+cd "$(dirname "$0")" || exit
 # load libs
 . ../lib/lib_utils.sh
-. ../lib/lib_de.sh
 
-main() {
-  de "$@"
+exec() {
+  sudo docker exec -it "$container" env PS1='\['"$BBlue"'\]'$(hostname -s)'@\['"$BPurple"'\]'"$container"'\['"$BBlue"'\]:\w \['"$BPurple"'\]\$\['"$nocolor"'\] ' env "$1"
 }
 
-  # $1: container name
-main "$@"
+de() {
+  [ -z "$1" ] && dps && return 1
+  container=$1
+  shift
+
+  if [ "$#" -eq 0 ]; then
+    for shell in bash ash sh dash; do
+      exec "$shell"
+      result=$?
+      [ "$result" -ne 127 ] && break
+    done
+
+    [ "$result" -eq 127 ] && echo "Shell not available: $container"
+    [ "$result" -eq 1 ] && dps
+  else
+    sudo docker exec "$container" "$@"
+    return $?
+  fi
+}
+
+de "$@"

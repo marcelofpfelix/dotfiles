@@ -13,7 +13,9 @@ cd "$(dirname "$0")" || exit
 CLAW_PORT="18789"
 
 show_status() {
+  CLAW_UP=0
   if ss -t -l -n | grep -q ":${CLAW_PORT}"; then
+    CLAW_UP=1
     # printc "$(icon robot)" g
     printf "\n"
   else
@@ -34,7 +36,9 @@ main() {
   else
     code=$?
   fi
-  notify_on_failure "check-claw" "$code"
+  report_check_status \
+    "check-claw" "$code" "up=${CLAW_UP:-0} port=${CLAW_PORT}" \
+    "$(prometheus_check_metric "check-claw" "service_up" "${CLAW_UP:-0}" "service=\"openclaw\",port=\"${CLAW_PORT}\"")"
   exit "$code"
 }
 

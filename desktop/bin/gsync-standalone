@@ -1,0 +1,329 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+CONFIG_DIR="${GSYNC_CONFIG_DIR:-$HOME/.config/gsync}"
+DEFAULT_CONFIG="${GSYNC_CONFIG:-$CONFIG_DIR/repos.conf}"
+
+DEFAULT_GIT="${GSYNC_GIT:-github.com}"
+DEFAULT_ORG="${GSYNC_ORG:-}"
+DEFAULT_WORKTREE="${GSYNC_WORKTREE:-false}"
+DEFAULT_MODE="${GSYNC_MODE:-read}"
+DEFAULT_BRANCH="${GSYNC_BRANCH:-main}"
+DEFAULT_COMMIT_MSG="${GSYNC_COMMIT_MSG:-auto-update}"
+
+CONFIG_FILES=()
+REPO_LINES=()
+REPO_DEFAULT_GITS=()
+REPO_DEFAULT_ORGS=()
+REPO_DEFAULT_WORKTREES=()
+REPO_DEFAULT_MODES=()
+REPO_DEFAULT_BRANCHES=()
+REPO_DEFAULT_COMMIT_MSGS=()
+FAILED=()
+TOTAL=0
+SUCCESS=0
+
+usage() {
+    cat <<EOF
+Usage:
+  gsync-standalone
+  gsync-standalone --config NAME_OR_FILE
+  gsync-standalone --repo REPO
+
+Default config:
+  $DEFAULT_CONFIG
+
+Config:
+  git=github.com
+  org=marcelofpfelix
+  worktree=false
+  mode=read
+  branch=main
+
+  repo dotfiles
+  repo team-telnyx/tel-proxy worktree=true
+  repo owner=github.com/marcelofpfelix/dotfiles mode=write
+EOF
+}
+
+die() {
+    printf 'ERROR %s\n' "$*" >&2
+    return 1
+}
+
+truthy() {
+    case "${1:-false}" in
+        1|true|TRUE|yes|YES|y|Y|on|ON) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+trim() {
+    local value="$1"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    printf '%s\n' "$value"
+}
+
+expand_path() {
+    local path="${1:?path is required}"
+    case "$path" in
+        "~") printf '%s\n' "$HOME" ;;
+        "~/"*) printf '%s/%s\n' "$HOME" "${path#~/}" ;;
+        *) printf '%s\n' "$path" ;;
+    esac
+}
+
+resolve_config_file() {
+    local config_file="${1:?config file is required}"
+    case "$config_file" in
+        */*|~*) expand_path "$config_file" ;;
+        *.*) printf '%s/%s\n' "$CONFIG_DIR" "$config_file" ;;
+        *) printf '%s/%s.conf\n' "$CONFIG_DIR" "$config_file" ;;
+    esac
+}
+
+repo_path() {
+    local org="$1" repo="$2" worktree="$3" branch="$4"
+    if truthy "$worktree"; then
+        printf '%s/%s/%s/%s\n' "${GWT_REPOS_ROOT:-$HOME/gwt}" "$org" "$repo" "$branch"
+    else
+        printf '%s/%s/%s\n' "${GIT_REPOS_ROOT:-$HOME/git}" "$org" "$repo"
+    fi
+}
+
+repo_url() {
+    local host="$1" org="$2" repo="$3"
+    printf 'git@%s:%s/%s.git\n' "$host" "$org" "$repo"
+}
+
+current_branch() {
+    git rev-parse --abbrev-ref HEAD 2>/dev/null || true
+}
+
+add_repo_line() {
+    REPO_LINES+=("${1:?repo line is required}")
+    REPO_DEFAULT_GITS+=("$DEFAULT_GIT")
+    REPO_DEFAULT_ORGS+=("$DEFAULT_ORG")
+    REPO_DEFAULT_WORKTREES+=("$DEFAULT_WORKTREE")
+    REPO_DEFAULT_MODES+=("$DEFAULT_MODE")
+    REPO_DEFAULT_BRANCHES+=("$DEFAULT_BRANCH")
+    REPO_DEFAULT_COMMIT_MSGS+=("$DEFAULT_COMMIT_MSG")
+}
+
+apply_default() {
+    local key="$1" value="$2"
+    case "$key" in
+        git|host) DEFAULT_GIT="$value" ;;
+        org|owner) DEFAULT_ORG="$value" ;;
+        worktree) DEFAULT_WORKTREE="$value" ;;
+        mode) DEFAULT_MODE="$value" ;;
+        branch) DEFAULT_BRANCH="$value" ;;
+        commit_msg|commit-message|message) DEFAULT_COMMIT_MSG="$value" ;;
+        *) printf 'WARN ignoring default %s\n' "$key" >&2 ;;
+    esac
+}
+
+read_config_file() {
+    local config_file line key value
+    config_file="$(resolve_config_file "$1")"
+    [ -f "$config_file" ] || die "config not found: $config_file"
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%%#*}"
+        line="$(trim "$line")"
+        [ -z "$line" ] && continue
+        case "$line" in
+            repo\ *) add_repo_line "${line#repo }" ;;
+            *=*)
+                key="$(trim "${line%%=*}")"
+                value="$(trim "${line#*=}")"
+                apply_default "$key" "$value"
+                ;;
+            *) printf 'WARN ignoring line: %s\n' "$line" >&2 ;;
+        esac
+    done < "$config_file"
+}
+
+parse_ref() {
+    local ref="$1" rest
+    ref="${ref%.git}"
+    ref="${ref#git@}"
+    ref="${ref#https://}"
+    ref="${ref#http://}"
+    ref="${ref/:/\/}"
+
+    REPO_HOST="${REPO_HOST:-$DEFAULT_GIT}"
+    REPO_ORG="${REPO_ORG:-$DEFAULT_ORG}"
+    REPO_NAME=""
+
+    case "$ref" in
+        */*/*)
+            REPO_HOST="${ref%%/*}"
+            rest="${ref#*/}"
+            REPO_ORG="${rest%%/*}"
+            REPO_NAME="${rest#*/}"
+            ;;
+        */*)
+            REPO_ORG="${ref%%/*}"
+            REPO_NAME="${ref#*/}"
+            ;;
+        *) REPO_NAME="$ref" ;;
+    esac
+
+    [ -n "$REPO_ORG" ] && [ -n "$REPO_NAME" ] || die "repo needs org/repo or configured org: $ref"
+}
+
+parse_repo() {
+    local spec="$1" token key value ref=""
+    REPO_HOST="$2"
+    REPO_ORG="$3"
+    REPO_WORKTREE="$4"
+    REPO_MODE="$5"
+    REPO_BRANCH="$6"
+    REPO_COMMIT_MSG="$7"
+
+    for token in $spec; do
+        if [[ "$token" == *"="* ]]; then
+            key="${token%%=*}"
+            value="${token#*=}"
+            case "$key" in
+                repo|ref|owner) ref="$value" ;;
+                worktree) REPO_WORKTREE="$value" ;;
+                mode) REPO_MODE="$value" ;;
+                branch) REPO_BRANCH="$value" ;;
+                commit_msg|commit-message|message) REPO_COMMIT_MSG="$value" ;;
+                *) printf 'WARN ignoring repo setting %s\n' "$key" >&2 ;;
+            esac
+        elif [ -z "$ref" ]; then
+            ref="$token"
+        fi
+    done
+
+    [ -n "$ref" ] || die "repo line needs a repo ref: $spec"
+    parse_ref "$ref" || return
+
+    case "$REPO_MODE" in
+        read|write) ;;
+        *) die "invalid mode '$REPO_MODE' for: $spec" || return ;;
+    esac
+
+    if ! truthy "$REPO_WORKTREE" && [ "$REPO_WORKTREE" != "false" ]; then
+        die "invalid worktree '$REPO_WORKTREE' for: $spec" || return
+    fi
+
+    REPO_URL="$(repo_url "$REPO_HOST" "$REPO_ORG" "$REPO_NAME")"
+    REPO_PATH="$(repo_path "$REPO_ORG" "$REPO_NAME" "$REPO_WORKTREE" "$REPO_BRANCH")"
+}
+
+ensure_repo() {
+    if git -C "$REPO_PATH" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        return 0
+    fi
+    [ ! -e "$REPO_PATH" ] || die "path exists but is not a git repo: $REPO_PATH"
+
+    if truthy "$REPO_WORKTREE"; then
+        local base="${GWT_REPOS_ROOT:-$HOME/gwt}/$REPO_ORG/$REPO_NAME"
+        mkdir -p "$base"
+        if [ ! -d "$base/.bare" ]; then
+            git clone --quiet --bare "$REPO_URL" "$base/.bare" || return
+            printf 'gitdir: ./.bare\n' > "$base/.git"
+            git -C "$base" config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+        elif [ ! -f "$base/.git" ]; then
+            printf 'gitdir: ./.bare\n' > "$base/.git"
+        fi
+        git -C "$base" fetch --quiet origin || return
+        if git -C "$base" show-ref --verify --quiet "refs/heads/$REPO_BRANCH"; then
+            git -C "$base" worktree add --quiet "$REPO_PATH" "$REPO_BRANCH"
+        else
+            git -C "$base" worktree add --quiet -b "$REPO_BRANCH" "$REPO_PATH" "origin/$REPO_BRANCH"
+        fi
+    else
+        mkdir -p "$(dirname "$REPO_PATH")"
+        git clone --quiet --branch "$REPO_BRANCH" "$REPO_URL" "$REPO_PATH"
+    fi
+}
+
+sync_repo() {
+    parse_repo "$@" || return
+    ensure_repo || return
+
+    local branch
+    branch="$(git -C "$REPO_PATH" rev-parse --abbrev-ref HEAD)"
+    if [ "$branch" != "$REPO_BRANCH" ]; then
+        printf 'SKIP %s/%s branch=%s current=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH" "$branch"
+        return 0
+    fi
+
+    git -C "$REPO_PATH" fetch --quiet origin "$REPO_BRANCH" || return
+    git -C "$REPO_PATH" pull --quiet origin "$REPO_BRANCH" || return
+
+    if [ "$REPO_MODE" = "read" ]; then
+        printf 'OK %s/%s mode=read branch=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
+        return 0
+    fi
+
+    git -C "$REPO_PATH" add .
+    if git -C "$REPO_PATH" diff-index --quiet HEAD -- 2>/dev/null; then
+        printf 'OK %s/%s mode=write branch=%s changed=false\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
+        return 0
+    fi
+
+    git -C "$REPO_PATH" commit -m "$REPO_COMMIT_MSG" >/dev/null || return
+    git -C "$REPO_PATH" push --quiet origin "$REPO_BRANCH" || return
+    printf 'OK %s/%s mode=write branch=%s changed=true\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
+}
+
+parse_args() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --config|-c) CONFIG_FILES+=("${2:?--config requires a name or file}"); shift 2 ;;
+            --repo|-r) add_repo_line "${2:?--repo requires a repo ref}"; shift 2 ;;
+            --write) DEFAULT_MODE=write; shift ;;
+            --read) DEFAULT_MODE=read; shift ;;
+            --help|-h) usage; exit 0 ;;
+            *) add_repo_line "$1"; shift ;;
+        esac
+    done
+}
+
+main() {
+    parse_args "$@"
+
+    if [ "${#CONFIG_FILES[@]}" -eq 0 ] && [ "${#REPO_LINES[@]}" -eq 0 ] && [ -f "$DEFAULT_CONFIG" ]; then
+        CONFIG_FILES+=("$DEFAULT_CONFIG")
+    fi
+
+    local config_file index repo_line
+    for config_file in "${CONFIG_FILES[@]}"; do
+        read_config_file "$config_file"
+    done
+
+    [ "${#REPO_LINES[@]}" -gt 0 ] || { usage; exit 2; }
+
+    for index in "${!REPO_LINES[@]}"; do
+        repo_line="${REPO_LINES[$index]}"
+        TOTAL=$((TOTAL + 1))
+        if sync_repo \
+            "$repo_line" \
+            "${REPO_DEFAULT_GITS[$index]}" \
+            "${REPO_DEFAULT_ORGS[$index]}" \
+            "${REPO_DEFAULT_WORKTREES[$index]}" \
+            "${REPO_DEFAULT_MODES[$index]}" \
+            "${REPO_DEFAULT_BRANCHES[$index]}" \
+            "${REPO_DEFAULT_COMMIT_MSGS[$index]}"; then
+            SUCCESS=$((SUCCESS + 1))
+        else
+            FAILED+=("$repo_line")
+        fi
+    done
+
+    if [ "${#FAILED[@]}" -gt 0 ]; then
+        printf 'FAIL completed=%s/%s failed=%s\n' "$SUCCESS" "$TOTAL" "${FAILED[*]}" >&2
+        exit 1
+    fi
+    printf 'DONE completed=%s/%s\n' "$SUCCESS" "$TOTAL"
+}
+
+main "$@"

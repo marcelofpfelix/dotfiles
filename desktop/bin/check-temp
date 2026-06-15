@@ -11,24 +11,24 @@ set -Eeuo pipefail
 cd "$(dirname "$0")" || exit
 
 show_status() {
-  local temp_raw temp_int
+  local temp_raw
 
   temp_raw=$(sensors | grep temp1 | head -n1 | awk '{print $2}' | tr -d '+°C')
-  temp_int=${temp_raw%.*}
+  TEMP_C=${temp_raw%.*}
 
-  if (( temp_int >= 80 )); then
+  if (( TEMP_C >= 80 )); then
     printc "$(icon temp)" r
-  elif (( temp_int >= 60 )); then
+  elif (( TEMP_C >= 60 )); then
     printc "$(icon temp)" y
   else
     printc "$(icon temp)" g
   fi
-  printf "%2d\n" "$temp_int"
+  printf "%2d\n" "$TEMP_C"
 
-  if (( temp_int >= 80 )); then
-    exit 2
-  elif (( temp_int >= 60 )); then
-    exit 1
+  if (( TEMP_C >= 80 )); then
+    return 2
+  elif (( TEMP_C >= 60 )); then
+    return 1
   fi
 }
 
@@ -36,8 +36,17 @@ main() {
   LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
   . "$LIBS_DIR/lib_utils.sh"
   . "$LIBS_DIR/lib_icon.sh"
+  . "$LIBS_DIR/lib_status.sh"
 
-  show_status
+  if show_status; then
+    code=0
+  else
+    code=$?
+  fi
+  report_check_status \
+    "check-temp" "$code" "temperature_celsius=${TEMP_C:-0}" \
+    "$(prometheus_check_metric "check-temp" "temperature_celsius" "${TEMP_C:-0}")"
+  exit "$code"
 }
 
 main "$@"

@@ -11,37 +11,45 @@ set -Eeuo pipefail
 cd "$(dirname "$0")" || exit
 
 show_status() {
-  local mem_pct
   case "$(uname)" in
     Linux)
-      mem_pct=$(awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {printf "%2.0f", (t-a)*100/t}' /proc/meminfo)
+      MEM_PCT=$(awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {printf "%2.0f", (t-a)*100/t}' /proc/meminfo)
       ;;
     Darwin)
       local page_size total used
-      page_size=$(sysctl -n hw.pagesize)
-      total=$(sysctl -n hw.memsize)
+      page_size=$(sysctl -n hw.pagesize 2>/dev/null || true)
+      total=$(sysctl -n hw.memsize 2>/dev/null || true)
       used=$(vm_stat | awk -v ps="$page_size" '
         /Pages active/   {a=$NF+0}
         /Pages wired/    {w=$NF+0}
         /Pages compressed/ {c=$NF+0}
         END {print (a+w+c)*ps}')
-      mem_pct=$(( used * 100 / total ))
+      if [ -n "$total" ] && [ "$total" -gt 0 ] 2>/dev/null; then
+        MEM_PCT=$(( used * 100 / total ))
+      fi
       ;;
   esac
 
-  if (( mem_pct >= 85 )); then
+  if [ -z "${MEM_PCT:-}" ]; then
+    MEM_PCT=0
     printc "$(icon mem)" r
-  elif (( mem_pct >= 60 )); then
+    printf "%2d\n" "$MEM_PCT"
+    return 2
+  fi
+
+  if (( MEM_PCT >= 85 )); then
+    printc "$(icon mem)" r
+  elif (( MEM_PCT >= 60 )); then
     printc "$(icon mem)" y
   else
     printc "$(icon mem)" g
   fi
-  printf "%2d\n" "$mem_pct"
+  printf "%2d\n" "$MEM_PCT"
 
-  if (( mem_pct >= 85 )); then
-    exit 2
-  elif (( mem_pct >= 60 )); then
-    exit 1
+  if (( MEM_PCT >= 85 )); then
+    return 2
+  elif (( MEM_PCT >= 60 )); then
+    return 1
   fi
 }
 
@@ -49,8 +57,17 @@ main() {
   LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
   . "$LIBS_DIR/lib_utils.sh"
   . "$LIBS_DIR/lib_icon.sh"
+  . "$LIBS_DIR/lib_status.sh"
 
-  show_status
+  if show_status; then
+    code=0
+  else
+    code=$?
+  fi
+  report_check_status \
+    "check-mem" "$code" "usage_percent=${MEM_PCT:-0}" \
+    "$(prometheus_check_metric "check-mem" "memory_usage_percent" "${MEM_PCT:-0}")"
+  exit "$code"
 }
 
 main "$@"

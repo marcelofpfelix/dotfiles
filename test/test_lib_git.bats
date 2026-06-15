@@ -5,7 +5,7 @@ setup() {
   export HOME="$TEST_DIR/home"
   mkdir -p "$HOME"
 
-  source "$(dirname "$BATS_TEST_FILENAME")/lib_git.sh"
+  source "$(dirname "$BATS_TEST_FILENAME")/../default/lib/lib_git.sh"
 }
 
 teardown() {
@@ -47,11 +47,37 @@ teardown() {
   [ "$output" = "$TEST_DIR/gwtroot/marcelofpfelix/homework/main" ]
 }
 
+@test "git_repo_url builds github ssh url" {
+  run git_repo_url marcelofpfelix dotfiles
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "git@github.com:marcelofpfelix/dotfiles.git" ]
+}
+
+@test "git_repo_url supports custom git host" {
+  run git_repo_url team-telnyx tel-proxy gitlab.com
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "git@gitlab.com:team-telnyx/tel-proxy.git" ]
+}
+
+@test "git repo owner and name are parsed from ssh urls" {
+  run git_repo_owner_from_url git@github.com:marcelofpfelix/dotfiles.git
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "marcelofpfelix" ]
+
+  run git_repo_name_from_url git@github.com:marcelofpfelix/dotfiles.git
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "dotfiles" ]
+}
+
 @test "git_repo_cd changes to resolved path" {
   mkdir -p "$HOME/git/marcelofpfelix/homework"
 
   run bash -c "
-    source '$(dirname "$BATS_TEST_FILENAME")/lib_git.sh'
+    source '$(dirname "$BATS_TEST_FILENAME")/../default/lib/lib_git.sh'
     git_repo_cd marcelofpfelix homework
     pwd
   "

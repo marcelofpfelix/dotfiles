@@ -5,61 +5,25 @@
 # git checkout a new branch
 ################################################################################
 
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/../lib/lib_git.sh" ]; then
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/../lib}"
+elif [ -f "$SCRIPT_DIR/../../default/lib/lib_git.sh" ]; then
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/../../default/lib}"
+else
+    LIBS_DIR="${LIBS_DIR:-$HOME/lib}"
+fi
+. "$LIBS_DIR/lib_git.sh"
 
 main() {
-    # get default branch name
-    default_branch="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
-
-    # checkout default branch
-    git checkout "$default_branch"
-    git fetch
-    # pull
-    git pull origin "$default_branch"
-    # check if pull was successful
-    if [ $? -ne 0 ]; then
-        echo "Exiting, no branch created." && exit
+    if [ "$#" -ne 1 ]; then
+        echo "Usage: checkout <branch>" >&2
+        exit 2
     fi
 
-    # check number of arguments is 1
-    if [ "$#" -eq 1 ]; then
-        branch="$1"
-    else
-        exit
-        # ask for new branch name
-        #branch=$(gum input --placeholder "New branch name")
-    fi
-
-    # check if branch name is empty
-    if [ -z "$branch" ]; then
-        echo "Exiting, no branch created." && exit
-    fi
-    # check if branch name is 'master' or 'main'
-    if [ "$branch" == $default_branch ]; then
-        echo "Exiting, no branch created." && exit
-    fi
-    # check if branch name already exists
-
-    if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
-        # checkout and pull from remote
-        git checkout "$branch"
-        git pull origin "$branch"
-        exit
-    fi
-    if git show-ref --verify --quiet "refs/heads/$branch"; then
-        # check if branch exists locally
-        git checkout "$branch"
-        exit
-
-        # echo "Branch '$branch' already exists."
-        # if (gum confirm "Reset '$branch'?"); then
-        #     echo ""
-        # else
-        #     git checkout "$branch"
-        #     echo "Exiting, no branch created." && exit
-        # fi
-    fi
-
-    git checkout -B "$branch"
+    git_checkout_feature_branch "$1"
 }
 
 main "$@"

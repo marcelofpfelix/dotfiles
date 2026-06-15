@@ -10,12 +10,14 @@
 cd "$(dirname "$0")" || exit 1
 LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
 . "$LIBS_DIR/lib_utils.sh"
+. "$LIBS_DIR/lib_status.sh"
 
 LEMONBAR=1
 STATUS_FILE="$HOME/script-status.ini"
 
 if [ ! -f "$STATUS_FILE" ]; then
     log ERRO "No status file found at $STATUS_FILE"
+    report_check_status "check-scripts" 1 "status file missing"
     exit 1
 fi
 
@@ -40,7 +42,9 @@ fi
 
 if [ "$has_errors" -eq 1 ]; then
     println "$(icon erro)" r
+    report_check_status "check-scripts" 1 "script-status has errors"
     exit 1
 else
     println
+    report_check_status "check-scripts" 0 "OK"
 fi

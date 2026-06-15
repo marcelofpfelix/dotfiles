@@ -4,6 +4,13 @@
 # Supports both normal repos and worktree repos
 ################################################################################
 
+git_bool() {
+    case "${1:-false}" in
+        1|true|TRUE|yes|YES|y|Y|on|ON) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # Check if current directory is a git worktree
 # Worktrees have .git as a file (not directory) containing "gitdir:" reference
 is_worktree() {
@@ -11,10 +18,7 @@ is_worktree() {
 }
 
 git_repo_path_bool() {
-    case "${1:-false}" in
-        1|true|TRUE|yes|YES|y|Y|on|ON) return 0 ;;
-        *) return 1 ;;
-    esac
+    git_bool "$@"
 }
 
 git_repo_path() {
@@ -38,6 +42,30 @@ git_repo_path() {
     printf '%s\n' "$path"
 }
 
+git_repo_url() {
+    local owner="${1:?owner is required}"
+    local repo="${2:?repo is required}"
+    local host="${3:-github.com}"
+
+    printf 'git@%s:%s/%s.git\n' "$host" "$owner" "$repo"
+}
+
+git_repo_owner_from_url() {
+    local repo_url="${1:?repo url is required}"
+    repo_url="${repo_url%.git}"
+    repo_url="${repo_url%/}"
+
+    printf '%s\n' "$repo_url" | awk -F'[/:]' '{print $(NF-1)}'
+}
+
+git_repo_name_from_url() {
+    local repo_url="${1:?repo url is required}"
+    repo_url="${repo_url%.git}"
+    repo_url="${repo_url%/}"
+
+    basename "$repo_url"
+}
+
 git_repo_cd() {
     local path
     path="$(git_repo_path "$@")" || return
@@ -47,6 +75,10 @@ git_repo_cd() {
 # Get current branch name
 get_current_branch() {
     git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ""
+}
+
+git_current_branch() {
+    get_current_branch "$@"
 }
 
 # Get default branch for repository
@@ -77,24 +109,155 @@ get_default_branch() {
     echo "main"
 }
 
-# Sync repository with remote
-# Usage: git_sync <branch> <commit_message>
-git_sync() {
-    local branch="${1:-$(get_default_branch)}"
-    local commit_msg="${2:-auto-update}"
+git_default_branch() {
+    get_default_branch "$@"
+}
 
-    # Fetch and pull
-    git fetch origin "$branch" 2>&1 || return 1
-    git pull origin "$branch" 2>&1 || return 1
+git_checkout_default_branch() {
+    local branch
+    branch="$(git_default_branch)"
 
-    # Stage all changes
-    git add .
+    git checkout "$branch"
+}
 
-    # Commit if there are changes
-    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-        git commit -m "$commit_msg" 2>&1 || return 1
-        git push origin "$branch" 2>&1 || return 1
+git_checkout_feature_branch() {
+    local branch="${1:?branch is required}"
+    local default_branch
+
+    default_branch="$(git_default_branch)"
+    if [ -z "$branch" ] || [ "$branch" = "$default_branch" ]; then
+        return 2
     fi
 
-    return 0
+    git checkout "$default_branch" || return
+    git fetch || return
+    git pull origin "$default_branch" || return
+
+    if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+        git checkout "$branch" || return
+        git pull origin "$branch"
+        return
+    fi
+
+    if git show-ref --verify --quiet "refs/heads/$branch"; then
+        git checkout "$branch"
+        return
+    fi
+
+    git checkout -B "$branch"
+}
+
+git_repo_has_worktree_path() {
+    local path="${1:?path is required}"
+
+    [ -d "$path" ] && git -C "$path" rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
+
+git_repo_ensure_normal() {
+    local path="${1:?path is required}"
+    local url="${2:?url is required}"
+    local branch="${3:-}"
+
+    if git_repo_has_worktree_path "$path"; then
+        return 0
+    fi
+
+    if [ -e "$path" ]; then
+        printf 'Path exists but is not a git repository: %s\n' "$path" >&2
+        return 1
+    fi
+
+    mkdir -p "$(dirname "$path")" || return
+    if [ -n "$branch" ] && [ "$branch" != "default" ]; then
+        git clone ${GITFLAGS:-} --branch "$branch" "$url" "$path"
+    else
+        git clone ${GITFLAGS:-} "$url" "$path"
+    fi
+}
+
+git_repo_ensure_worktree() {
+    local owner="${1:?owner is required}"
+    local repo="${2:?repo is required}"
+    local path="${3:?path is required}"
+    local url="${4:?url is required}"
+    local branch="${5:-main}"
+    local base="${GWT_REPOS_ROOT:-$HOME/gwt}/$owner/$repo"
+
+    if git_repo_has_worktree_path "$path"; then
+        return 0
+    fi
+
+    if [ -e "$path" ]; then
+        printf 'Path exists but is not a git worktree: %s\n' "$path" >&2
+        return 1
+    fi
+
+    mkdir -p "$base" || return
+    if [ ! -d "$base/.bare" ]; then
+        git clone ${GITFLAGS:-} --bare "$url" "$base/.bare" || return
+        printf 'gitdir: ./.bare\n' > "$base/.git"
+        git -C "$base" config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" || return
+    elif [ ! -f "$base/.git" ]; then
+        printf 'gitdir: ./.bare\n' > "$base/.git"
+    fi
+
+    git -C "$base" fetch ${GITFLAGS:-} origin || return
+
+    if [ -z "$branch" ] || [ "$branch" = "default" ]; then
+        branch="$(git -C "$base" remote show origin 2>/dev/null | awk '/HEAD branch/ {print $NF}')"
+        branch="${branch:-main}"
+    fi
+
+    if git -C "$base" show-ref --verify --quiet "refs/heads/$branch"; then
+        git -C "$base" worktree add ${GITFLAGS:-} "$path" "$branch"
+    elif git -C "$base" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+        git -C "$base" worktree add ${GITFLAGS:-} -b "$branch" "$path" "origin/$branch"
+    else
+        printf 'Branch not found for worktree clone: %s\n' "$branch" >&2
+        return 1
+    fi
+}
+
+git_repo_ensure() {
+    local owner="${1:?owner is required}"
+    local repo="${2:?repo is required}"
+    local path="${3:?path is required}"
+    local url="${4:?url is required}"
+    local worktree="${5:-false}"
+    local branch="${6:-}"
+
+    if git_bool "$worktree"; then
+        git_repo_ensure_worktree "$owner" "$repo" "$path" "$url" "$branch"
+    else
+        git_repo_ensure_normal "$path" "$url" "$branch"
+    fi
+}
+
+git_repo_pull() {
+    local branch="${1:-$(git_default_branch)}"
+
+    git fetch origin "$branch" || return
+    git pull origin "$branch"
+}
+
+# Sync repository with remote.
+# Usage: git_sync <branch> <commit_message> [mode]
+# mode=read only fetches/pulls; mode=write also commits and pushes changes.
+git_sync() {
+    local branch="${1:-$(git_default_branch)}"
+    local commit_msg="${2:-auto-update}"
+    local mode="${3:-write}"
+
+    git_repo_pull "$branch" || return
+
+    if [ "$mode" = "read" ] || [ "$mode" = "pull" ]; then
+        return 0
+    fi
+
+    git add .
+
+    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+        git commit -m "$commit_msg" || return
+        git push origin "$branch" || return
+    fi
 }

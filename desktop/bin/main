@@ -5,13 +5,20 @@
 # git checkout default branch
 ################################################################################
 
+set -Eeuo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/../lib/lib_git.sh" ]; then
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/../lib}"
+elif [ -f "$SCRIPT_DIR/../../default/lib/lib_git.sh" ]; then
+    LIBS_DIR="${LIBS_DIR:-$SCRIPT_DIR/../../default/lib}"
+else
+    LIBS_DIR="${LIBS_DIR:-$HOME/lib}"
+fi
+. "$LIBS_DIR/lib_git.sh"
 
 main() {
-    # get default branch name
-    default_branch="$(git remote show origin | awk '/HEAD branch/ {print $NF}')"
-
-    # checkout default branch
-    git checkout "$default_branch"
+    git_checkout_default_branch
 }
 
 main "$@"

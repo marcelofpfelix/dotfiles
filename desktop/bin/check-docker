@@ -13,26 +13,25 @@ cd "$(dirname "$0")" || exit
 DOCKER_EXPECTED=${DOCKER_EXPECTED:-0}
 
 show_status() {
-  local running stopped
-  running=$(docker ps -q 2>/dev/null | wc -l | tr -d ' \t')
-  stopped=$(docker ps -q --filter "status=exited" 2>/dev/null | wc -l | tr -d ' \t')
+  DOCKER_RUNNING=$(docker ps -q 2>/dev/null | wc -l | tr -d ' \t')
+  DOCKER_STOPPED=$(docker ps -q --filter "status=exited" 2>/dev/null | wc -l | tr -d ' \t')
 
-  if (( stopped > 0 )); then
+  if (( DOCKER_STOPPED > 0 )); then
     printc "$(icon docker)" r
-  elif (( DOCKER_EXPECTED > 0 && running != DOCKER_EXPECTED )); then
+  elif (( DOCKER_EXPECTED > 0 && DOCKER_RUNNING != DOCKER_EXPECTED )); then
     printc "$(icon docker)" y
   else
     printc "$(icon docker)" g
   fi
-  printc "${running}" n
-  if (( stopped > 0 )); then
-    printc "/${stopped}" r
+  printc "${DOCKER_RUNNING}" n
+  if (( DOCKER_STOPPED > 0 )); then
+    printc "/${DOCKER_STOPPED}" r
   fi
   printf "\n"
 
-  if (( stopped > 0 )); then
+  if (( DOCKER_STOPPED > 0 )); then
     return 2
-  elif (( DOCKER_EXPECTED > 0 && running != DOCKER_EXPECTED )); then
+  elif (( DOCKER_EXPECTED > 0 && DOCKER_RUNNING != DOCKER_EXPECTED )); then
     return 1
   fi
 }
@@ -48,7 +47,11 @@ main() {
   else
     code=$?
   fi
-  notify_on_failure "check-docker" "$code"
+  report_check_status \
+    "check-docker" "$code" "running=${DOCKER_RUNNING:-0} stopped=${DOCKER_STOPPED:-0}" \
+    "$(prometheus_check_metric "check-docker" "docker_running_containers" "${DOCKER_RUNNING:-0}")" \
+    "$(prometheus_check_metric "check-docker" "docker_stopped_containers" "${DOCKER_STOPPED:-0}")" \
+    "$(prometheus_check_metric "check-docker" "docker_expected_containers" "$DOCKER_EXPECTED")"
   exit "$code"
 }
 
