@@ -35,6 +35,7 @@ alias m="make"
 alias ap="ansible-playbook"
 
 alias sshhosts="sed -rn 's/^\s*Host\s+(.*)\s*/\1/ip' ~/.ssh/config ~/.ssh/config.d/work"
+alias smac="ssg mac"
 
 
 

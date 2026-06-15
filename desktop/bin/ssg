@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+remote_path='PATH="$HOME/bin:$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"'
+
+gpg_path() {
+  export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+}
+
+usage() {
+  cat <<'EOF_USAGE'
+Usage:
+  ssg <ssh-host>      Connect to a host with GPG agent forwarding
+  ssg prepare         Prepare the local GPG agent socket for SSH forwarding
+  ssg status          Show local GPG agent forwarding status
+EOF_USAGE
+}
+
+prepare() {
+  gpg_path
+
+  agent_socket="$(gpgconf --list-dir agent-socket)"
+  socket_dir="$(dirname "$agent_socket")"
+
+  mkdir -p "$socket_dir"
+
+  # Stop the local agent and remove only the socket path so SSH can bind the
+  # forwarded laptop agent there. This does not delete any GPG keys.
+  gpgconf --kill gpg-agent >/dev/null 2>&1 || true
+  rm -f "$agent_socket"
+
+  echo "Prepared remote GPG agent socket:"
+  echo "$agent_socket"
+  echo
+  echo "Rollback:"
+  echo "  gpgconf --kill gpg-agent"
+  echo "  gpgconf --launch gpg-agent"
+}
+
+status() {
+  gpg_path
+
+  agent_socket="$(gpgconf --list-dir agent-socket)"
+  extra_socket="$(gpgconf --list-dir agent-extra-socket)"
+
+  echo "GPG home: $(gpgconf --list-dir homedir)"
+  echo "Agent socket: $agent_socket"
+  echo "Extra socket: $extra_socket"
+  echo
+
+  if [[ -S "$agent_socket" ]]; then
+    echo "Agent socket exists."
+  else
+    echo "Agent socket does not exist."
+  fi
+
+  if command -v lsof >/dev/null 2>&1; then
+    echo
+    echo "Socket owner/process:"
+    lsof -U "$agent_socket" 2>/dev/null || true
+  fi
+
+  echo
+  echo "Agent check:"
+  gpg-connect-agent 'GETINFO version' /bye || true
+
+  echo
+  echo "Secret key check:"
+  gpg --list-secret-keys --keyid-format LONG 0xE74728FDCCEA53CE || true
+}
+
+connect() {
+  if [[ $# -lt 1 ]]; then
+    usage >&2
+    exit 2
+  fi
+
+  host="$1"
+  remote_gpgconf="${remote_path}; command -v gpgconf >/dev/null 2>&1 || { echo \"gpgconf not found on remote PATH\" >&2; exit 127; }; gpgconf"
+  remote_prepare="${remote_path}; command -v ssg >/dev/null 2>&1 || { echo \"ssg not found on remote PATH\" >&2; exit 127; }; ssg prepare"
+
+  local_extra_socket="$(gpgconf --list-dir agent-extra-socket)"
+  if [[ ! -S "$local_extra_socket" ]]; then
+    gpgconf --launch gpg-agent
+  fi
+
+  if [[ ! -S "$local_extra_socket" ]]; then
+    echo "Laptop extra agent socket was not found: $local_extra_socket" >&2
+    exit 1
+  fi
+
+  remote_agent_socket="$(ssh "$host" "$remote_gpgconf --list-dir agent-socket")"
+
+  echo "Laptop extra socket: $local_extra_socket"
+  echo "Remote agent socket: $remote_agent_socket"
+  echo
+  echo "Preparing remote socket..."
+  ssh "$host" "$remote_prepare"
+
+  echo
+  echo "Opening forwarded SSH session."
+  echo "Inside the session, gopass/GPG decrypt requests should be authorized by the laptop agent."
+  echo
+
+  ssh \
+    -t \
+    -o ExitOnForwardFailure=yes \
+    -R "${remote_agent_socket}:${local_extra_socket}" \
+    "$host" \
+    'export GPG_TTY=$(tty); gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true; cd ~/git/marcelofpfelix/pass-store 2>/dev/null || cd ~; exec "${SHELL:-/bin/sh}" -l'
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  -h|--help|help|"")
+    usage
+    ;;
+  prepare)
+    shift
+    [[ $# -eq 0 ]] || { usage >&2; exit 2; }
+    prepare
+    ;;
+  status)
+    shift
+    [[ $# -eq 0 ]] || { usage >&2; exit 2; }
+    status
+    ;;
+  *)
+    connect "$cmd"
+    ;;
+esac

@@ -51,6 +51,10 @@ local_copy() {
     # copy the dotfiles to the local directory
     cp -rT ${dotfiles}/default  ~
     cp -rT ${dotfiles}/desktop  ~
+
+    # GnuPG refuses group/world-accessible homedirs.
+    chmod 700 ~/.gnupg 2>/dev/null || true
+    find ~/.gnupg -type f -name '*.conf' -exec chmod 600 {} + 2>/dev/null || true
     cp -rT ${homework}/workdesk ~
     cp -rT ${workdir}/laptop       ~
     cp -rT ${workdir}/tanker       ~
