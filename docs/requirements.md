@@ -61,4 +61,3 @@ Some aliases and scripts use these when present:
 - `gopass`
 - `gpaste-client` or `copyq`
 - `notify-send` or `terminal-notifier`
-
