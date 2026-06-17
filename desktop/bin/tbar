@@ -13,7 +13,7 @@ cd "$(dirname "$0")" || exit
 set -o pipefail
 
 # Default scripts to run (override by passing arguments)
-DEFAULT_SCRIPTS=(check-docker vpn check-claw check-cpu check-mem)
+DEFAULT_SCRIPTS=(check-gpg check-docker vpn check-claw check-cpu check-mem)
 SCRIPTS=("${@:-${DEFAULT_SCRIPTS[@]}}")
 
 EXIT_CODE=0

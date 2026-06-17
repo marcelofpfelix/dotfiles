@@ -47,6 +47,7 @@ function icon() {
 
             ['time']=' '
             ['unlock']=' '
+            ['gpg']='󰩪 '
             ['vpn']='󰕥 '
             ['vpn_warn']='󰳈 '
             ['vpn_crit']='󰻍 '
@@ -75,6 +76,7 @@ function icon() {
 
             ['time']='🕐'
             ['unlock']='🔓'
+            ['gpg']='🔐'
             ['vpn']='🛡️'
             ['vpn_warn']='🗡️'
             ['vpn_crit']='⚔️ '

@@ -93,7 +93,7 @@ function printc() {
     local default=$(color "n")
 
     # if the color is n or invalid, then don't change the color
-    if [[ $cid == "n" ]] || [[ -z ${COLOR["$cid"]} ]]; then
+    if [[ $cid == "n" ]] || [[ -z ${COLOR[$cid]+x} ]]; then
         printf "${1}"
         return
     fi
@@ -260,13 +260,13 @@ function printt() {
     cid=${2:-bb}
 
     # check if richpy is enabled
-    if [[ $RICHPY ]]; then
+    if [[ -n "${RICHPY:-}" && -n "${RPCOLOR[$cid]+x}" ]]; then
         COLOR["$cid"]="${RPCOLOR["$cid"]}"
-        COLOR["n"]="${RPCOLOR["n"]}"
+        COLOR["n"]="${RPCOLOR[n]:-}"
     fi
 
     # if the color is n or invalid, then don't change the color
-    if [[ $cid == "n" ]] || [[ -z ${COLOR["$cid"]} ]]; then
+    if [[ $cid == "n" ]] || [[ -z ${COLOR[$cid]+x} ]]; then
         printf "${1}"
         return
     fi

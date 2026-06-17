@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+set -Ee
+
+MODE=icon
+FORCE_LOCK=0
+WARN_TTL=${CHECK_GPG_WARN_TTL:-300}
+PROBE_FILE=""
+TTL=""
+
+usage() {
+  cat <<'EOF_USAGE'
+Usage: check-gpg [--plain|--icon|--bar] [--force-lock]
+
+Default output is icon-only for status bars.
+Colors: red=open, yellow=close to expiring, plain=locked.
+EOF_USAGE
+}
+
+load_libs() {
+  local dir=${LIBS_DIR:-$HOME/lib}
+  [[ -r "$dir/lib_icon.sh" ]] && . "$dir/lib_icon.sh"
+}
+
+show_icon() {
+  local color=$1 glyph="gpg " prefix="" suffix=""
+  declare -F icon >/dev/null 2>&1 && glyph="$(icon gpg)"
+  if [[ -z "${NO_COLOR:-}" && "${LEMONBAR:-0}" == 1 ]]; then
+    case "$color" in
+      r) prefix="%{F#f38ba8}"; suffix="%{F-}" ;;
+      y) prefix="%{F#f9e2af}"; suffix="%{F-}" ;;
+    esac
+  fi
+  printf '%s%s%s\n' "$prefix" "$glyph" "$suffix"
+}
+
+show() {
+  local state=$1 color=$2
+  case "$MODE" in
+    icon|bar) show_icon "$color" ;;
+    plain) printf 'gpg:%s\n' "$state" ;;
+  esac
+}
+
+store_path() {
+  [[ -n "${CHECK_GPG_STORE:-}" ]] && { printf '%s\n' "$CHECK_GPG_STORE"; return; }
+  gopass config mounts.path 2>/dev/null | awk 'NF {print; exit}'
+}
+
+probe_file() {
+  local store=$1 entry=${CHECK_GPG_ENTRY:-}
+  if [[ -n "$entry" ]]; then
+    printf '%s/%s.gpg\n' "$store" "${entry%.gpg}"
+  else
+    gopass ls --flat 2>/dev/null | awk -v s="$store" 'NF {print s "/" $0 ".gpg"; exit}'
+  fi
+}
+
+min_ttl() {
+  gpg-connect-agent 'KEYINFO --list' /bye 2>/dev/null |
+    awk '/^S KEYINFO / && $10 ~ /^[0-9]+$/ {if (m == "" || $10 < m) m = $10} END {print m}'
+}
+
+probe_open() {
+  local store err
+  store=$(store_path) || return 2
+  [[ -d "$store" ]] || return 2
+  PROBE_FILE=$(probe_file "$store") || return 2
+  [[ -r "$PROBE_FILE" ]] || return 2
+
+  err=$(mktemp "${TMPDIR:-/tmp}/check-gpg.XXXXXX") || return 2
+  if gpg --batch --yes --pinentry-mode error --output /dev/null --decrypt "$PROBE_FILE" >/dev/null 2>"$err"; then
+    rm -f "$err"
+    return 0
+  fi
+  rm -f "$err"
+  return 1
+}
+
+main() {
+  local arg code state color
+  for arg in "$@"; do
+    case "$arg" in
+      --bar) MODE=bar ;;
+      --icon|--icon-only) MODE=icon ;;
+      --plain) MODE=plain ;;
+      --force-lock) FORCE_LOCK=1 ;;
+      -h|--help) usage; return 0 ;;
+      *) usage >&2; return 2 ;;
+    esac
+  done
+
+  load_libs
+  if (( FORCE_LOCK )); then
+    gpgconf --kill gpg-agent >/dev/null 2>&1 || true
+    gpgconf --kill scdaemon >/dev/null 2>&1 || true
+  fi
+
+  if probe_open; then
+    TTL=$(min_ttl || true)
+    if [[ "$TTL" =~ ^[0-9]+$ && "$TTL" -le "$WARN_TTL" ]]; then
+      state=expiring; color=y; code=1
+    else
+      state=open; color=r; code=2
+    fi
+  else
+    code=$?
+    if [[ $code -eq 1 ]]; then
+      state=locked; color=n; code=0
+    else
+      state=unknown; color=r; code=2
+    fi
+  fi
+
+  show "$state" "$color"
+  return "$code"
+}
+
+main "$@"

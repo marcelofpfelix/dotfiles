@@ -8,7 +8,7 @@
 export LEMONBAR=1
 
 # scripts to run (collected into a single space-separated line)
-SCRIPTS=(check-docker check-temp)
+SCRIPTS=(check-gpg check-docker check-temp)
 #SCRIPTS+=(alerts check-time check-resolv check-safe)
 
 OUTPUTS=()
