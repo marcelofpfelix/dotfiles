@@ -108,6 +108,7 @@ gwt_add() {
     log DEBG "${LOCAL_DIR}/.bare/HEAD"
 
     cd "${LOCAL_DIR}"
+    git_repo_normalize_origin_url . || return
     default_branch="$(git_default_branch)"
     git fetch origin
     if git show-ref --verify --quiet "refs/heads/${branch}"; then
@@ -158,6 +159,7 @@ gwt_switch() {
 
     tmux new-window -n $repo_url -c $git_dir/$user/$repo_url
     cd $git_dir/$user/$repo_url
+    git_repo_normalize_origin_url . || return
     branch=${PWD##*/}
     git fetch origin
     git pull origin $branch

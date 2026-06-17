@@ -16,9 +16,29 @@ mkdir -p "$DAILY_DIR" "$ARCHIVE_DIR"
 TODAY=$(date +%Y-%m-%d)
 TODAY_FILE="${DAILY_DIR}/${TODAY}.md"
 
+date_epoch() {
+    local value="${1:?date is required}"
+
+    if date -d "$value" +%s >/dev/null 2>&1; then
+        date -d "$value" +%s
+    else
+        date -j -f "%Y-%m-%d" "$value" +%s
+    fi
+}
+
+days_ago_epoch() {
+    local days="${1:?days is required}"
+
+    if date -d "${days} days ago" +%s >/dev/null 2>&1; then
+        date -d "${days} days ago" +%s
+    else
+        date -v-"${days}"d +%s
+    fi
+}
+
 # Create today's file if not exists
 if [ ! -f "$TODAY_FILE" ]; then
-    echo "# Daily Notes for ${TODAY}" > "$TODAY_FILE"
+    echo "# Daily Notes for ${TODAY}" > "$TODAY_FILE" || exit 1
 fi
 
 # Move files older than 15 days to archive
@@ -26,11 +46,11 @@ find "$DAILY_DIR" -maxdepth 1 -type f -name "*.md" | while read -r file; do
     filename=$(basename "$file" .md)
     # Validate filename format YYYY-MM-DD
     if [[ "$filename" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-        file_date=$(date -d "$filename" +%s 2>/dev/null)
-        cutoff_date=$(date -d "15 days ago" +%s)
+        file_date=$(date_epoch "$filename")
+        cutoff_date=$(days_ago_epoch 15)
 
         if [ "$file_date" -le "$cutoff_date" ]; then
-            mv "$file" "$ARCHIVE_DIR/"
+            mv "$file" "$ARCHIVE_DIR/" || exit 1
         fi
     fi
 done

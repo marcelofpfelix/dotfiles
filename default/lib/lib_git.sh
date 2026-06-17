@@ -27,10 +27,16 @@ git_repo_path() {
     local subpath="${3:-}"
     local git_root="${GIT_REPOS_ROOT:-$HOME/git}"
     local gwt_root="${GWT_REPOS_ROOT:-$HOME/gwt}"
-    local path
+    local path base default_branch
 
     if git_repo_path_bool "${WORKTREE:-false}"; then
-        path="$gwt_root/$owner/$repo/main"
+        base="$gwt_root/$owner/$repo"
+        if [ -d "$base/.bare" ]; then
+            default_branch="$(git -C "$base/.bare" symbolic-ref --short HEAD 2>/dev/null)"
+            default_branch="${default_branch#refs/heads/}"
+        fi
+        default_branch="${default_branch:-main}"
+        path="$base/$default_branch"
     else
         path="$git_root/$owner/$repo"
     fi
@@ -48,6 +54,46 @@ git_repo_url() {
     local host="${3:-github.com}"
 
     printf 'git@%s:%s/%s.git\n' "$host" "$owner" "$repo"
+}
+
+git_repo_ssh_url_from_url() {
+    local url="${1:?repo url is required}" path
+
+    case "$url" in
+        https://github.com/*)
+            path="${url#https://github.com/}"
+            printf 'git@github.com:%s\n' "$path"
+            ;;
+        http://github.com/*)
+            path="${url#http://github.com/}"
+            printf 'git@github.com:%s\n' "$path"
+            ;;
+        *)
+            printf '%s\n' "$url"
+            ;;
+    esac
+}
+
+git_repo_normalize_origin_url() {
+    local repo_dir="${1:-.}"
+    local remote="${2:-origin}"
+    local url ssh_url push_url ssh_push_url
+
+    url="$(git -C "$repo_dir" config --get "remote.$remote.url" 2>/dev/null)" || return 0
+    ssh_url="$(git_repo_ssh_url_from_url "$url")"
+    if [ "$ssh_url" != "$url" ]; then
+        git -C "$repo_dir" remote set-url "$remote" "$ssh_url" || return
+    fi
+
+    while IFS= read -r push_url; do
+        [ -n "$push_url" ] || continue
+        ssh_push_url="$(git_repo_ssh_url_from_url "$push_url")"
+        if [ "$ssh_push_url" != "$push_url" ]; then
+            git -C "$repo_dir" remote set-url --push "$remote" "$ssh_push_url" || return
+        fi
+    done <<EOF
+$(git -C "$repo_dir" config --get-all "remote.$remote.pushurl" 2>/dev/null)
+EOF
 }
 
 git_repo_owner_from_url() {
@@ -157,8 +203,10 @@ git_repo_ensure_normal() {
     local path="${1:?path is required}"
     local url="${2:?url is required}"
     local branch="${3:-}"
+    url="$(git_repo_ssh_url_from_url "$url")"
 
     if git_repo_has_worktree_path "$path"; then
+        git_repo_normalize_origin_url "$path" || return
         return 0
     fi
 
@@ -182,8 +230,10 @@ git_repo_ensure_worktree() {
     local url="${4:?url is required}"
     local branch="${5:-main}"
     local base="${GWT_REPOS_ROOT:-$HOME/gwt}/$owner/$repo"
+    url="$(git_repo_ssh_url_from_url "$url")"
 
     if git_repo_has_worktree_path "$path"; then
+        git_repo_normalize_origin_url "$path" || return
         return 0
     fi
 
@@ -201,6 +251,7 @@ git_repo_ensure_worktree() {
         printf 'gitdir: ./.bare\n' > "$base/.git"
     fi
 
+    git_repo_normalize_origin_url "$base" || return
     git -C "$base" fetch ${GITFLAGS:-} origin || return
 
     if [ -z "$branch" ] || [ "$branch" = "default" ]; then

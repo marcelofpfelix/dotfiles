@@ -9,7 +9,7 @@ set -Eeuo pipefail
 
 AGENT_TMUX_STATE_DIR="${AGENT_TMUX_STATE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/agent-tmux}"
 AGENT_TMUX_BAR_MODE="${AGENT_TMUX_BAR_MODE:-compact}"
-AGENT_TMUX_CACHE_TTL="${AGENT_TMUX_CACHE_TTL:-5}"
+AGENT_TMUX_CACHE_TTL="${AGENT_TMUX_CACHE_TTL:-30}"
 AGENT_TMUX_IDLE_SECONDS="${AGENT_TMUX_IDLE_SECONDS:-45}"
 AGENT_TMUX_CAPTURE_LINES="${AGENT_TMUX_CAPTURE_LINES:-80}"
 AGENT_TMUX_NOTIFY="${AGENT_TMUX_NOTIFY:-auto}"
@@ -52,7 +52,7 @@ commands:
 env:
   AGENT_TMUX_IDLE_SECONDS     seconds without pane output before free (default: 45)
   AGENT_TMUX_BAR_MODE         compact, counts, or agents (default: compact)
-  AGENT_TMUX_CACHE_TTL        seconds to cache bar scans (default: 5)
+  AGENT_TMUX_CACHE_TTL        seconds to cache bar scans (default: 30)
   AGENT_TMUX_CAPTURE_LINES    pane lines used for prompt detection (default: 80)
   AGENT_TMUX_NOTIFY           auto, notify-send, telemsg, or another command
   AGENT_TMUX_NOTIFY_STATES    comma-list of states to notify (default: blocked)
@@ -1016,7 +1016,7 @@ why_pane() {
 notify() {
   local rows state agent pane_id session window_index window path event_age event_duration event_name event_message
   local key state_file stamp_file previous seconds label suffix
-  rows="$(scan_panes || true)"
+  rows="$(scan_panes_cached || true)"
   [[ -n "$rows" ]] || return 0
 
   mkdir -p "$AGENT_TMUX_STATE_DIR"

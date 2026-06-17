@@ -18,12 +18,20 @@ fi
 . "$LIBS_DIR/lib_git.sh"
 
 main() {
-    if [ "$#" -ne 1 ]; then
-        echo "Usage: checkout <branch>" >&2
-        exit 2
-    fi
-
-    git_checkout_feature_branch "$1"
+    case "$#" in
+        0)
+            default_branch="$(git_default_branch)"
+            git checkout "$default_branch"
+            git_repo_pull "$default_branch"
+            ;;
+        1)
+            git_checkout_feature_branch "$1"
+            ;;
+        *)
+            echo "Usage: checkout [branch]" >&2
+            exit 2
+            ;;
+    esac
 }
 
 main "$@"

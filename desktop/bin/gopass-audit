@@ -8,6 +8,7 @@
 #   journalctl -t gopass-audit                # all entries
 #   journalctl -t gopass-audit --since today   # today only
 #   journalctl -t gopass-audit --grep "show"   # reads only
+#   Note: Homebrew's journalctl/dystemctl emulation does not show these logs on macOS.
 
 logger -t gopass-audit "user=$USER action=${1:-} entry=${2:-} args=$*"
-exec /usr/bin/gopass "$@"
+exec env gopass "$@"

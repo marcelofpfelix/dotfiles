@@ -61,6 +61,24 @@ teardown() {
   [ "$output" = "git@gitlab.com:team-telnyx/tel-proxy.git" ]
 }
 
+@test "git_repo_ssh_url_from_url converts github https urls" {
+  run git_repo_ssh_url_from_url https://github.com/team-telnyx/tel-proxy-alerts.git
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "git@github.com:team-telnyx/tel-proxy-alerts.git" ]
+}
+
+@test "git_repo_normalize_origin_url rewrites github https origin" {
+  mkdir -p "$TEST_DIR/repo"
+  git -C "$TEST_DIR/repo" init --quiet
+  git -C "$TEST_DIR/repo" remote add origin https://github.com/team-telnyx/tel-proxy-alerts.git
+
+  run git_repo_normalize_origin_url "$TEST_DIR/repo"
+
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$TEST_DIR/repo" remote get-url origin)" = "git@github.com:team-telnyx/tel-proxy-alerts.git" ]
+}
+
 @test "git repo owner and name are parsed from ssh urls" {
   run git_repo_owner_from_url git@github.com:marcelofpfelix/dotfiles.git
 

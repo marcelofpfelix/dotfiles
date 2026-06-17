@@ -19,7 +19,7 @@ without requiring a separate app or plugin yet.
 - Restart panes launched with `agent-tmux open`.
 - Notify on selected state transitions with `agent-tmux notify`. The default is
   `blocked` only.
-- Cache bar scans for `AGENT_TMUX_CACHE_TTL` seconds. The default is 5 seconds.
+- Cache bar scans for `AGENT_TMUX_CACHE_TTL` seconds. The default is 30 seconds.
 - Accept native lifecycle events with `agent-event`, and overlay those states
   onto matching tmux panes by exact cwd or repo root.
 - Show hook-derived duration in `status`, `switch`, notifications, and compact
@@ -49,7 +49,7 @@ it per host or session:
 ```bash
 AGENT_TMUX_IDLE_SECONDS=90 agent-tmux bar
 AGENT_TMUX_BAR_MODE=counts agent-tmux bar
-AGENT_TMUX_CACHE_TTL=5 agent-tmux bar
+AGENT_TMUX_CACHE_TTL=30 agent-tmux bar
 AGENT_TMUX_FREE_RE='ready|type a message' agent-tmux status
 ```
 
@@ -232,7 +232,9 @@ agent-tmux restart %91
 ```
 
 That makes normal tmux status refreshes drive both visibility and transition
-notifications. Window titles render a state icon through:
+notifications. The status module, notifications, and window icons use the
+cached pane scan, controlled by `AGENT_TMUX_CACHE_TTL` and defaulting to 30
+seconds. Window titles render a state icon through:
 
 ```tmux
 #(agent-tmux window-icon #{session_name}:#{window_index})#W
