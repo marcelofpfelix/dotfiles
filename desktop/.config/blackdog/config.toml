@@ -1,0 +1,20 @@
+[app]
+default_environment = "local"
+
+[output]
+format = "text"
+symbols = "unicode"
+
+[modules]
+load = ["connectivity"]
+
+[ui]
+theme = "catppuccin-mocha"
+keymap = "shell"
+layout = "compact"
+vim_mode = false
+
+[ui.features]
+history = true
+fuzzy_completion = true
+startup_hints = true

@@ -1,0 +1,86 @@
+[suite]
+id = "sip-shoot-dev"
+enabled = true
+timeout = "5s"
+execution = "serial"
+target_policy = "allowlist"
+target_allowlist = ["sipdev.telnyx.com"]
+
+[modules]
+load = ["shoot", "sipops"]
+
+[output]
+format = "json"
+symbols = "unicode"
+
+[[hosts]]
+id = "sipdev-udp"
+address = "sipdev.telnyx.com"
+port = 5060
+protocol = "shoot+udp"
+labels = ["sip", "dev", "telnyx"]
+
+[[scenarios]]
+id = "sipdev-options-200"
+description = "Send a crafted OPTIONS to sipdev.telnyx.com and assert SIP 200."
+
+[[scenarios.host_bindings]]
+role = "subject"
+host = "sipdev-udp"
+
+[[scenarios.steps]]
+id = "send-options"
+type = "step"
+function = "shoot.sip"
+host_role = "subject"
+outputs = ["status", "transport", "sent_bytes", "received_bytes", "response_code", "redacted_sip_message"]
+
+[scenarios.steps.inputs]
+message_file = "/home/marcelof/.config/blackdog/messages/options-sipdev.sip"
+transport = "udp"
+expected_status = 200
+response_mode = "required"
+ip_size = 1480
+rewrite_call_id = "replace"
+rewrite_content_length = "calculate"
+line_endings = "crlf"
+
+[[scenarios.steps]]
+id = "assert-options-200"
+type = "assert"
+depends_on = ["send-options"]
+
+[scenarios.steps.expect]
+condition = "steps.send-options.response_code == 200"
+
+[[scenarios]]
+id = "sipdev-invite-final-4xx"
+description = "Send a crafted INVITE to sipdev.telnyx.com and assert the final response is 4xx."
+
+[[scenarios.host_bindings]]
+role = "subject"
+host = "sipdev-udp"
+
+[[scenarios.steps]]
+id = "send-invite"
+type = "step"
+function = "shoot.sip"
+host_role = "subject"
+outputs = ["status", "transport", "sent_bytes", "received_bytes", "response_code", "redacted_sip_message"]
+
+[scenarios.steps.inputs]
+message_file = "/home/marcelof/.config/blackdog/messages/invite-sipdev.sip"
+transport = "udp"
+response_mode = "required"
+ip_size = 1480
+rewrite_call_id = "replace"
+rewrite_content_length = "calculate"
+line_endings = "crlf"
+
+[[scenarios.steps]]
+id = "assert-invite-final-4xx"
+type = "assert"
+depends_on = ["send-invite"]
+
+[scenarios.steps.expect]
+condition = "steps.send-invite.response_code >= 400 && steps.send-invite.response_code < 500"

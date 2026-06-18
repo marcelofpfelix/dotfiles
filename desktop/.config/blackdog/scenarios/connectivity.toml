@@ -1,0 +1,49 @@
+[[scenarios]]
+id = "ping-us-dev"
+
+[[scenarios.host_bindings]]
+role = "subject"
+selector = "all(us, dev)"
+
+[[scenarios.steps]]
+id = "ping"
+type = "step"
+function = "connectivity.ping"
+host_role = "subject"
+
+[[scenarios]]
+id = "tcp-us-dev"
+
+[[scenarios.host_bindings]]
+role = "subject"
+selector = "all(us, dev)"
+
+[[scenarios.steps]]
+id = "tcp"
+type = "step"
+function = "connectivity.tcp"
+host_role = "subject"
+
+[[scenarios]]
+id = "conn"
+
+[[scenarios.host_bindings]]
+role = "subject"
+selector = "all(us, dev)"
+
+[[scenarios.steps]]
+id = "ping"
+type = "step"
+function = "connectivity.ping"
+host_role = "subject"
+
+[[scenarios.steps]]
+id = "wait-1s"
+type = "wait"
+duration = "1s"
+
+[[scenarios.steps]]
+id = "tcp"
+type = "step"
+function = "connectivity.tcp"
+host_role = "subject"

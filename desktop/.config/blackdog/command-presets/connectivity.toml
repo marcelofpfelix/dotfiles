@@ -1,0 +1,28 @@
+[[command_presets]]
+id = "connectivity-ping"
+function = "connectivity.ping"
+
+[[command_presets]]
+id = "connectivity-tcp"
+function = "connectivity.tcp"
+
+[[command_presets]]
+id = "conn"
+mode = "sequence"
+
+[[command_presets.stages]]
+id = "ping"
+type = "step"
+function = "connectivity.ping"
+host_role = "subject"
+
+[[command_presets.stages]]
+id = "wait-1s"
+type = "wait"
+duration = "1s"
+
+[[command_presets.stages]]
+id = "tcp"
+type = "step"
+function = "connectivity.tcp"
+host_role = "subject"

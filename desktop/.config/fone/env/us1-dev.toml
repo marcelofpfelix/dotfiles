@@ -1,0 +1,8 @@
+contacts = "../contacts/us1-dev.toml"
+
+[vars]
+protocol = "sip"
+domain = "sipdev.telnyx.com"
+username = "marcelof1dev"
+test_number = "+351918532956"
+password_env = "RPJS_TELNYX_PASSWORD"

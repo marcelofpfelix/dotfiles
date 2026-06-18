@@ -1,0 +1,31 @@
+[suite]
+id = "first-connectivity"
+enabled = true
+timeout = "3s"
+execution = "serial"
+
+[imports]
+command_presets = ["../command-presets/connectivity.toml"]
+scenarios = ["../scenarios/connectivity.toml"]
+
+[modules]
+load = ["connectivity"]
+
+[output]
+format = "text"
+symbols = "unicode"
+
+[environments.dev]
+
+[environments.dev.defaults.check]
+timeout = "3s"
+
+[[hosts]]
+id = "us-dev-cloudflare-dns"
+address = "1.1.1.1"
+port = 443
+labels = ["us", "dev", "public", "dns"]
+
+[[host_sets]]
+id = "us-dev"
+host_selector = "all(us, dev)"

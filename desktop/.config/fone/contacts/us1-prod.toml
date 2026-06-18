@@ -1,0 +1,8 @@
+[[contacts]]
+name = "Marcelo Mobile"
+uris = ["${protocol}:${test_number}@${domain}"]
+numbers = ["${test_number}"]
+tags = ["test", "mobile", "telnyx", "us1-prod"]
+profile = "us1_prod"
+environment = "us1_prod"
+notes = "Default rpjs production test-call target."

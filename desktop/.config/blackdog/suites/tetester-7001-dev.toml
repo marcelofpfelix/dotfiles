@@ -1,0 +1,158 @@
+[suite]
+id = "tetester-7001-dev"
+timeout = "30s"
+target_policy = "allowlist"
+target_allowlist = ["sipdev.telnyx.com"]
+
+[output]
+format = "json"
+
+[modules]
+load = ["pjsua", "sipops"]
+
+[[credentials]]
+id = "7001-a-auth"
+provider = "env"
+ref = "BLACKDOG_7001_A_AUTH"
+scopes = ["module:pjsua"]
+
+[[credentials]]
+id = "7001-b-auth"
+provider = "env"
+ref = "BLACKDOG_7001_B_AUTH"
+scopes = ["module:pjsua"]
+
+[[hosts]]
+id = "a-leg"
+address = "127.0.0.1"
+
+[[hosts]]
+id = "b-leg"
+address = "127.0.0.1"
+port = 5071
+
+[[scenarios]]
+id = "7001-ob-contactencoded-dev"
+enabled = true
+description = "Local private dev configuration for TeTester manual script 7001 against sipdev.telnyx.com."
+legacy_id = "7001"
+
+[scenarios.external_ref]
+source_repo = "te-tester-manual"
+source_script = "bash/scripts/7001-ob-contactencoded.sh"
+legacy_id = "7001"
+legacy_success_exit = 0
+legacy_failure_exit = 1
+legacy_inconclusive_exit = 2
+environment = "dev"
+
+[scenarios.variables]
+server = "sipdev.telnyx.com"
+transport = "tcp"
+timeout_ms = 16000
+rtp_enabled = false
+a_user = "tetest7001a"
+a_from = "sip:+13125556364@sipdev.telnyx.com"
+a_to = "sip:+14693785126@sipdev.telnyx.com;transport=tcp"
+a_account_uri = "sip:tetest7001a@sipdev.telnyx.com"
+a_registrar_uri = "sip:sipdev.telnyx.com"
+a_credential_ref = "7001-a-auth"
+b_user = "tetest7001b"
+b_account_uri = "sip:tetest7001b@sipdev.telnyx.com"
+b_registrar_uri = "sip:sipdev.telnyx.com"
+b_credential_ref = "7001-b-auth"
+b_listen_port = 5071
+b_register_expires = 60
+b_final_status = 486
+b_answer_contact = "<sip:tetest7001b@127.0.0.1:5071;transport=tcp>"
+expected_contact_encoding = "encoded"
+contact_header_names = "Contact,m"
+contact_encoding_pattern = '*[^*]+**[^*]+*'
+register_b_leg = true
+
+[[scenarios.host_bindings]]
+role = "caller"
+host = "a-leg"
+
+[[scenarios.host_bindings]]
+role = "callee"
+host = "b-leg"
+
+[[scenarios.steps]]
+id = "b-register"
+type = "step"
+function = "pjsua.register"
+host_role = "callee"
+when = "variables.register_b_leg == true"
+inputs = { account_uri = "{{variables.b_account_uri}}", registrar_uri = "{{variables.b_registrar_uri}}", credential_ref = "{{variables.b_credential_ref}}", expires = "{{variables.b_register_expires}}", transport = "{{variables.transport}}", expected_status = 200 }
+outputs = ["status", "registration_state", "status_code"]
+
+[[scenarios.steps]]
+id = "b-dialog"
+type = "step"
+function = "pjsua.call"
+host_role = "callee"
+depends_on = ["b-register"]
+inputs = { role = "callee", listen_port = "{{variables.b_listen_port}}", provisional_statuses = [180], answer_status = "{{variables.b_final_status}}", answer_contact = "{{variables.b_answer_contact}}", expected_status = "{{variables.b_final_status}}", transport = "{{variables.transport}}" }
+outputs = ["status", "call_state", "status_code"]
+
+[[scenarios.steps]]
+id = "a-call"
+type = "step"
+function = "pjsua.call"
+host_role = "caller"
+depends_on = ["b-dialog"]
+inputs = { role = "caller", target_uri = "{{variables.a_to}}", account_uri = "{{variables.a_account_uri}}", registrar_uri = "{{variables.a_registrar_uri}}", credential_ref = "{{variables.a_credential_ref}}", expires = 60, register_expected_status = 200, expected_status = "{{variables.b_final_status}}", transport = "{{variables.transport}}" }
+outputs = ["status", "call_state", "status_code", "contact_header_count", "contact_encoded_count", "contact_unencoded_count", "contact_headers_encoded"]
+
+[[scenarios.steps]]
+id = "a-leg-sip-artifact"
+type = "artifact"
+depends_on = ["a-call"]
+
+[scenarios.steps.expect]
+kind = "pjsua_call_events"
+class = "trace"
+source_step = "a-call"
+description = "A-leg received SIP messages used for Contact/m header checks."
+
+[scenarios.steps.produces]
+artifact_refs = ["steps.a-call.artifacts.pjsua_call_events"]
+
+[[scenarios.steps]]
+id = "contact-headers-present"
+type = "assert"
+depends_on = ["a-leg-sip-artifact"]
+
+[scenarios.steps.expect]
+condition = "artifacts.a-leg-sip-artifact.contact_header_count != 0"
+module = "sipops"
+helper = "assert_compact_header_exists"
+headers = "Contact,m"
+failure_status = "inconclusive"
+legacy_exit = 2
+
+[[scenarios.steps]]
+id = "contact-headers-encoded"
+type = "assert"
+depends_on = ["contact-headers-present"]
+
+[scenarios.steps.expect]
+condition = "artifacts.a-leg-sip-artifact.contact_headers_encoded == true"
+module = "sipops"
+helper = "assert_header_contains"
+pattern_ref = "variables.contact_encoding_pattern"
+success_status = "passed"
+failure_status = "failed"
+legacy_success_exit = 0
+legacy_failure_exit = 1
+
+[[scenarios.steps]]
+id = "result-map"
+type = "result"
+depends_on = ["contact-headers-encoded"]
+
+[scenarios.steps.expect]
+passed = "all Contact/m headers received by the A leg match the encoded Contact pattern"
+failed = "received Contact/m headers are present but not consistently encoded"
+inconclusive = "not enough valid evidence to decide pass/fail: dialog failed, count reconciliation failed, or no Contact/m header was captured"
