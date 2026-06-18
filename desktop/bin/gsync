@@ -31,6 +31,10 @@ flags:
     short: print clone and sync paths
     alias: v
     type: bool
+  - use: force
+    short: accepted for compatibility; gsync always runs the requested sync
+    alias: f
+    type: bool
 """
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -269,9 +273,9 @@ gsync_sync_repo() {
     fi
 
     git fetch --quiet origin "$REPO_BRANCH" || return
-    git pull --quiet origin "$REPO_BRANCH" || return
 
     if [ "$REPO_MODE" = "read" ]; then
+        git pull --rebase --quiet origin "$REPO_BRANCH" || return
         printf 'OK %s/%s mode=read branch=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
         return 0
     fi
@@ -284,17 +288,21 @@ gsync_sync_repo() {
         fi
     fi
 
+    local changed=false
     git add .
     if ! git diff-index --quiet HEAD -- 2>/dev/null; then
         git commit -m "$REPO_COMMIT_MSG" || {
             git reset HEAD . 2>/dev/null || true
             return 1
         }
-        git push origin "$REPO_BRANCH" || return
-        printf 'OK %s/%s mode=write branch=%s changed=true\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
-    else
-        printf 'OK %s/%s mode=write branch=%s changed=false\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
+        changed=true
     fi
+
+    git pull --rebase --quiet origin "$REPO_BRANCH" || return
+    if [ "$changed" = "true" ]; then
+        git push origin "$REPO_BRANCH" || return
+    fi
+    printf 'OK %s/%s mode=write branch=%s changed=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH" "$changed"
 }
 
 gsync_parse_args() {
@@ -305,6 +313,7 @@ gsync_parse_args() {
             --write) DEFAULT_MODE=write; shift ;;
             --read) DEFAULT_MODE=read; shift ;;
             --verbose|-v) GSYNC_VERBOSE=true; shift ;;
+            --force|-f) shift ;;
             --help|-h) gsync_usage; exit 0 ;;
             *) gsync_add_repo_line "$1"; shift ;;
         esac
