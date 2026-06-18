@@ -8,4 +8,3 @@ CSeq: 1 OPTIONS
 Contact: <sip:blackdog@127.0.0.1:5060>
 Accept: application/sdp
 Content-Length: 0
-
