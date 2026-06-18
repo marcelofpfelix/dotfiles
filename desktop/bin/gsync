@@ -352,12 +352,20 @@ gsync_main() {
 
     if [ "${#FAILED_REPOS[@]}" -gt 0 ]; then
         printf 'FAIL completed=%s/%s failed=%s\n' "$SUCCESS" "$TOTAL" "${FAILED_REPOS[*]}" >&2
-        update_status 1 "Failed: ${FAILED_REPOS[*]}" "gsync" || true
+        report_check_status \
+            "gsync" 1 "completed=${SUCCESS} total=${TOTAL} failed=${#FAILED_REPOS[@]}" \
+            "$(prometheus_check_metric "gsync" "repositories_total" "$TOTAL")" \
+            "$(prometheus_check_metric "gsync" "repositories_success" "$SUCCESS")" \
+            "$(prometheus_check_metric "gsync" "repositories_failed" "${#FAILED_REPOS[@]}")" || true
         exit 1
     fi
 
     printf 'DONE completed=%s/%s\n' "$SUCCESS" "$TOTAL"
-    update_status 0 "OK" "gsync" || true
+    report_check_status \
+        "gsync" 0 "completed=${SUCCESS} total=${TOTAL} failed=0" \
+        "$(prometheus_check_metric "gsync" "repositories_total" "$TOTAL")" \
+        "$(prometheus_check_metric "gsync" "repositories_success" "$SUCCESS")" \
+        "$(prometheus_check_metric "gsync" "repositories_failed" 0)" || true
 }
 
 gsync_main "$@"
