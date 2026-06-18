@@ -46,21 +46,25 @@ homework="$(git_repo_path marcelofpfelix homework)"
 workdir="$(git_repo_path team-telnyx tel-proxy home)"
 homelab="$(git_repo_path marcelofpfelix homelab)"
 
+if [ ! -d "$workdir" ] && [ -d "${GIT_REPOS_ROOT:-$HOME/git}/team-telnyx/tel-proxy/home" ]; then
+    workdir="${GIT_REPOS_ROOT:-$HOME/git}/team-telnyx/tel-proxy/home"
+fi
+
 
 local_copy() {
     # copy the dotfiles to the local directory
-    cp -rT ${dotfiles}/default  ~
-    cp -rT ${dotfiles}/desktop  ~
+    cp -R "${dotfiles}/default/." "$HOME/"
+    cp -R "${dotfiles}/desktop/." "$HOME/"
 
     # GnuPG refuses group/world-accessible homedirs.
     chmod 700 ~/.gnupg 2>/dev/null || true
     find ~/.gnupg -type f -name '*.conf' -exec chmod 600 {} + 2>/dev/null || true
-    cp -rT ${homework}/workdesk ~
-    cp -rT ${workdir}/laptop       ~
-    cp -rT ${workdir}/tanker       ~
+    cp -R "${homework}/workdesk/." "$HOME/"
+    cp -R "${workdir}/laptop/." "$HOME/"
+    cp -R "${workdir}/tanker/." "$HOME/"
 
     # ignore jinja2 templates
-    rm ~/.ssh/config.d/work.j2
+    rm -f ~/.ssh/config.d/work.j2
     echo "Copied dotfiles to home directory"
     exit 0
 }
