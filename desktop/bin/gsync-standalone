@@ -7,7 +7,7 @@ DEFAULT_CONFIG="${GSYNC_CONFIG:-$CONFIG_DIR/repos.conf}"
 
 DEFAULT_GIT="${GSYNC_GIT:-github.com}"
 DEFAULT_ORG="${GSYNC_ORG:-}"
-DEFAULT_WORKTREE="${GSYNC_WORKTREE:-false}"
+DEFAULT_WORKTREE="${GSYNC_WORKTREE:-true}"
 DEFAULT_MODE="${GSYNC_MODE:-read}"
 DEFAULT_BRANCH="${GSYNC_BRANCH:-main}"
 DEFAULT_COMMIT_MSG="${GSYNC_COMMIT_MSG:-auto-update}"
@@ -37,7 +37,7 @@ Default config:
 Config:
   git=github.com
   org=marcelofpfelix
-  worktree=false
+  worktree=true
   mode=read
   branch=main
 
@@ -89,7 +89,7 @@ repo_path() {
     if truthy "$worktree"; then
         printf '%s/%s/%s/%s\n' "${GWT_REPOS_ROOT:-$HOME/gwt}" "$org" "$repo" "$branch"
     else
-        printf '%s/%s/%s\n' "${GIT_REPOS_ROOT:-$HOME/git}" "$org" "$repo"
+        printf '%s/%s/%s\n' "${GIT_REPOS_ROOT:-$HOME/gwt}" "$org" "$repo"
     fi
 }
 

@@ -100,6 +100,11 @@ gwt_clone() {
 
 gwt_add() {
     branch="${ARGS[1]:-${RAW_ARGS[1]:-}}"
+    repo_base=""
+    repo_context=""
+    repo_root=""
+    git_common_dir=""
+    worktree_path=""
     if [[ -z "$branch" ]]; then
         log ERRO "Missing branch name. Usage: gwt add <branch> or gwt add -n <branch>"
         exit 2
@@ -108,15 +113,47 @@ gwt_add() {
     log DEBG "${LOCAL_DIR}/.bare/HEAD"
 
     cd "${LOCAL_DIR}"
-    git_repo_normalize_origin_url . || return
-    default_branch="$(git_default_branch)"
-    git fetch origin
-    if git show-ref --verify --quiet "refs/heads/${branch}"; then
-        git worktree add "$branch" "$branch"
-    elif git show-ref --verify --quiet "refs/remotes/origin/${branch}"; then
-        git worktree add "$branch" "origin/$branch"
+    if [[ -d "${LOCAL_DIR}/.bare" ]]; then
+        repo_base="${LOCAL_DIR}"
+        repo_context="${LOCAL_DIR}/.bare"
     else
-        git worktree add -b "$branch" "$branch" "origin/$default_branch"
+        repo_root="$(git rev-parse --show-toplevel)" || return
+        git_common_dir="$(git -C "$repo_root" rev-parse --git-common-dir)" || return
+        if [[ "$git_common_dir" != /* ]]; then
+            git_common_dir="$repo_root/$git_common_dir"
+        fi
+        if [[ "$(basename "$git_common_dir")" = ".bare" ]]; then
+            repo_base="$(dirname "$git_common_dir")"
+            repo_context="$git_common_dir"
+        else
+            repo_base="$(dirname "$repo_root")"
+            repo_context="$repo_root"
+        fi
+    fi
+    worktree_path="$repo_base/$branch"
+
+    git_repo_normalize_origin_url "$repo_context" || return
+    git -C "$repo_context" fetch origin
+    default_branch="$(git -C "$repo_context" symbolic-ref --short HEAD 2>/dev/null)"
+    if [[ -z "$default_branch" ]]; then
+        default_branch="$(git -C "$repo_context" symbolic-ref refs/remotes/origin/HEAD 2>/dev/null)"
+        default_branch="${default_branch#refs/remotes/origin/}"
+    fi
+    if [[ -n "$default_branch" ]] && ! git -C "$repo_context" show-ref --verify --quiet "refs/remotes/origin/$default_branch"; then
+        default_branch=""
+    fi
+    if [[ -z "$default_branch" ]] && git -C "$repo_context" show-ref --verify --quiet refs/remotes/origin/master; then
+        default_branch="master"
+    elif [[ -z "$default_branch" ]] && git -C "$repo_context" show-ref --verify --quiet refs/remotes/origin/main; then
+        default_branch="main"
+    fi
+    default_branch="${default_branch:-main}"
+    if git -C "$repo_context" show-ref --verify --quiet "refs/heads/${branch}"; then
+        git -C "$repo_context" worktree add "$worktree_path" "$branch"
+    elif git -C "$repo_context" show-ref --verify --quiet "refs/remotes/origin/${branch}"; then
+        git -C "$repo_context" worktree add -b "$branch" "$worktree_path" "origin/$branch"
+    else
+        git -C "$repo_context" worktree add -b "$branch" "$worktree_path" "origin/$default_branch"
     fi
 
     # add option for remote

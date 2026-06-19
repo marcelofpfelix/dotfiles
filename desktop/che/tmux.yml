@@ -78,8 +78,8 @@ agent-monitor:
     window-icon: agent-tmux window-icon "#{session_name}:#{window_index}"
     focus: agent-tmux focus %pane_id
     switch: agent-tmux switch
-    open: agent-tmux open codex ~/git/repo
-    open-new: agent-tmux open --new --session dev --name codex:repo codex ~/git/repo
+    open: agent-tmux open codex ~/gwt/org/repo/main
+    open-new: agent-tmux open --new --session dev --name codex:repo codex ~/gwt/org/repo/main
     restart: agent-tmux restart %pane_id
     keys: agent-tmux keys
     switcher-keys: Enter focus, C-r refresh, C-e send Enter, C-n rename window, C-k kill pane, C-y copy, C-w open path, C-x restart

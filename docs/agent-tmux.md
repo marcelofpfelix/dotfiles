@@ -71,8 +71,8 @@ agent-tmux bar-plain # compact status text without tmux formatting
 agent-tmux window-icon dev:2 # icon for one tmux window's agent state
 agent-tmux focus %91 # focus a specific pane id
 agent-tmux switch   # pick an agent pane with fzf/gum and focus it
-agent-tmux open codex ~/git/repo # open or reuse an agent window
-agent-tmux open --new --name codex:repo --session dev codex ~/git/repo
+agent-tmux open codex ~/gwt/org/repo/main # open or reuse an agent window
+agent-tmux open --new --name codex:repo --session dev codex ~/gwt/org/repo/main
 agent-tmux restart %91 # restart a pane launched by agent-tmux open
 agent-tmux keys     # show switcher key bindings
 agent-tmux notify   # one notification pass
@@ -140,11 +140,11 @@ agent-tmux events-clear
 
 Portable source config now lives under:
 
-- `/home/marcelof/git/marcelofpfelix/homework/workdesk/.codex/hooks.json`
-- `/home/marcelof/git/marcelofpfelix/homework/workdesk/.codex/config.toml.example`
-- `/home/marcelof/git/marcelofpfelix/homework/workdesk/.claude/settings.json`
-- `/home/marcelof/git/marcelofpfelix/homework/workdesk/.claude/hooks/agent-tmux-event.sh`
-- `/home/marcelof/git/marcelofpfelix/homework/workdesk/.config/opencode/plugins/agent-tmux.ts`
+- `/home/marcelof/gwt/marcelofpfelix/homework/main/workdesk/.codex/hooks.json`
+- `/home/marcelof/gwt/marcelofpfelix/homework/main/workdesk/.codex/config.toml.example`
+- `/home/marcelof/gwt/marcelofpfelix/homework/main/workdesk/.claude/settings.json`
+- `/home/marcelof/gwt/marcelofpfelix/homework/main/workdesk/.claude/hooks/agent-tmux-event.sh`
+- `/home/marcelof/gwt/marcelofpfelix/homework/main/workdesk/.config/opencode/plugins/agent-tmux.ts`
 
 Those source files can be synced into `~/.codex`, `~/.claude`, and
 `~/.config/opencode` when you want native event capture active. Codex supports
@@ -155,13 +155,13 @@ separate `agent-tmux.ts` plugin and leaves the RTK plugin untouched.
 Dry-run the source-to-home sync:
 
 ```bash
-/home/marcelof/git/marcelofpfelix/homework/workdesk/bin/sync-agent-monitor-config
+/home/marcelof/gwt/marcelofpfelix/homework/main/workdesk/bin/sync-agent-monitor-config
 ```
 
 Apply it only when you want those source files copied into `~/`:
 
 ```bash
-/home/marcelof/git/marcelofpfelix/homework/workdesk/bin/sync-agent-monitor-config --apply
+/home/marcelof/gwt/marcelofpfelix/homework/main/workdesk/bin/sync-agent-monitor-config --apply
 ```
 
 The helper backs up existing destination files before overwriting them. It does
@@ -213,13 +213,13 @@ AGENT_TMUX_BAR_MODE=repos agent-tmux bar    # dotfiles:1 tel-proxy:2
 Open controls:
 
 ```bash
-agent-tmux open codex ~/git/repo
-agent-tmux open claude ~/git/repo
-AGENT_TMUX_OPEN_SESSION=dev agent-tmux open opencode ~/git/repo
-agent-tmux open hermes ~/git/repo
-AGENT_TMUX_OPEN_NAME=agent:repo agent-tmux open codex ~/git/repo
-agent-tmux open --new codex ~/git/repo
-agent-tmux open --session dev --name codex:repo codex ~/git/repo
+agent-tmux open codex ~/gwt/org/repo/main
+agent-tmux open claude ~/gwt/org/repo/main
+AGENT_TMUX_OPEN_SESSION=dev agent-tmux open opencode ~/gwt/org/repo/main
+agent-tmux open hermes ~/gwt/org/repo/main
+AGENT_TMUX_OPEN_NAME=agent:repo agent-tmux open codex ~/gwt/org/repo/main
+agent-tmux open --new codex ~/gwt/org/repo/main
+agent-tmux open --session dev --name codex:repo codex ~/gwt/org/repo/main
 agent-tmux restart %91
 ```
 

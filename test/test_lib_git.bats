@@ -12,13 +12,13 @@ teardown() {
   rm -rf "$TEST_DIR"
 }
 
-@test "git_repo_path defaults to git checkout path" {
+@test "git_repo_path defaults to gwt worktree path" {
   unset WORKTREE GIT_REPOS_ROOT GWT_REPOS_ROOT
 
   run git_repo_path marcelofpfelix homework
 
   [ "$status" -eq 0 ]
-  [ "$output" = "$HOME/git/marcelofpfelix/homework" ]
+  [ "$output" = "$HOME/gwt/marcelofpfelix/homework/main" ]
 }
 
 @test "git_repo_path resolves WORKTREE=true to gwt main path" {
@@ -36,7 +36,7 @@ teardown() {
 }
 
 @test "git_repo_path custom roots are honored" {
-  GIT_REPOS_ROOT="$TEST_DIR/gitroot" run git_repo_path marcelofpfelix homework
+  WORKTREE=false GIT_REPOS_ROOT="$TEST_DIR/gitroot" run git_repo_path marcelofpfelix homework
 
   [ "$status" -eq 0 ]
   [ "$output" = "$TEST_DIR/gitroot/marcelofpfelix/homework" ]
@@ -92,7 +92,7 @@ teardown() {
 }
 
 @test "git_repo_cd changes to resolved path" {
-  mkdir -p "$HOME/git/marcelofpfelix/homework"
+  mkdir -p "$HOME/gwt/marcelofpfelix/homework/main"
 
   run bash -c "
     source '$(dirname "$BATS_TEST_FILENAME")/../default/lib/lib_git.sh'
@@ -101,5 +101,5 @@ teardown() {
   "
 
   [ "$status" -eq 0 ]
-  [ "$output" = "$HOME/git/marcelofpfelix/homework" ]
+  [ "$output" = "$HOME/gwt/marcelofpfelix/homework/main" ]
 }

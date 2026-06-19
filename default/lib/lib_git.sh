@@ -25,11 +25,11 @@ git_repo_path() {
     local owner="${1:?owner is required}"
     local repo="${2:?repo is required}"
     local subpath="${3:-}"
-    local git_root="${GIT_REPOS_ROOT:-$HOME/git}"
+    local git_root="${GIT_REPOS_ROOT:-$HOME/gwt}"
     local gwt_root="${GWT_REPOS_ROOT:-$HOME/gwt}"
     local path base default_branch
 
-    if git_repo_path_bool "${WORKTREE:-false}"; then
+    if git_repo_path_bool "${WORKTREE:-true}"; then
         base="$gwt_root/$owner/$repo"
         if [ -d "$base/.bare" ]; then
             default_branch="$(git -C "$base/.bare" symbolic-ref --short HEAD 2>/dev/null)"

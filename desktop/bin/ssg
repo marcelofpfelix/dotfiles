@@ -107,7 +107,7 @@ connect() {
     -o ExitOnForwardFailure=yes \
     -R "${remote_agent_socket}:${local_extra_socket}" \
     "$host" \
-    'export GPG_TTY=$(tty); gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true; cd ~/git/marcelofpfelix/pass-store 2>/dev/null || cd ~; exec "${SHELL:-/bin/sh}" -l'
+    'export GPG_TTY=$(tty); gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true; cd ~/gwt/marcelofpfelix/pass-store/main 2>/dev/null || cd ~; exec "${SHELL:-/bin/sh}" -l'
 }
 
 cmd="${1:-}"
