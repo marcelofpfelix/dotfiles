@@ -1,0 +1,346 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# aggressive local cache cleanup with dry-run by default
+################################################################################
+
+set -Eeuo pipefail
+
+EXECUTE=0
+GWT_ROOT=${GWT_ROOT:-"$HOME/gwt"}
+DO_DOCKER=1
+DO_BREW=1
+DO_NPM=1
+DO_JS_STORES=1
+DO_PYTHON=1
+DO_MAC=1
+DO_GWT=1
+
+usage() {
+  cat <<'EOF'
+Usage: clean-caches [--execute] [options]
+
+Dry-runs by default. Pass --execute to delete caches and run prune commands.
+
+Options:
+  --execute             actually delete/prune
+  --gwt-root PATH       gwt root to scan (default: $HOME/gwt)
+  --skip-docker         skip docker system/builder pruning
+  --skip-brew           skip Homebrew cleanup
+  --skip-npm            skip npm cache cleanup
+  --skip-js-stores      skip pnpm/yarn cache pruning
+  --skip-python         skip pip/uv cache cleanup
+  --skip-mac            skip macOS developer/cache directories
+  --skip-gwt            skip ignored build/dependency folders under gwt
+  -h, --help            show this help
+
+The gwt cleanup only removes candidate directories that are ignored by Git.
+Dry-runs print sizes grouped by compact paths, up to three folders deep.
+EOF
+}
+
+log() {
+  printf '%s\n' "$*"
+}
+
+run() {
+  if (( EXECUTE )); then
+    log "run: $*"
+    "$@"
+  else
+    log "would run: $*"
+  fi
+}
+
+path_size() {
+  du -sh "$1" 2>/dev/null | awk '{print $1}'
+}
+
+compact_path() {
+  local path=$1
+  local root=${2:-$HOME}
+  local rel
+  local parts
+  local count
+
+  case "$path" in
+    "$root"/*)
+      rel=${path#"$root"/}
+      ;;
+    "$HOME"/*)
+      rel="~/${path#"$HOME"/}"
+      ;;
+    *)
+      rel=$path
+      ;;
+  esac
+
+  IFS=/ read -r -a parts <<<"$rel"
+  count=${#parts[@]}
+  if (( count > 4 )); then
+    printf '%s/%s/%s/.../%s\n' "${parts[0]}" "${parts[1]}" "${parts[2]}" "${parts[count - 1]}"
+  else
+    printf '%s\n' "$rel"
+  fi
+}
+
+print_size_summary() {
+  local input=$1
+
+  awk -F '\t' '
+    {
+      size[$2] += $1
+    }
+    END {
+      for (path in size) {
+        print size[path] "\t" path
+      }
+    }
+  ' "$input" |
+    sort -nr |
+    awk -F '\t' '
+      function human(kb) {
+        if (kb >= 1048576) {
+          return sprintf("%.1fG", kb / 1048576)
+        }
+        if (kb >= 1024) {
+          return sprintf("%.0fM", kb / 1024)
+        }
+        return sprintf("%dK", kb)
+      }
+      {
+        printf "%8s  %s\n", human($1), $2
+      }
+    '
+}
+
+remove_path() {
+  local path=$1
+  local root=${2:-$HOME}
+  local size
+
+  [[ -e "$path" || -L "$path" ]] || return 0
+  size=$(path_size "$path")
+  if (( EXECUTE )); then
+    log "remove ${size:-?} $(compact_path "$path" "$root")"
+    rm -rf -- "$path"
+  else
+    printf '%8s  %s\n' "${size:-?}" "$(compact_path "$path" "$root")"
+  fi
+}
+
+have() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+parse_args() {
+  while (($#)); do
+    case "$1" in
+      --execute)
+        EXECUTE=1
+        ;;
+      --gwt-root)
+        shift
+        [[ $# -gt 0 ]] || {
+          log "missing value for --gwt-root" >&2
+          exit 2
+        }
+        GWT_ROOT=$1
+        ;;
+      --skip-docker)
+        DO_DOCKER=0
+        ;;
+      --skip-brew)
+        DO_BREW=0
+        ;;
+      --skip-npm)
+        DO_NPM=0
+        ;;
+      --skip-js-stores)
+        DO_JS_STORES=0
+        ;;
+      --skip-python)
+        DO_PYTHON=0
+        ;;
+      --skip-mac)
+        DO_MAC=0
+        ;;
+      --skip-gwt)
+        DO_GWT=0
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        log "unknown argument: $1" >&2
+        usage >&2
+        exit 2
+        ;;
+    esac
+    shift
+  done
+}
+
+cleanup_docker() {
+  (( DO_DOCKER )) || return 0
+  have docker || return 0
+
+  log "== docker =="
+  run docker system prune --all --force --volumes
+  run docker builder prune --all --force
+  if docker buildx version >/dev/null 2>&1; then
+    run docker buildx prune --all --force
+  fi
+}
+
+cleanup_brew() {
+  (( DO_BREW )) || return 0
+  have brew || return 0
+
+  log "== homebrew =="
+  run brew autoremove
+  run brew cleanup --prune=all --scrub
+}
+
+cleanup_npm() {
+  (( DO_NPM )) || return 0
+  have npm || return 0
+
+  log "== npm =="
+  run npm cache clean --force
+}
+
+cleanup_js_stores() {
+  (( DO_JS_STORES )) || return 0
+
+  log "== js package stores =="
+  if have pnpm; then
+    run pnpm store prune
+  fi
+  if have yarn; then
+    run yarn cache clean
+  fi
+}
+
+cleanup_python() {
+  (( DO_PYTHON )) || return 0
+
+  log "== python =="
+  if have pip; then
+    run pip cache purge
+  fi
+  if have uv; then
+    run uv cache clean
+  fi
+}
+
+cleanup_mac() {
+  (( DO_MAC )) || return 0
+
+  log "== macOS developer caches =="
+  remove_path "$HOME/Library/Developer/Xcode/DerivedData"
+  remove_path "$HOME/Library/Developer/CoreSimulator/Caches"
+  remove_path "$HOME/Library/Caches/CocoaPods"
+  remove_path "$HOME/Library/Caches/org.carthage.CarthageKit"
+  remove_path "$HOME/Library/Caches/Homebrew"
+}
+
+git_ignored() {
+  local path=$1
+  local dir=$path
+  local repo
+  local rel
+
+  while [[ ! -d "$dir" && "$dir" != / ]]; do
+    dir=$(dirname "$dir")
+  done
+
+  repo=$(git -C "$dir" rev-parse --show-toplevel 2>/dev/null || true)
+  [[ -n "$repo" ]] || return 1
+
+  case "$path" in
+    "$repo"/*)
+      rel=${path#"$repo"/}
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+
+  git -C "$repo" check-ignore -q -- "$rel"
+}
+
+cleanup_gwt_ignored_dirs() {
+  local path
+  local tmp
+
+  (( DO_GWT )) || return 0
+  [[ -d "$GWT_ROOT" ]] || {
+    log "skip gwt: $GWT_ROOT not found"
+    return 0
+  }
+
+  log "== ignored gwt build/dependency folders =="
+  if (( ! EXECUTE )); then
+    tmp=$(mktemp "${TMPDIR:-/tmp}/clean-caches.XXXXXX")
+  fi
+  while IFS= read -r -d '' path; do
+    if git_ignored "$path"; then
+      if (( EXECUTE )); then
+        remove_path "$path" "$GWT_ROOT"
+      else
+        du -sk "$path" 2>/dev/null | awk -v label="$(compact_path "$path" "$GWT_ROOT")" '{print $1 "\t" label}' >>"$tmp"
+      fi
+    fi
+  done < <(
+    find "$GWT_ROOT" \
+      \( -type d -name .git -o -type d -name .bare \) -prune -o \
+      \( -type d \( \
+          -name target -o \
+          -name node_modules -o \
+          -name .pnpm-store -o \
+          -name .yarn -o \
+          -name .parcel-cache -o \
+          -name .turbo -o \
+          -name .next -o \
+          -name .nuxt -o \
+          -name .svelte-kit -o \
+          -name dist -o \
+          -name build -o \
+          -name coverage -o \
+          -name .pytest_cache -o \
+          -name .mypy_cache -o \
+          -name .ruff_cache -o \
+          -name .tox -o \
+          -name __pycache__ \
+        \) -print0 -prune \
+      \)
+  )
+
+  if (( ! EXECUTE )); then
+    if [[ -s "$tmp" ]]; then
+      print_size_summary "$tmp"
+    fi
+    rm -f "$tmp"
+  fi
+}
+
+main() {
+  parse_args "$@"
+
+  if (( ! EXECUTE )); then
+    log "dry-run mode; pass --execute to delete caches"
+  fi
+
+  cleanup_docker
+  cleanup_brew
+  cleanup_npm
+  cleanup_js_stores
+  cleanup_python
+  cleanup_mac
+  cleanup_gwt_ignored_dirs
+}
+
+main "$@"

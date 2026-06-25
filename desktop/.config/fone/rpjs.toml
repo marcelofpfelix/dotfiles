@@ -1,17 +1,20 @@
+# Compatibility config for shells that set FONE_CONFIG=~/.config/fone/rpjs.toml.
+# Keep paths relative so this works on macOS and Linux checkouts.
+
 [defaults]
 profile = "us1_prod"
 environment = "us1_prod"
 
 [profiles.us1_dev]
-path = "/home/marcelof/.config/fone/profiles/us1-dev.toml"
+path = "profiles/us1-dev.toml"
 default_env = "us1_dev"
 
 [profiles.us1_prod]
-path = "/home/marcelof/.config/fone/profiles/us1-prod.toml"
+path = "profiles/us1-prod.toml"
 default_env = "us1_prod"
 
 [environments.us1_dev]
-path = "/home/marcelof/.config/fone/env/us1-dev.toml"
+path = "env/us1-dev.toml"
 
 [environments.us1_prod]
-path = "/home/marcelof/.config/fone/env/us1-prod.toml"
+path = "env/us1-prod.toml"

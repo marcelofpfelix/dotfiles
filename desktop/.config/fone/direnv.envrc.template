@@ -1,0 +1,10 @@
+# Copy or source this from a local .envrc, then run `direnv allow`.
+# This template intentionally does not store the SIP password.
+
+export RPJS_TELNYX_PASSWORD_GOPASS_PATH="${RPJS_TELNYX_PASSWORD_GOPASS_PATH:-telnyx/rpjs/password}"
+
+if command -v gopass >/dev/null 2>&1; then
+  export RPJS_TELNYX_PASSWORD="$(gopass show -o "$RPJS_TELNYX_PASSWORD_GOPASS_PATH")"
+else
+  echo "fone: gopass not found; RPJS_TELNYX_PASSWORD not set" >&2
+fi

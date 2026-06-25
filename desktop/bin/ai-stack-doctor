@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+check_cmd() {
+  local name="$1" required="${2:-yes}" path
+  if path="$(command -v "$name" 2>/dev/null)"; then
+    printf 'ok      %-24s %s\n' "$name" "$path"
+  elif [[ "$required" == "yes" ]]; then
+    printf 'missing %-24s required\n' "$name"
+  else
+    printf 'optional %-24s not installed\n' "$name"
+  fi
+}
+
+section() {
+  printf '\n%s\n' "$1"
+}
+
+section "core binaries"
+for cmd in codex claude opencode openclaw bd task-master serena uv uvx rtk rg fd ast-grep jq tmux gh git node npm docker; do
+  check_cmd "$cmd" yes
+done
+
+section "on-demand binaries"
+for cmd in babysitter fff-mcp fff sourcebot litellm langfuse helicone; do
+  check_cmd "$cmd" no
+done
+
+section "codex mcp"
+if command -v codex >/dev/null 2>&1; then
+  codex mcp list || true
+else
+  printf 'codex not installed\n'
+fi
+
+section "opencode mcp"
+if command -v opencode >/dev/null 2>&1; then
+  opencode mcp list || true
+else
+  printf 'opencode not installed\n'
+fi
+
+section "babysitter"
+if command -v babysitter >/dev/null 2>&1; then
+  babysitter harness:discover || true
+else
+  cat <<'EOF'
+not installed
+install:
+  npm install -g @a5c-ai/babysitter-sdk
+  claude plugin marketplace add a5c-ai/babysitter
+  claude plugin install --scope user babysitter@a5c.ai
+EOF
+fi
+
+section "hindsight"
+if [[ -f "$HOME/.hindsight/codex.json" ]]; then
+  printf 'ok      %-24s %s\n' "codex config" "$HOME/.hindsight/codex.json"
+else
+  printf 'missing %-24s %s\n' "codex config" "$HOME/.hindsight/codex.json"
+fi
+if command -v uvx >/dev/null 2>&1; then
+  printf 'ready   %-24s %s\n' "local daemon" "uvx hindsight-embed"
+fi
+cat <<'EOF'
+status: ready-only. Do not run the installer unless you want retain/recall hooks active.
+enable:
+  curl -fsSL https://hindsight.vectorize.io/get-codex | bash
+  uvx hindsight-embed
+EOF

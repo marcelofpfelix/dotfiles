@@ -2,69 +2,50 @@
 
 ################################################################################
 #                                 FILE INFO
-# Parse and monitor ~/script-status.ini
+# Example script to parse and monitor /tmp/script-status.ini
 ################################################################################
 
 #set -Eeuo pipefail
 
 cd "$(dirname "$0")" || exit 1
 LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+STATUS_FILE="${STATUS_FILE:-$HOME/script-status.ini}"
 . "$LIBS_DIR/lib_utils.sh"
 . "$LIBS_DIR/lib_status.sh"
 
 LEMONBAR=1
-STATUS_FILE="$HOME/script-status.ini"
 
 if [ ! -f "$STATUS_FILE" ]; then
     log ERRO "No status file found at $STATUS_FILE"
-    report_check_status "check-scripts" 1 "status_file_missing=1" \
-        "$(prometheus_check_metric "check-scripts" "status_file_missing" 1)" \
-        "$(prometheus_check_metric "check-scripts" "status_entries_checked" 0)" \
-        "$(prometheus_check_metric "check-scripts" "status_entries_failed" 0)"
+    report_check_status "check-scripts" 1 "status file missing"
     exit 1
 fi
 
 has_errors=0
-checked_entries=0
-failed_entries=0
-stale_status=0
 
-# Check if status file has today's date.
+# Check if status file has today's date
 today_date="# $(date +%Y%m%d)"
 first_line=$(head -n 1 "$STATUS_FILE")
 
 if [ "$first_line" != "$today_date" ]; then
     has_errors=1
-    stale_status=1
 else
     while IFS=': ' read -r script_name exit_code message; do
-        # Skip comment lines, blank lines, and this script's previous status.
+        # Skip comment lines
         [[ "$script_name" =~ ^# ]] && continue
-        [ -z "$script_name" ] && continue
         [ "$script_name" = "check-scripts" ] && continue
-
-        checked_entries=$((checked_entries + 1))
 
         if [ "$exit_code" != "0" ]; then
             has_errors=1
-            failed_entries=$((failed_entries + 1))
         fi
     done < "$STATUS_FILE"
 fi
 
 if [ "$has_errors" -eq 1 ]; then
     println "$(icon erro)" r
-    report_check_status \
-        "check-scripts" 1 "checked=${checked_entries} failed=${failed_entries} stale=${stale_status}" \
-        "$(prometheus_check_metric "check-scripts" "status_entries_checked" "$checked_entries")" \
-        "$(prometheus_check_metric "check-scripts" "status_entries_failed" "$failed_entries")" \
-        "$(prometheus_check_metric "check-scripts" "status_file_stale" "$stale_status")"
+    report_check_status "check-scripts" 1 "script-status has errors"
     exit 1
 else
     println
-    report_check_status \
-        "check-scripts" 0 "checked=${checked_entries} failed=${failed_entries} stale=${stale_status}" \
-        "$(prometheus_check_metric "check-scripts" "status_entries_checked" "$checked_entries")" \
-        "$(prometheus_check_metric "check-scripts" "status_entries_failed" "$failed_entries")" \
-        "$(prometheus_check_metric "check-scripts" "status_file_stale" "$stale_status")"
+    report_check_status "check-scripts" 0 "OK"
 fi

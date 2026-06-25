@@ -28,20 +28,6 @@ DAILY_SCRIPTS=(
 
 # Commit message for git operations
 COMMIT_MSG="auto-update"
-TOTAL_SCRIPTS=0
-SUCCESS_SCRIPTS=0
-
-report_daily_status() {
-    local exit_code="$1"
-    local message="$2"
-    local failed_count="${3:-0}"
-
-    report_check_status \
-        "daily" "$exit_code" "$message" \
-        "$(prometheus_check_metric "daily" "scripts_total" "$TOTAL_SCRIPTS")" \
-        "$(prometheus_check_metric "daily" "scripts_success" "$SUCCESS_SCRIPTS")" \
-        "$(prometheus_check_metric "daily" "scripts_failed" "$failed_count")"
-}
 
 # Log message helper
 log() {
@@ -55,9 +41,9 @@ check_already_run() {
             log "Force run: Removing existing marker file"
             rm -f "$MARKER_FILE"
         else
-            log "ERROR: Already executed today (${TODAY})"
-            report_daily_status 1 "already_run=1" 0
-            exit 1
+            log "Already executed today (${TODAY})"
+            update_status 0 "Already executed today"
+            exit 0
         fi
     fi
 }
@@ -133,7 +119,7 @@ main() {
     # Handle empty script list
     if [ ${#DAILY_SCRIPTS[@]} -eq 0 ]; then
         log "WARNING: No daily scripts configured"
-        report_daily_status 0 "total=0 success=0 failed=0" 0
+        update_status 0 "OK (no scripts configured)"
         exit 0
     fi
 
@@ -144,24 +130,18 @@ main() {
         [ -z "$script" ] && continue
         [[ "$script" =~ ^#.* ]] && continue
 
-        TOTAL_SCRIPTS=$((TOTAL_SCRIPTS + 1))
-
         # Run script and track failures
-        if run_script "$script"; then
-            SUCCESS_SCRIPTS=$((SUCCESS_SCRIPTS + 1))
-        else
-            failed_scripts+=("$script")
-        fi
+        run_script "$script" || failed_scripts+=("$script")
     done
 
     # Report results
     if [ ${#failed_scripts[@]} -gt 0 ]; then
         log "ERROR: ${#failed_scripts[@]} script(s) failed: ${failed_scripts[*]}"
-        report_daily_status 1 "total=${TOTAL_SCRIPTS} success=${SUCCESS_SCRIPTS} failed=${#failed_scripts[@]}" "${#failed_scripts[@]}"
+        update_status 1 "Failed: ${failed_scripts[*]}"
         exit 1
     else
         log "SUCCESS: All scripts completed"
-        report_daily_status 0 "total=${TOTAL_SCRIPTS} success=${SUCCESS_SCRIPTS} failed=0" 0
+        update_status 0 "OK"
         exit 0
     fi
 }

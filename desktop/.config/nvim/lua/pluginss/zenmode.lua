@@ -1,3 +1,17 @@
+local zen_columns = {}
+
+local function hide_columns(win)
+  zen_columns[win] = {
+    number = vim.wo[win].number,
+    relativenumber = vim.wo[win].relativenumber,
+    signcolumn = vim.wo[win].signcolumn,
+  }
+
+  vim.wo[win].number = false
+  vim.wo[win].relativenumber = false
+  vim.wo[win].signcolumn = "no"
+end
+
 require("zen-mode").setup({
   window = {
     backdrop = 0.95,
@@ -24,11 +38,28 @@ require("zen-mode").setup({
       laststatus = 0, -- turn off the statusline in zen mode
     },
     twilight = { enabled = false }, -- enable to start Twilight when zen mode opens
-    gitsigns = { enabled = false }, -- disables git signs
+    gitsigns = { enabled = true }, -- disable git signs while Zen Mode is active
     tmux = { enabled = true }, -- disables the tmux statusline
     wezterm = {
       enabled = true,
       font = "+20", -- (10% increase per step)
     },
   },
+  on_open = function(win)
+    zen_columns = {}
+    for _, visible_win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+      hide_columns(visible_win)
+    end
+    hide_columns(win)
+  end,
+  on_close = function()
+    for win, opts in pairs(zen_columns) do
+      if vim.api.nvim_win_is_valid(win) then
+        vim.wo[win].number = opts.number
+        vim.wo[win].relativenumber = opts.relativenumber
+        vim.wo[win].signcolumn = opts.signcolumn
+      end
+    end
+    zen_columns = {}
+  end,
 })

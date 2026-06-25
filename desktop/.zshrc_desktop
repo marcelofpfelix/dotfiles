@@ -47,13 +47,13 @@ export CLICOLOR_FORCE=1
 # I don't use a PM since a git pull is easy enough
 
 # https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins
-export ZSH_PLUGINS="/opt/git"
+export ZSH_PLUGINS="${GIT_REPOS_ROOT:-$HOME/git}"
 source $ZSH_PLUGINS/romkatv/zsh-defer/zsh-defer.plugin.zsh
 # fzf-tab needs to be loaded after compinit, but before plugins which will wrap widgets
-zsh-defer source $ZSH_PLUGINS/aloxaf/fzf-tab/fzf-tab.zsh
-zsh-defer source $ZSH_PLUGINS/zsh-users/zsh-autosuggestions/zsh-autosuggestions.zsh
-zsh-defer source $ZSH_PLUGINS/zsh-users/zsh-history-substring-search/zsh-history-substring-search.zsh
-zsh-defer source $ZSH_PLUGINS/zsh-users/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source $ZSH_PLUGINS/aloxaf/fzf-tab/fzf-tab.zsh
+source $ZSH_PLUGINS/zsh-users/zsh-autosuggestions/zsh-autosuggestions.zsh
+source $ZSH_PLUGINS/zsh-users/zsh-history-substring-search/zsh-history-substring-search.zsh
+source $ZSH_PLUGINS/zsh-users/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 # Note that zsh-syntax-highlighting must be the last plugin sourced.
 
 # fzf-tab config

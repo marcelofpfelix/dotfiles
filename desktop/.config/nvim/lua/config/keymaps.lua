@@ -39,6 +39,19 @@ vim.keymap.set({ "i", "x", "n", "s" }, "<C-s>", "<cmd>w<cr><esc>", { desc = "Sav
 
 vim.keymap.set("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit All" })      -- quit all
 
+vim.keymap.set("n", "<leader>tn", function()
+  local hide_column = vim.wo.number or vim.wo.relativenumber or vim.wo.signcolumn ~= "no"
+
+  vim.wo.number = not hide_column
+  vim.wo.relativenumber = not hide_column
+  vim.wo.signcolumn = hide_column and "no" or "yes"
+
+  local ok, gitsigns = pcall(require, "gitsigns")
+  if ok then
+    gitsigns.toggle_signs(not hide_column)
+  end
+end, { desc = "Toggle Number/Sign Column" })
+
 -- Terminal Mappings
 vim.keymap.set("t", "<C-/>", "<cmd>close<cr>", { desc = "Hide Terminal" })   -- close terminal with Ctrl-/
 vim.keymap.set("t", "<C-_>", "<cmd>close<cr>", { desc = "which_key_ignore" })-- alt form of Ctrl-/

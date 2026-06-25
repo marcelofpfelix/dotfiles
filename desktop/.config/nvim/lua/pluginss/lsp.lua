@@ -69,15 +69,10 @@ require('mason-lspconfig').setup {
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
 
-for _, lsp in ipairs(servers) do
-  require('lspconfig')[lsp].setup {
-    on_attach = on_attach,
-    capabilities = capabilities,
-  }
-end
-
--- Turn on lsp status information
-require('fidget').setup()
+local lsp_defaults = {
+  on_attach = on_attach,
+  capabilities = capabilities,
+}
 
 -- Example custom configuration for lua
 --
@@ -86,9 +81,7 @@ local runtime_path = vim.split(package.path, ';')
 table.insert(runtime_path, 'lua/?.lua')
 table.insert(runtime_path, 'lua/?/init.lua')
 
-require('lspconfig').lua_ls.setup {
-  on_attach = on_attach,
-  capabilities = capabilities,
+vim.lsp.config('lua_ls', vim.tbl_deep_extend('force', lsp_defaults, {
   settings = {
     Lua = {
       runtime = {
@@ -108,7 +101,17 @@ require('lspconfig').lua_ls.setup {
       telemetry = { enable = false },
     },
   },
-}
+}))
+
+for _, lsp in ipairs(servers) do
+  if lsp ~= 'lua_ls' then
+    vim.lsp.config(lsp, lsp_defaults)
+  end
+  vim.lsp.enable(lsp)
+end
+
+-- Turn on lsp status information
+require('fidget').setup()
 --
 -- nvim-cmp setup
 local cmp = require 'cmp'

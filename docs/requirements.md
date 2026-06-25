@@ -24,26 +24,25 @@ On macOS, these are expected to be available from Homebrew when possible.
 
 ## Zsh Plugin Repos
 
-`desktop/.zshrc_desktop` loads zsh plugins from `ZSH_PLUGINS`, currently
-defaulting to `/opt/git`.
+`desktop/.zshrc_desktop` loads zsh plugins from `ZSH_PLUGINS`, defaulting to
+`GIT_REPOS_ROOT` or `$HOME/git`.
 
 Required repos:
 
-- `/opt/git/romkatv/zsh-defer`
-- `/opt/git/aloxaf/fzf-tab`
-- `/opt/git/zsh-users/zsh-autosuggestions`
-- `/opt/git/zsh-users/zsh-history-substring-search`
-- `/opt/git/zsh-users/zsh-syntax-highlighting`
+- `$HOME/git/romkatv/zsh-defer`
+- `$HOME/git/aloxaf/fzf-tab`
+- `$HOME/git/zsh-users/zsh-autosuggestions`
+- `$HOME/git/zsh-users/zsh-history-substring-search`
+- `$HOME/git/zsh-users/zsh-syntax-highlighting`
 
 Example install:
 
 ```sh
-sudo mkdir -p /opt/git/romkatv /opt/git/aloxaf /opt/git/zsh-users
-sudo git clone https://github.com/romkatv/zsh-defer /opt/git/romkatv/zsh-defer
-sudo git clone https://github.com/aloxaf/fzf-tab /opt/git/aloxaf/fzf-tab
-sudo git clone https://github.com/zsh-users/zsh-autosuggestions /opt/git/zsh-users/zsh-autosuggestions
-sudo git clone https://github.com/zsh-users/zsh-history-substring-search /opt/git/zsh-users/zsh-history-substring-search
-sudo git clone https://github.com/zsh-users/zsh-syntax-highlighting /opt/git/zsh-users/zsh-syntax-highlighting
+gsync --read --repo "romkatv/zsh-defer branch=master"
+gsync --read --repo "aloxaf/fzf-tab branch=master"
+gsync --read --repo "zsh-users/zsh-autosuggestions branch=master"
+gsync --read --repo "zsh-users/zsh-history-substring-search branch=master"
+gsync --read --repo "zsh-users/zsh-syntax-highlighting branch=master"
 ```
 
 ## Optional Desktop Tools
@@ -61,3 +60,41 @@ Some aliases and scripts use these when present:
 - `gopass`
 - `gpaste-client` or `copyq`
 - `notify-send` or `terminal-notifier`
+
+## AI Heavy-User Stack
+
+Core binaries expected on the main workstation:
+
+- `codex`
+- `claude`
+- `opencode`
+- `openclaw`
+- `bd`
+- `task-master`
+- `serena`
+- `uv` and `uvx`
+- `rtk`
+- `rg`
+- `fd`
+- `ast-grep`
+- `jq`
+- `tmux`
+- `gh`
+- `docker`
+
+On-demand binaries and services:
+
+- `babysitter` from `npm install -g @a5c-ai/babysitter-sdk`
+- Babysitter Claude plugin from `claude plugin marketplace add a5c-ai/babysitter`
+  and `claude plugin install --scope user babysitter@a5c.ai`
+- Codex-Workflows from `codex plugin marketplace add
+  robzilla1738/Codex-Workflows` and `codex plugin add
+  codex-workflows@codex-workflows`
+- FFF MCP/binary for repeated fuzzy/frecency-heavy search
+- Sourcebot for org-scale multi-repo search
+- LiteLLM, Langfuse, and Helicone for shared API routing and observability
+- Hindsight local daemon with `uvx hindsight-embed`, after explicit memory-pilot
+  approval
+
+Run `ai-stack-doctor` to check what is installed and which on-demand pieces are
+ready to enable.

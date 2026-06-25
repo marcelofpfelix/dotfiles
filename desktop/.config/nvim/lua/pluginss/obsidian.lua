@@ -3,7 +3,7 @@ require("obsidian").setup({
   workspaces = {
     {
       name = "Notes",
-      path = "/home/marcelof/git/marcelofpfelix/wiki",
+      path = vim.fn.expand("~/git/marcelofpfelix/wiki"),
     },
   },
 })

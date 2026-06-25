@@ -1,0 +1,54 @@
+# Default Telnyx/RPJS fone setup for this desktop profile.
+
+[defaults]
+profile = "us1_prod"
+environment = "us1_prod"
+
+[ui]
+default_mode = "tui"
+default_tab = "contacts"
+update_check = false
+
+[modules.sip]
+enabled = true
+
+[modules.audio]
+enabled = true
+
+[modules.tui]
+enabled = true
+
+[modules.capture]
+enabled = false
+
+[runtime]
+duration_seconds = 10
+log_level = 0
+
+[transport]
+sip_transport = "udp"
+local_port = 0
+
+[account]
+# Registration policy wired to pjsua-lite where supported.
+# registration_expires_seconds = 300
+# registration_retry_interval_seconds = 30
+# registration_timeout_seconds = 10
+# unregister_on_exit = true
+
+[media]
+null_audio = false
+
+[profiles.us1_dev]
+path = "profiles/us1-dev.toml"
+default_env = "us1_dev"
+
+[profiles.us1_prod]
+path = "profiles/us1-prod.toml"
+default_env = "us1_prod"
+
+[environments.us1_dev]
+path = "env/us1-dev.toml"
+
+[environments.us1_prod]
+path = "env/us1-prod.toml"
