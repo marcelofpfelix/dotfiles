@@ -41,7 +41,7 @@ flags:
 . ../lib/lib_cli.sh
 
 
-if git_repo_path_bool "${WORKTREE:-false}"; then
+if git_repo_path_bool "${WORKTREE:-true}"; then
     gwt_root="${GWT_REPOS_ROOT:-$HOME/gwt}"
     dotfiles="$gwt_root/marcelofpfelix/dotfiles/main"
     homework="$gwt_root/marcelofpfelix/homework/main"
@@ -52,10 +52,6 @@ else
     homework="$(git_repo_path marcelofpfelix homework)"
     workdir="$(git_repo_path team-telnyx tel-proxy home)"
     homelab="$(git_repo_path marcelofpfelix homelab)"
-fi
-
-if [ ! -d "$workdir" ] && [ -d "${GIT_REPOS_ROOT:-$HOME/git}/team-telnyx/tel-proxy/home" ]; then
-    workdir="${GIT_REPOS_ROOT:-$HOME/git}/team-telnyx/tel-proxy/home"
 fi
 
 
