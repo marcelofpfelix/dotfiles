@@ -54,7 +54,7 @@ gsync_init() {
     DEFAULT_CONFIG="${GSYNC_CONFIG:-$DEFAULT_CONFIG_DIR/repos.conf}"
     DEFAULT_GIT="${GSYNC_GIT:-github.com}"
     DEFAULT_ORG="${GSYNC_ORG:-}"
-    DEFAULT_WORKTREE="${GSYNC_WORKTREE:-false}"
+    DEFAULT_WORKTREE="${GSYNC_WORKTREE:-1}"
     DEFAULT_MODE="${GSYNC_MODE:-read}"
     DEFAULT_BRANCH="${GSYNC_BRANCH:-main}"
     DEFAULT_COMMIT_MSG="${GSYNC_COMMIT_MSG:-auto-update}"
@@ -88,13 +88,13 @@ Default config:
 Config:
   git=github.com
   org=marcelofpfelix
-  worktree=false
+  worktree=1
   mode=read
   branch=main
 
   repo dotfiles
-  repo team-telnyx/tel-proxy worktree=true
-  repo owner=github.com/marcelofpfelix/dotfiles worktree=false mode=read branch=main
+  repo team-telnyx/tel-proxy worktree=1
+  repo owner=github.com/marcelofpfelix/dotfiles worktree=1 mode=read branch=main
 
 Defaults can appear anywhere in a config file. A repo uses the defaults active
 when its line was read.

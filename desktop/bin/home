@@ -46,10 +46,6 @@ homework="$(git_repo_path marcelofpfelix homework)"
 workdir="$(git_repo_path team-telnyx tel-proxy home)"
 homelab="$(git_repo_path marcelofpfelix homelab)"
 
-if [ ! -d "$workdir" ] && [ -d "${GIT_REPOS_ROOT:-$HOME/git}/team-telnyx/tel-proxy/home" ]; then
-    workdir="${GIT_REPOS_ROOT:-$HOME/git}/team-telnyx/tel-proxy/home"
-fi
-
 
 local_copy() {
     # copy the dotfiles to the local directory
