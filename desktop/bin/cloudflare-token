@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+secret_path="${CLOUDFLARE_GOPASS_PATH:-homelab/cloudflare}"
+
+usage() {
+  cat <<'MSG'
+usage: cloudflare-token [--export]
+
+Print the Cloudflare API token from gopass.
+
+Environment:
+  CLOUDFLARE_API_TOKEN   Use this token instead of reading gopass.
+  CLOUDFLARE_GOPASS_PATH Override the gopass path. Default: homelab/cloudflare.
+
+Options:
+  --export               Print a shell export command for CLOUDFLARE_API_TOKEN.
+MSG
+}
+
+print_export=false
+
+case "${1:-}" in
+  "")
+    ;;
+  --export)
+    print_export=true
+    ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
+
+if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+  token="$CLOUDFLARE_API_TOKEN"
+else
+  if ! command -v gopass >/dev/null 2>&1; then
+    cat >&2 <<'MSG'
+CLOUDFLARE_API_TOKEN is not set and gopass was not found.
+Set CLOUDFLARE_API_TOKEN or install/configure gopass.
+MSG
+    exit 1
+  fi
+
+  if ! token="$(gopass show -o "$secret_path" 2>/dev/null)"; then
+    cat >&2 <<MSG
+Could not read Cloudflare token from gopass path: ${secret_path}
+Set CLOUDFLARE_API_TOKEN or create that gopass secret.
+MSG
+    exit 1
+  fi
+fi
+
+if [[ -z "$token" ]]; then
+  cat >&2 <<MSG
+Cloudflare token is empty. Check CLOUDFLARE_API_TOKEN or gopass path: ${secret_path}
+MSG
+  exit 1
+fi
+
+if [[ "$print_export" == true ]]; then
+  printf 'export CLOUDFLARE_API_TOKEN=%q\n' "$token"
+else
+  printf '%s\n' "$token"
+fi

@@ -1,5 +1,32 @@
 -- [[ Configure Treesitter ]]
 -- See `:help nvim-treesitter`
+-- nvim-treesitter master's Markdown injection directive still assumes the
+-- pre-0.12 single-node capture shape. Neovim 0.12 passes captures as node
+-- lists, which breaks fenced code blocks while rendering Markdown.
+if vim.fn.has('nvim-0.12') == 1 then
+  local query = require('vim.treesitter.query')
+  local aliases = {
+    ex = 'elixir',
+    pl = 'perl',
+    sh = 'bash',
+    ts = 'typescript',
+    uxn = 'uxntal',
+  }
+
+  pcall(require, 'nvim-treesitter.query_predicates')
+  query.add_directive('set-lang-from-info-string!', function(match, _, bufnr, pred, metadata)
+    local capture_id = pred[2]
+    local nodes = match[capture_id]
+    local node = type(nodes) == 'table' and nodes[1] or nodes
+    if not node then
+      return
+    end
+
+    local lang = vim.treesitter.get_node_text(node, bufnr):lower()
+    metadata['injection.language'] = vim.filetype.match({ filename = 'a.' .. lang }) or aliases[lang] or lang
+  end, { force = true, all = false })
+end
+
 require('nvim-treesitter.configs').setup {
   -- Add languages to be installed here that you want installed for treesitter
   ensure_installed = {

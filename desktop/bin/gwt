@@ -89,10 +89,13 @@ gwt_clone() {
 
     repo="$(git_repo_name_from_url "$repo_url")"
     user="$(git_repo_owner_from_url "$repo_url")"
+    clone_url="$(git_repo_url "$user" "$repo")"
+    default_branch="$(git ls-remote --symref "$clone_url" HEAD 2>/dev/null | awk '/^ref:/ { branch=$2; sub(/^refs\/heads\//, "", branch); print branch; exit }')"
+    default_branch="${default_branch:-main}"
     log INFO "user/repo: $user/$repo"
 
-    repo_path="$git_dir/$user/$repo/main"
-    git_repo_ensure "$user" "$repo" "$repo_path" "$(git_repo_url "$user" "$repo")" true default
+    repo_path="$git_dir/$user/$repo/$default_branch"
+    git_repo_ensure "$user" "$repo" "$repo_path" "$clone_url" true "$default_branch"
     cd "$repo_path" || return
     default_branch="$(git_current_branch)"
     tmux new-window -n "${repo}_${default_branch}" -c "$repo_path"
@@ -152,6 +155,8 @@ gwt_add() {
         git -C "$repo_context" worktree add "$worktree_path" "$branch"
     elif git -C "$repo_context" show-ref --verify --quiet "refs/remotes/origin/${branch}"; then
         git -C "$repo_context" worktree add -b "$branch" "$worktree_path" "origin/$branch"
+    elif ! git -C "$repo_context" show-ref --heads --quiet && [[ -z "$(git -C "$repo_context" for-each-ref --count=1 --format='%(refname)' refs/remotes/origin)" ]]; then
+        git -C "$repo_context" worktree add -b "$branch" "$worktree_path"
     else
         git -C "$repo_context" worktree add -b "$branch" "$worktree_path" "origin/$default_branch"
     fi

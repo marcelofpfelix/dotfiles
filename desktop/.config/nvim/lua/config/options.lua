@@ -10,6 +10,9 @@ vim.opt.undofile = true                                 -- persistent undo acros
 vim.opt.ignorecase = true                               -- case-insensitive search by default
 vim.opt.smartcase = true                                -- BUT become case-sensitive with capitals
 vim.opt.signcolumn = "yes"                              -- always show sign column to avoid jump
+if vim.env.SSH_TTY then
+  vim.g.clipboard = "osc52"                             -- copy from SSH/tmux to the local terminal clipboard
+end
 vim.opt.clipboard = "unnamedplus"                       -- use system clipboard
 vim.opt.timeoutlen = (vim.g.vscode and 1000) or 300     -- mapped sequence wait time (ms)
 vim.opt.splitright = true                               -- vertical splits open to the right

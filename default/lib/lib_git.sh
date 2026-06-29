@@ -263,6 +263,9 @@ git_repo_ensure_worktree() {
         git -C "$base" worktree add ${GITFLAGS:-} "$path" "$branch"
     elif git -C "$base" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
         git -C "$base" worktree add ${GITFLAGS:-} -b "$branch" "$path" "origin/$branch"
+    elif ! git -C "$base" show-ref --heads --quiet && [[ -z "$(git -C "$base" for-each-ref --count=1 --format='%(refname)' refs/remotes/origin)" ]]; then
+        git -C "$base" symbolic-ref HEAD "refs/heads/$branch" || return
+        git -C "$base" worktree add ${GITFLAGS:-} -b "$branch" "$path"
     else
         printf 'Branch not found for worktree clone: %s\n' "$branch" >&2
         return 1
