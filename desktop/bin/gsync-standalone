@@ -264,15 +264,20 @@ sync_repo() {
         return 0
     fi
 
+    local changed=false
     git -C "$REPO_PATH" add .
-    if git -C "$REPO_PATH" diff-index --quiet HEAD -- 2>/dev/null; then
-        printf 'OK %s/%s mode=write branch=%s changed=false\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
-        return 0
+    if ! git -C "$REPO_PATH" diff-index --quiet HEAD -- 2>/dev/null; then
+        git -C "$REPO_PATH" commit -m "$REPO_COMMIT_MSG" >/dev/null || return
+        changed=true
     fi
 
-    git -C "$REPO_PATH" commit -m "$REPO_COMMIT_MSG" >/dev/null || return
-    git -C "$REPO_PATH" push --quiet origin "$REPO_BRANCH" || return
-    printf 'OK %s/%s mode=write branch=%s changed=true\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH"
+    local ahead=0 pushed=false
+    ahead="$(git -C "$REPO_PATH" rev-list --count "origin/$REPO_BRANCH..HEAD" 2>/dev/null || printf '0')"
+    if [ "$ahead" -gt 0 ]; then
+        git -C "$REPO_PATH" push --quiet origin "$REPO_BRANCH" || return
+        pushed=true
+    fi
+    printf 'OK %s/%s mode=write branch=%s changed=%s ahead=%s pushed=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH" "$changed" "$ahead" "$pushed"
 }
 
 parse_args() {

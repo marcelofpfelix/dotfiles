@@ -299,10 +299,14 @@ gsync_sync_repo() {
     fi
 
     git pull --rebase --quiet origin "$REPO_BRANCH" || return
-    if [ "$changed" = "true" ]; then
+
+    local ahead=0 pushed=false
+    ahead="$(git rev-list --count "origin/$REPO_BRANCH..HEAD" 2>/dev/null || printf '0')"
+    if [ "$ahead" -gt 0 ]; then
         git push origin "$REPO_BRANCH" || return
+        pushed=true
     fi
-    printf 'OK %s/%s mode=write branch=%s changed=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH" "$changed"
+    printf 'OK %s/%s mode=write branch=%s changed=%s ahead=%s pushed=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH" "$changed" "$ahead" "$pushed"
 }
 
 gsync_parse_args() {
