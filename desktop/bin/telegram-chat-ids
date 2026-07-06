@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""List Telegram chat IDs visible to bot tokens stored in gopass."""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from typing import Any
+
+
+DEFAULT_PREFIX = "homelab/telegram"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Find Telegram chat IDs from bot getUpdates responses."
+    )
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        help="Specific gopass secret paths. Defaults to every entry under homelab/telegram.",
+    )
+    parser.add_argument(
+        "--prefix",
+        default=DEFAULT_PREFIX,
+        help=f"gopass prefix to scan when no paths are given. Default: {DEFAULT_PREFIX}",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print JSON instead of a table.",
+    )
+    parser.add_argument(
+        "--raw",
+        action="store_true",
+        help="Print raw Telegram getUpdates JSON for each bot. Tokens are not printed.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=10.0,
+        help="HTTP timeout in seconds. Default: 10.",
+    )
+    parser.add_argument(
+        "--offset",
+        type=int,
+        help="Telegram update offset to pass through to getUpdates.",
+    )
+    return parser.parse_args()
+
+
+def run_gopass(args: list[str]) -> str:
+    try:
+        result = subprocess.run(
+            ["env", "gopass", *args],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except FileNotFoundError:
+        raise SystemExit("telegram-chat-ids: gopass not found in PATH") from None
+    except subprocess.CalledProcessError as exc:
+        detail = exc.stderr.strip() or exc.stdout.strip() or "unknown gopass error"
+        raise RuntimeError(detail) from exc
+    return result.stdout
+
+
+def list_secret_paths(prefix: str) -> list[str]:
+    try:
+        output = run_gopass(["ls", "--flat", prefix])
+    except RuntimeError as exc:
+        raise SystemExit(f"telegram-chat-ids: cannot list {prefix}: {exc}") from None
+
+    paths = [line.strip() for line in output.splitlines() if line.strip()]
+    return sorted(paths)
+
+
+def read_token(path: str) -> str:
+    try:
+        token = run_gopass(["show", "-o", path]).strip()
+    except RuntimeError as exc:
+        raise RuntimeError(f"cannot read {path}: {exc}") from exc
+    if not token:
+        raise RuntimeError(f"empty token at {path}")
+    return token
+
+
+def telegram_get_updates(
+    token: str,
+    timeout: float,
+    offset: int | None,
+) -> dict[str, Any]:
+    params = []
+    if offset is not None:
+        params.append(f"offset={offset}")
+    suffix = "?" + "&".join(params) if params else ""
+    url = f"https://api.telegram.org/bot{token}/getUpdates{suffix}"
+
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        try:
+            payload = json.loads(body)
+            message = payload.get("description") or body
+        except json.JSONDecodeError:
+            message = body or str(exc)
+        raise RuntimeError(message) from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise RuntimeError(str(exc)) from exc
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"invalid JSON response: {exc}") from exc
+
+
+def chat_from_update(update: dict[str, Any]) -> dict[str, Any] | None:
+    for key in (
+        "message",
+        "edited_message",
+        "channel_post",
+        "edited_channel_post",
+        "my_chat_member",
+        "chat_member",
+    ):
+        value = update.get(key)
+        if isinstance(value, dict) and isinstance(value.get("chat"), dict):
+            return value["chat"]
+    return None
+
+
+def chat_label(chat: dict[str, Any]) -> str:
+    title = chat.get("title")
+    if title:
+        return str(title)
+    names = [
+        str(chat.get("first_name") or "").strip(),
+        str(chat.get("last_name") or "").strip(),
+    ]
+    full_name = " ".join(part for part in names if part)
+    if full_name:
+        return full_name
+    username = chat.get("username")
+    return f"@{username}" if username else ""
+
+
+def update_date(update: dict[str, Any]) -> str:
+    for key in ("message", "edited_message", "channel_post", "edited_channel_post"):
+        value = update.get(key)
+        if isinstance(value, dict) and isinstance(value.get("date"), int):
+            return dt.datetime.fromtimestamp(value["date"], tz=dt.timezone.utc).isoformat()
+    return ""
+
+
+def collect_for_path(
+    path: str,
+    timeout: float,
+    offset: int | None,
+    raw: bool,
+) -> dict[str, Any]:
+    token = read_token(path)
+    payload = telegram_get_updates(token, timeout=timeout, offset=offset)
+
+    if raw:
+        return {"bot": path, "response": payload}
+
+    if not payload.get("ok"):
+        description = payload.get("description", "Telegram API returned ok=false")
+        raise RuntimeError(str(description))
+
+    seen: dict[int, dict[str, Any]] = {}
+    for update in payload.get("result", []):
+        if not isinstance(update, dict):
+            continue
+        chat = chat_from_update(update)
+        if not chat or "id" not in chat:
+            continue
+        chat_id = int(chat["id"])
+        seen[chat_id] = {
+            "bot": path,
+            "chat_id": chat_id,
+            "type": chat.get("type", ""),
+            "name": chat_label(chat),
+            "username": chat.get("username", ""),
+            "update_id": update.get("update_id", ""),
+            "date": update_date(update),
+        }
+
+    return {"bot": path, "chats": list(seen.values())}
+
+
+def print_table(rows: list[dict[str, Any]]) -> None:
+    if not rows:
+        print("No chats found. Send a message to each bot or mention it in a group, then run again.")
+        return
+
+    headers = ["bot", "chat_id", "type", "name", "username", "update_id", "date"]
+    widths = {
+        header: max(len(header), *(len(str(row.get(header, ""))) for row in rows))
+        for header in headers
+    }
+    print("  ".join(header.ljust(widths[header]) for header in headers))
+    print("  ".join("-" * widths[header] for header in headers))
+    for row in rows:
+        print("  ".join(str(row.get(header, "")).ljust(widths[header]) for header in headers))
+
+
+def main() -> int:
+    args = parse_args()
+    paths = args.paths or list_secret_paths(args.prefix)
+    if not paths:
+        print(f"telegram-chat-ids: no gopass entries found under {args.prefix}", file=sys.stderr)
+        return 1
+
+    results = []
+    errors = []
+    for path in paths:
+        try:
+            results.append(collect_for_path(path, args.timeout, args.offset, args.raw))
+        except RuntimeError as exc:
+            errors.append({"bot": path, "error": str(exc)})
+
+    if args.raw:
+        print(json.dumps({"results": results, "errors": errors}, indent=2, sort_keys=True))
+    elif args.json:
+        chats = [chat for result in results for chat in result.get("chats", [])]
+        print(json.dumps({"chats": chats, "errors": errors}, indent=2, sort_keys=True))
+    else:
+        rows = [chat for result in results for chat in result.get("chats", [])]
+        print_table(rows)
+        for error in errors:
+            print(f"ERROR {error['bot']}: {error['error']}", file=sys.stderr)
+
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

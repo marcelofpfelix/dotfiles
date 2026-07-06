@@ -7,6 +7,6 @@
 data.location=~/.task
 
 # Color theme (uncomment one to use)
-include /usr/share/taskwarrior/dark-violets-256.theme
+include ~/.config/task/themes/catppuccin-mocha.theme
 
 regex=on

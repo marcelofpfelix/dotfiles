@@ -1,0 +1,29 @@
+# Catppuccin Mocha for Taskwarrior
+# Palette: https://catppuccin.com/palette
+
+color=on
+
+color.active=bold color11
+color.blocked=color8
+color.blocking=bold color9
+color.completed=color8
+color.deleted=color8
+color.due=color9
+color.due.today=bold color9
+color.overdue=bold color1
+color.project=color6
+color.recurring=color5
+color.scheduled=color4
+color.tag=color5
+color.uda.priority.H=bold color1
+color.uda.priority.M=bold color3
+color.uda.priority.L=color4
+color.waiting=color8
+
+color.calendar.due=color9
+color.calendar.due.today=bold color9
+color.calendar.overdue=bold color1
+color.calendar.weekend=color8
+
+color.summary.background=color0
+color.summary.bar=color5

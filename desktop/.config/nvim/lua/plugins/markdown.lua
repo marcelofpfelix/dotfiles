@@ -1,0 +1,27 @@
+return {
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = { "markdown", "Avante" },
+    opts = {
+      enabled = true,
+      file_types = { "markdown", "Avante" },
+      anti_conceal = { enabled = false },
+      bullet = { enabled = false },
+      checkbox = { enabled = false },
+      code = { enabled = false },
+      dash = { enabled = false },
+      document = { enabled = false },
+      heading = { enabled = false },
+      html = { enabled = false },
+      inline_highlight = { enabled = false },
+      latex = { enabled = false },
+      link = { enabled = false },
+      padding = { enabled = false },
+      paragraph = { enabled = false },
+      pipe_table = { enabled = false },
+      sign = { enabled = false },
+      yaml = { enabled = false },
+      quote = { enabled = true },
+    },
+  },
+}
