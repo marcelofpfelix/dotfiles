@@ -11,9 +11,19 @@ vim.opt.ignorecase = true                               -- case-insensitive sear
 vim.opt.smartcase = true                                -- BUT become case-sensitive with capitals
 vim.opt.signcolumn = "yes"                              -- always show sign column to avoid jump
 if vim.env.SSH_TTY then
-  vim.g.clipboard = "osc52"                             -- copy from SSH/tmux to the local terminal clipboard
+  vim.g.clipboard = "osc52"                             -- allow OSC52 copy over SSH/tmux
+  vim.opt.clipboard = ""                                -- keep plain p local; OSC52 paste waits on terminal reads
+  vim.api.nvim_create_autocmd("TextYankPost", {
+    callback = function()
+      vim.highlight.on_yank()
+      local osc52 = require("vim.ui.clipboard.osc52")
+      osc52.copy("+")(vim.v.event.regcontents)
+      osc52.copy("*")(vim.v.event.regcontents)
+    end,
+  })
+else
+  vim.opt.clipboard = "unnamedplus"                     -- use system clipboard locally
 end
-vim.opt.clipboard = "unnamedplus"                       -- use system clipboard
 vim.opt.timeoutlen = (vim.g.vscode and 1000) or 300     -- mapped sequence wait time (ms)
 vim.opt.splitright = true                               -- vertical splits open to the right
 vim.opt.splitbelow = true                               -- horizontal splits open below
