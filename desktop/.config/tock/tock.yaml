@@ -1,0 +1,22 @@
+backend: timewarrior
+time_format: "24"
+weekly_target: "40h"
+check_updates: false
+
+timewarrior:
+  data_path: /Users/marcelof/.timewarrior/data
+  use_tock_tag_colors: true
+  use_tock_tag_colors_calendar: true
+  use_tock_tag_colors_weekly_activity: true
+  use_tock_tag_colors_top_projects: true
+
+working_hours:
+  enabled: true
+  weekdays: "mon,tue,wed,thu,fri"
+  stop_at: "18:00"
+
+calendar:
+  time_spent_format: "15:04"
+  time_start_format: "15:04"
+  time_end_format: " - 15:04"
+  time_total_format: "15:04"

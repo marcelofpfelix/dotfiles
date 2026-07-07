@@ -58,6 +58,8 @@ Some aliases and scripts use these when present:
 - `pre-commit`
 - `ansible-playbook`
 - `gopass`
+- `timew`
+- `tock`
 - `gpaste-client` or `copyq`
 - `notify-send` or `terminal-notifier`
 

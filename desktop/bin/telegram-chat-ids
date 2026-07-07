@@ -41,6 +41,11 @@ def parse_args() -> argparse.Namespace:
         help="Print raw Telegram getUpdates JSON for each bot. Tokens are not printed.",
     )
     parser.add_argument(
+        "--groups-only",
+        action="store_true",
+        help="Only print group, supergroup, and channel chats.",
+    )
+    parser.add_argument(
         "--timeout",
         type=float,
         default=10.0,
@@ -119,7 +124,7 @@ def telegram_get_updates(
         raise RuntimeError(f"invalid JSON response: {exc}") from exc
 
 
-def chat_from_update(update: dict[str, Any]) -> dict[str, Any] | None:
+def event_from_update(update: dict[str, Any]) -> tuple[str, dict[str, Any], dict[str, Any]] | None:
     for key in (
         "message",
         "edited_message",
@@ -130,7 +135,7 @@ def chat_from_update(update: dict[str, Any]) -> dict[str, Any] | None:
     ):
         value = update.get(key)
         if isinstance(value, dict) and isinstance(value.get("chat"), dict):
-            return value["chat"]
+            return key, value, value["chat"]
     return None
 
 
@@ -150,10 +155,24 @@ def chat_label(chat: dict[str, Any]) -> str:
 
 
 def update_date(update: dict[str, Any]) -> str:
-    for key in ("message", "edited_message", "channel_post", "edited_channel_post"):
+    for key in (
+        "message",
+        "edited_message",
+        "channel_post",
+        "edited_channel_post",
+        "my_chat_member",
+        "chat_member",
+    ):
         value = update.get(key)
         if isinstance(value, dict) and isinstance(value.get("date"), int):
             return dt.datetime.fromtimestamp(value["date"], tz=dt.timezone.utc).isoformat()
+    return ""
+
+
+def chat_member_status(event: dict[str, Any]) -> str:
+    new_member = event.get("new_chat_member")
+    if isinstance(new_member, dict):
+        return str(new_member.get("status", ""))
     return ""
 
 
@@ -162,6 +181,7 @@ def collect_for_path(
     timeout: float,
     offset: int | None,
     raw: bool,
+    groups_only: bool,
 ) -> dict[str, Any]:
     token = read_token(path)
     payload = telegram_get_updates(token, timeout=timeout, offset=offset)
@@ -177,16 +197,25 @@ def collect_for_path(
     for update in payload.get("result", []):
         if not isinstance(update, dict):
             continue
-        chat = chat_from_update(update)
-        if not chat or "id" not in chat:
+        event = event_from_update(update)
+        if event is None:
+            continue
+        event_type, event_body, chat = event
+        if "id" not in chat:
             continue
         chat_id = int(chat["id"])
+        chat_type = str(chat.get("type", ""))
+        if groups_only and chat_type == "private":
+            continue
         seen[chat_id] = {
             "bot": path,
             "chat_id": chat_id,
-            "type": chat.get("type", ""),
+            "type": chat_type,
             "name": chat_label(chat),
             "username": chat.get("username", ""),
+            "event": event_type,
+            "thread_id": event_body.get("message_thread_id", ""),
+            "member_status": chat_member_status(event_body),
             "update_id": update.get("update_id", ""),
             "date": update_date(update),
         }
@@ -196,10 +225,24 @@ def collect_for_path(
 
 def print_table(rows: list[dict[str, Any]]) -> None:
     if not rows:
-        print("No chats found. Send a message to each bot or mention it in a group, then run again.")
+        print(
+            "No chats found. Send a DM to each bot, or add it to a group and send "
+            "a command such as /start or /start@bot_username, then run again."
+        )
         return
 
-    headers = ["bot", "chat_id", "type", "name", "username", "update_id", "date"]
+    headers = [
+        "bot",
+        "chat_id",
+        "type",
+        "name",
+        "username",
+        "event",
+        "thread_id",
+        "member_status",
+        "update_id",
+        "date",
+    ]
     widths = {
         header: max(len(header), *(len(str(row.get(header, ""))) for row in rows))
         for header in headers
@@ -221,7 +264,15 @@ def main() -> int:
     errors = []
     for path in paths:
         try:
-            results.append(collect_for_path(path, args.timeout, args.offset, args.raw))
+            results.append(
+                collect_for_path(
+                    path,
+                    args.timeout,
+                    args.offset,
+                    args.raw,
+                    args.groups_only,
+                )
+            )
         except RuntimeError as exc:
             errors.append({"bot": path, "error": str(exc)})
 
@@ -233,6 +284,13 @@ def main() -> int:
     else:
         rows = [chat for result in results for chat in result.get("chats", [])]
         print_table(rows)
+        if rows and all(row.get("type") == "private" for row in rows):
+            print(
+                "Only private chats are visible. For group IDs, add the bot to the "
+                "group and send a bot command in that group, then rerun with "
+                "--groups-only.",
+                file=sys.stderr,
+            )
         for error in errors:
             print(f"ERROR {error['bot']}: {error['error']}", file=sys.stderr)
 

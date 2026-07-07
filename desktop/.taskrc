@@ -1,12 +1,39 @@
-# Here is an example of entries that use the default, override and blank values
-#   variable=foo   -- By specifying a value, this overrides the default
+# Taskwarrior config.
+# taskwarrior-tui reads this same file for reports, colors, keys, and UI styles.
 
-# Use the command 'task show' to see all defaults and overrides
-
-# Files
 data.location=~/.task
+hooks.location=~/.task/hooks
 
-# Color theme (uncomment one to use)
 include ~/.config/task/themes/catppuccin-mocha.theme
 
 regex=on
+confirmation=on
+allow.empty.filter=off
+bulk=3
+weekstart=monday
+dateformat=Y-M-D
+editor=nvim
+
+uda.priority.values=H,M,L
+
+report.next.description=Next actionable tasks
+report.next.filter=(status:pending or status:waiting) limit:page
+report.next.columns=id,priority,project,tags,due.relative,scheduled.countdown,depends,description.count,urgency
+report.next.labels=ID,P,Project,Tags,Due,Sched,Deps,Description,Urg
+report.next.sort=urgency-
+
+uda.taskwarrior-tui.task-report.next.filter=(status:pending or status:waiting)
+uda.taskwarrior-tui.task-report.info-show=true
+uda.taskwarrior-tui.task-report.info-location=auto
+uda.taskwarrior-tui.task-report.use-alternate-style=true
+uda.taskwarrior-tui.task-report.looping=true
+uda.taskwarrior-tui.task-report.jump-to-task-on-add=true
+uda.taskwarrior-tui.task-report.prompt-on-undo=true
+uda.taskwarrior-tui.task-report.prompt-on-delete=true
+uda.taskwarrior-tui.task-report.prompt-on-done=false
+uda.taskwarrior-tui.quick-tag.name=next
+uda.taskwarrior-tui.selection.indicator=>
+uda.taskwarrior-tui.mark.indicator=*
+uda.taskwarrior-tui.unmark.indicator=
+uda.taskwarrior-tui.mark-selection.indicator=+
+uda.taskwarrior-tui.unmark-selection.indicator=-

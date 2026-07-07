@@ -1,29 +1,53 @@
 # Catppuccin Mocha for Taskwarrior
 # Palette: https://catppuccin.com/palette
+# Taskwarrior supports 256-color values, so these are xterm approximations of
+# the Catppuccin Mocha palette rather than true hex colors.
 
 color=on
 
-color.active=bold color11
-color.blocked=color8
-color.blocking=bold color9
-color.completed=color8
-color.deleted=color8
-color.due=color9
-color.due.today=bold color9
-color.overdue=bold color1
-color.project=color6
-color.recurring=color5
-color.scheduled=color4
-color.tag=color5
-color.uda.priority.H=bold color1
-color.uda.priority.M=bold color3
-color.uda.priority.L=color4
-color.waiting=color8
+color.alternate=on color235
+color.active=bold color222
+color.blocked=color60
+color.blocking=bold color211
+color.completed=color60
+color.deleted=color60
+color.due=color216
+color.due.today=bold color222
+color.overdue=bold color211
+color.project=color110
+color.recurring=color183
+color.scheduled=color111
+color.tag=color183
+color.tagged=color183
+color.waiting=color60
 
-color.calendar.due=color9
-color.calendar.due.today=bold color9
-color.calendar.overdue=bold color1
-color.calendar.weekend=color8
+color.uda.priority.H=bold color211
+color.uda.priority.M=bold color222
+color.uda.priority.L=color111
 
-color.summary.background=color0
-color.summary.bar=color5
+color.calendar.due=color216
+color.calendar.due.today=bold color222
+color.calendar.overdue=bold color211
+color.calendar.today=color235 on color183
+color.calendar.weekend=color60
+
+color.label=color189
+color.header=bold color183
+color.footnote=color60
+color.warning=bold color222
+color.error=color235 on color211
+
+color.summary.background=color235
+color.summary.bar=color183
+
+uda.taskwarrior-tui.style.title=bold color183
+uda.taskwarrior-tui.style.title.border=color60
+uda.taskwarrior-tui.style.navbar=color189 on color235
+uda.taskwarrior-tui.style.command=color189 on color235
+uda.taskwarrior-tui.style.command.error=bold color211
+uda.taskwarrior-tui.style.context.active=color235 on color183
+uda.taskwarrior-tui.style.report.selection=color235 on color111
+uda.taskwarrior-tui.style.report-menu.active=color235 on color183
+uda.taskwarrior-tui.style.calendar.title=color235 on color183
+uda.taskwarrior-tui.style.report.scrollbar=color183
+uda.taskwarrior-tui.style.report.scrollbar.area=color235

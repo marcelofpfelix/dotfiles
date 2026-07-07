@@ -1,19 +1,22 @@
-# Mirrors desktop/.wezterm.lua where Ghostty has equivalent settings.
-theme = Catppuccin Mocha
+# Desktop terminal defaults
+theme = light:Catppuccin Latte,dark:Catppuccin Mocha
+window-theme = auto
 font-family = Fira Code
 font-size = 10
-
-# WezTerm: window_background_opacity = 1.0
 background-opacity = 1
+window-padding-x = 8
+window-padding-y = 6
+window-padding-balance = true
+window-save-state = always
+window-inherit-working-directory = true
+window-inherit-font-size = true
+window-show-tab-bar = auto
+window-new-tab-position = current
+gtk-titlebar = true
+gtk-tabs-location = top
+gtk-wide-tabs = true
 
-# WezTerm: enable_tab_bar = false
-window-show-tab-bar = never
-
-# WezTerm: window_decorations = RESIZE
-window-decoration = false
-gtk-titlebar = false
-
-# Copy/paste and OSC 52.
+# Clipboard and OSC 52. Allow terminal apps to copy out, but keep reads gated.
 clipboard-read = ask
 clipboard-write = allow
 clipboard-trim-trailing-spaces = true
@@ -21,17 +24,30 @@ clipboard-paste-protection = true
 clipboard-paste-bracketed-safe = true
 copy-on-select = clipboard
 
-# Keep remote SSH sessions usable with Ghostty terminfo and environment.
+# Shell integration improves cwd inheritance, close prompts, SSH env, and terminfo.
 shell-integration = zsh
 shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo,path
 term = xterm-ghostty
-
 confirm-close-surface = true
 scrollback-limit = 100000000
 mouse-hide-while-typing = true
 cursor-style = block
 cursor-style-blink = false
 
-# WezTerm keys.
-keybind = ctrl+f=toggle_fullscreen
+# Common Linux desktop shortcuts.
+keybind = ctrl+shift+c=copy_to_clipboard
+keybind = ctrl+shift+v=paste_from_clipboard
 keybind = shift+insert=paste_from_clipboard
+keybind = ctrl+shift+t=new_tab
+keybind = ctrl+shift+n=new_window
+keybind = ctrl+shift+w=close_surface
+keybind = ctrl+shift+q=quit
+keybind = ctrl+shift+comma=reload_config
+keybind = ctrl+comma=open_config
+keybind = ctrl+shift+f=start_search
+keybind = ctrl+shift+p=toggle_command_palette
+keybind = ctrl+shift+enter=toggle_split_zoom
+keybind = ctrl+f=toggle_fullscreen
+keybind = ctrl+plus=increase_font_size:1
+keybind = ctrl+minus=decrease_font_size:1
+keybind = ctrl+zero=reset_font_size
