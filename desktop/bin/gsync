@@ -8,10 +8,11 @@
 set -Eeuo pipefail
 
 CLI="""
-use: gsync
+use: gsync [NAME_OR_FILE]
 short: sync configured git repositories
 long: |
   Sync configured git repositories. Reads ~/.config/gsync/repos.conf by default.
+  Pass a config name or file as the first argument to use a different config.
 flags:
   - use: config
     short: config name or file
@@ -79,6 +80,7 @@ gsync_usage() {
     cat <<EOF
 Usage:
   gsync
+  gsync NAME_OR_FILE
   gsync --config NAME_OR_FILE
   gsync --repo REPO
 
@@ -155,6 +157,13 @@ gsync_read_config_file() {
     fi
 
     config_read_kv_file "$config_file" gsync_read_config_line
+}
+
+gsync_config_exists() {
+    local config_file="${1:?config file is required}"
+
+    config_file="$(config_resolve_file "$config_file" "$DEFAULT_CONFIG_DIR")"
+    [ -f "$config_file" ]
 }
 
 gsync_parse_repo_ref() {
@@ -319,7 +328,14 @@ gsync_parse_args() {
             --verbose|-v) GSYNC_VERBOSE=true; shift ;;
             --force|-f) shift ;;
             --help|-h) gsync_usage; exit 0 ;;
-            *) gsync_add_repo_line "$1"; shift ;;
+            *)
+                if gsync_config_exists "$1"; then
+                    CONFIG_FILES+=("$1")
+                else
+                    gsync_add_repo_line "$1"
+                fi
+                shift
+                ;;
         esac
     done
 }
