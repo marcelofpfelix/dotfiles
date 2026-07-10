@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+
+# sdm manager - ensures SDM is logged in, refreshes ssh_config, and requests
+# access for work hosts missing from SDM.
+
+set -Eeuo pipefail
+cd "$(dirname "$0")" || exit
+
+SDM_BIN="${SDM_BIN:-sdm}"
+SDM_EMAIL="${SDM_EMAIL:-marcelof@telnyx.com}"
+SDM_SSH_CONFIG="${SDM_SSH_CONFIG:-$HOME/.sdm/ssh_config}"
+WORK_SSH_CONFIG="${WORK_SSH_CONFIG:-$HOME/.ssh/legacy/work}"
+SDM_MACOS_UNLOCK_KEYCHAIN="${SDM_MACOS_UNLOCK_KEYCHAIN:-1}"
+SDM_KEYCHAIN_PATH="${SDM_KEYCHAIN_PATH:-$HOME/Library/Keychains/login.keychain-db}"
+
+is_macos() {
+  case "${OSTYPE:-}" in
+    darwin*) return 0 ;;
+  esac
+
+  [[ "$(uname -s 2>/dev/null || true)" == "Darwin" ]]
+}
+
+unlock_macos_keychain() {
+  [[ "$SDM_MACOS_UNLOCK_KEYCHAIN" == "1" ]] || return 0
+  is_macos || return 0
+  command -v security >/dev/null 2>&1 || return 0
+  [[ -e "$SDM_KEYCHAIN_PATH" ]] || return 0
+
+  echo "Unlocking macOS login keychain for SDM..." >&2
+  if ! security unlock-keychain "$SDM_KEYCHAIN_PATH"; then
+    echo "warning: could not unlock $SDM_KEYCHAIN_PATH; SDM login may fail to store its token" >&2
+  fi
+}
+
+ensure_login() {
+  if ! "$SDM_BIN" status &>/dev/null; then
+    echo "Not logged in, authenticating..." >&2
+    unlock_macos_keychain
+    "$SDM_BIN" login --email "$SDM_EMAIL"
+  fi
+}
+
+sync() {
+  "$SDM_BIN" ssh config
+  # Add short aliases to Host lines: tel-*-<word>-<digits> -> <first letter><digits>
+  # e.g. tel-ams3-ibm-prod-227 -> p227, tel-at1-prox-dev-224 -> d224
+  local sdm_copy="$HOME/.ssh/config.d/sdm"
+  local tmp
+  tmp=$(mktemp)
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^Host[[:space:]]+(.*) ]]; then
+      local aliases="${BASH_REMATCH[1]}"
+      local first="${aliases%% *}"
+      if [[ "$first" =~ -([a-z])[a-z]*-([0-9]+)$ ]]; then
+        local short="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+        [[ " $aliases " == *" $short "* ]] || aliases="$short $aliases"
+      fi
+      echo "Host $aliases"
+    else
+      echo "$line"
+    fi
+  done < "$SDM_SSH_CONFIG" > "$tmp"
+  mv "$tmp" "$sdm_copy"
+}
+
+# Parse ssh_config Host and HostName lines into two associative arrays (by nameref).
+# shellcheck disable=SC2034 # nameref assignments look unused to shellcheck
+parse_ssh_config() {
+  local file="$1"
+  local -n aliases_ref=$2 hostnames_ref=$3
+  local current=""
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^Host[[:space:]]+(.*) ]]; then
+      local all="${BASH_REMATCH[1]}"
+      current="${all%% *}"
+      aliases_ref["$current"]="$all"
+    elif [[ -n "$current" && ! "$line" =~ ^[[:space:]]*# && "$line" =~ ^[[:space:]]+HostName[[:space:]]+(.*) ]]; then
+      hostnames_ref["$current"]="${BASH_REMATCH[1]}"
+    fi
+  done < "$file"
+}
+
+# Request access for work hosts that are missing from SDM.
+# Parses all non-commented HostName entries, extracts the hostname prefix
+# (before the first dot), and checks against SDM.
+request_missing() {
+  local -n work_hn=$1 sdm_al=$2
+  for host in "${!work_hn[@]}"; do
+    local hn="${work_hn[$host]}"
+    local canonical="${hn%%.*}"
+    [[ -n "$canonical" ]] || continue
+    if [[ -z "${sdm_al[$canonical]+x}" ]]; then
+      echo "Requesting access: $canonical" >&2
+      "$SDM_BIN" access to "$canonical" --reason "ENGDESK-50816" --duration 30d || true
+    fi
+  done
+}
+
+main() {
+  ensure_login
+  sync
+
+  # shellcheck disable=SC2034 # populated via nameref in parse_ssh_config
+  declare -A work_aliases work_hostnames
+  parse_ssh_config "$WORK_SSH_CONFIG" work_aliases work_hostnames
+
+  # shellcheck disable=SC2034 # populated via nameref in parse_ssh_config
+  declare -A sdm_aliases sdm_hostnames
+  parse_ssh_config "$SDM_SSH_CONFIG" sdm_aliases sdm_hostnames
+
+  request_missing work_hostnames sdm_aliases
+
+  echo "SDM config refreshed." >&2
+}
+
+main "$@"

@@ -42,6 +42,9 @@ zstyle ':completion:*' matcher-list 'm:{[:lower:][:upper:]}={[:upper:][:lower:]}
 export CLICOLOR=1
 export CLICOLOR_FORCE=1
 
+# Disable agent-tmux tmux status/window hooks by default.
+export AGENT_TMUX_ENABLED="${AGENT_TMUX_ENABLED:-0}"
+
 # plugins
 # # https://github.com/zsh-users/antigen
 # I don't use a PM since a git pull is easy enough
