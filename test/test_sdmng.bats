@@ -148,6 +148,35 @@ SCRIPT
   ! grep -q "security:" "$TEST_DIR/calls.log"
 }
 
+@test "does not login when macOS keychain unlock fails" {
+  cat > "$TEST_DIR/mock_sdm" <<SCRIPT
+#!/usr/bin/env bash
+echo "sdm:\$@" >> "$TEST_DIR/calls.log"
+case "\$1" in
+  status) exit 1 ;;
+  login) exit 0 ;;
+  ssh) cp "$TEST_DIR/sdm_ssh_config_source" "$TEST_DIR/.sdm/ssh_config" ;;
+  access) exit 0 ;;
+esac
+SCRIPT
+  chmod +x "$TEST_DIR/mock_sdm"
+
+  cat > "$TEST_DIR/security" <<SCRIPT
+#!/usr/bin/env bash
+echo "security:\$@" >> "$TEST_DIR/calls.log"
+exit 36
+SCRIPT
+  chmod +x "$TEST_DIR/security"
+  mkdir -p "$HOME/Library/Keychains"
+  touch "$HOME/Library/Keychains/login.keychain-db"
+
+  run env OSTYPE=darwin22 PATH="$TEST_DIR:$PATH" "$TEST_DIR/sdmng"
+  [ "$status" -eq 1 ]
+  grep -q "security:unlock-keychain $HOME/Library/Keychains/login.keychain-db" "$TEST_DIR/calls.log"
+  ! grep -q "sdm:login" "$TEST_DIR/calls.log"
+  [[ "$output" == *"SDM login cannot store its token"* ]]
+}
+
 @test "skips login when already authenticated" {
   run "$TEST_DIR/sdmng"
   [ "$status" -eq 0 ]

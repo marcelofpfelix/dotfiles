@@ -1,0 +1,28 @@
+export EDITOR="${EDITOR:-nvim}"
+export VISUAL="${VISUAL:-$EDITOR}"
+export PAGER="${PAGER:-less}"
+export LESS="${LESS:--FRX}"
+
+path=("$HOME/bin" "$HOME/.local/bin" $path)
+
+alias ll='eza -la --group-directories-first'
+alias la='eza -a --group-directories-first'
+alias l='eza --group-directories-first'
+alias cat='bat --paging=never'
+alias grep='rg'
+alias v='$EDITOR'
+alias t='tmux new-session -A -s main'
+
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init zsh)"
+fi
+
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
+
+if [ -n "$TERMUX_VERSION" ] && command -v tmux >/dev/null 2>&1 && [ -z "$TMUX" ] && [ -z "$TERMUX_NO_AUTO_TMUX" ]; then
+  case "$-" in
+    *i*) tmux new-session -A -s main ;;
+  esac
+fi

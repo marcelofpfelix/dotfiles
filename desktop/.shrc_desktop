@@ -58,6 +58,8 @@ export VAGRANT_EXPERIMENTAL="1"
 export PYENV_ROOT="$HOME/.pyenv"
 # wireshark theme
 export QT_STYLE_OVERRIDE=Adwaita-Dark
+# force has-nerd-font to treat this terminal as Nerd Font capable
+export NERD_FONT=1
 # Ruby Gems
 export GEM_HOME="$HOME/gems"
 # nvm
@@ -94,6 +96,12 @@ export CLIP_BACKEND="gpaste"
 export GOPASS_CLIPBOARD_COPY_CMD="$HOME/bin/gopass-clip-copy"
 export GOPASS_CLIPBOARD_CLEAR_CMD="$HOME/bin/gopass-clip-clear"
 # https://github.com/gopasspw/gopass/blob/master/docs/usecases/gpaste.md
+
+# Shared secret env wrapper.
+alias svi='senv vi'
+alias snvim='senv nvim'
+alias sdk='senv dk'
+alias sdocker='senv docker'
 
 
 # ##############################################################################

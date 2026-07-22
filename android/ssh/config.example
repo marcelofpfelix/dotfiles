@@ -1,0 +1,13 @@
+Host homelab
+  HostName homelab.local
+  User marcelof
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+
+Host prod-example
+  HostName 203.0.113.10
+  User ubuntu
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+  ServerAliveInterval 30
+  ServerAliveCountMax 3

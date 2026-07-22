@@ -1,0 +1,17 @@
+bat
+eza
+fd
+fzf
+git
+jq
+mosh
+neovim
+openssh
+ripgrep
+starship
+termux-api
+termux-services
+tmux
+tree
+yq
+zsh

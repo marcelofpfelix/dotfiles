@@ -1,0 +1,371 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: tsha [options]
+
+Build a tshark command with gum-powered fuzzy field selection.
+
+Options:
+  -r, --read FILE       Read packets from a capture file
+  -i, --interface IFACE Capture from an interface
+  -Y, --display FILTER  Start with a display filter
+  -e, --field FIELD     Add an output field
+      --protocol NAME   Preload the field picker with a protocol prefix, e.g. sip
+      --all-fields      Search every tshark field instead of protocol fields
+      --refresh-fields  Rebuild the cached tshark field list
+      --run             Run the built command without prompting
+      --print           Print the built command without prompting
+      --copy            Copy the built command without prompting
+      --export          Print: export TSHA_CMD=<command>
+  -h, --help            Show this help
+
+With no action flag, tsha prompts for what to do with the generated command.
+EOF
+}
+
+fail() {
+  printf 'tsha: %s\n' "$*" >&2
+  exit 1
+}
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || fail "$1 is required"
+}
+
+shell_quote() {
+  local quoted=()
+  local arg
+
+  for arg in "$@"; do
+    printf -v arg '%q' "$arg"
+    quoted+=("$arg")
+  done
+
+  (IFS=' '; printf '%s\n' "${quoted[*]}")
+}
+
+field_cache_file() {
+  printf '%s/tsha/fields.tsv\n' "${XDG_CACHE_HOME:-$HOME/.cache}"
+}
+
+refresh_field_cache() {
+  local cache tmp
+
+  cache="$(field_cache_file)"
+  mkdir -p "$(dirname "$cache")"
+  tmp="${cache}.$$"
+
+  tshark -G fields |
+    awk -F '\t' '$1 == "F" {
+      desc = $8
+      gsub(/[[:space:]]+/, " ", desc)
+      printf "%s\t%s\t%s\t%s\n", $3, $2, $4, desc
+    }' > "$tmp"
+
+  mv "$tmp" "$cache"
+}
+
+ensure_field_cache() {
+  local cache
+
+  cache="$(field_cache_file)"
+  if [[ "$refresh_fields" == "1" || ! -s "$cache" ]]; then
+    refresh_field_cache
+  fi
+}
+
+field_rows() {
+  local cache prefix
+
+  ensure_field_cache
+  cache="$(field_cache_file)"
+
+  if [[ "$all_fields" == "1" ]]; then
+    cat "$cache"
+    return 0
+  fi
+
+  prefix="$protocol_query"
+  awk -F '\t' -v prefix="$prefix" 'index($1, prefix) == 1' "$cache"
+}
+
+pick_field() {
+  local prompt="${1:-field}"
+  local query="${2:-}"
+  local selected
+
+  selected="$(
+    field_rows |
+      gum filter \
+        --prompt="${prompt}> " \
+        --placeholder='field, label, or type' \
+        --value="$query" \
+        --height=20 \
+        --fuzzy \
+        --strict
+  )"
+
+  [[ -n "$selected" ]] || return 1
+  cut -f1 <<<"$selected"
+}
+
+pick_fields() {
+  local query="${1:-}"
+  local selected
+
+  selected="$(
+    field_rows |
+      gum filter \
+        --prompt='fields> ' \
+        --placeholder='choose output fields' \
+        --value="$query" \
+        --height=20 \
+        --fuzzy \
+        --strict \
+        --no-limit
+  )"
+
+  [[ -n "$selected" ]] || return 1
+  cut -f1 <<<"$selected"
+}
+
+pick_source() {
+  local source
+
+  source="$(
+    printf '%s\n' \
+      'capture file' \
+      'live interface' \
+      'no source/options only' |
+      gum choose --header='Packet source'
+  )"
+
+  case "$source" in
+    'capture file')
+      read_file="$(gum file . --file --height=20 --header='Capture file')"
+      [[ -n "$read_file" ]] || return 1
+      ;;
+    'live interface')
+      iface="$(
+        tshark -D |
+          gum filter \
+            --prompt='iface> ' \
+            --placeholder='interface' \
+            --height=15 \
+            --fuzzy \
+            --strict |
+          sed 's/^[0-9]\+\. //; s/ .*//'
+      )"
+      [[ -n "$iface" ]] || return 1
+      ;;
+    'no source/options only')
+      ;;
+  esac
+}
+
+field_filter() {
+  local field op value
+
+  field="$(pick_field 'filter field' "$protocol_query")" || return 1
+  op="$(
+    printf '%s\n' \
+      'exists' \
+      '==' \
+      'contains' \
+      'matches' \
+      '!=' \
+      '>' \
+      '<' \
+      '>=' \
+      '<=' |
+      gum choose --header="Filter operator for $field"
+  )"
+
+  case "$op" in
+    exists)
+      printf '%s\n' "$field"
+      ;;
+    ==|contains|matches|!=|\>|\<|\>=|\<=)
+      value="$(gum input --prompt="$field $op " --placeholder='value')"
+      [[ -n "$value" ]] || return 1
+      printf '%s %s "%s"\n' "$field" "$op" "${value//\"/\\\"}"
+      ;;
+  esac
+}
+
+build_command() {
+  cmd=(tshark)
+
+  if [[ -n "${read_file:-}" ]]; then
+    cmd+=(-r "$read_file")
+  elif [[ -n "${iface:-}" ]]; then
+    cmd+=(-i "$iface")
+  fi
+
+  if [[ -n "${display_filter:-}" ]]; then
+    cmd+=(-Y "$display_filter")
+  fi
+
+  if ((${#fields[@]} > 0)); then
+    cmd+=(-T fields -E header=y -E separator=/t)
+    local field
+    for field in "${fields[@]}"; do
+      cmd+=(-e "$field")
+    done
+  fi
+}
+
+copy_command() {
+  local command_string="$1"
+
+  if command -v pbcopy >/dev/null 2>&1; then
+    printf '%s' "$command_string" | pbcopy
+  elif command -v wl-copy >/dev/null 2>&1; then
+    printf '%s' "$command_string" | wl-copy
+  elif command -v xclip >/dev/null 2>&1; then
+    printf '%s' "$command_string" | xclip -selection clipboard
+  else
+    fail 'no clipboard command found: expected pbcopy, wl-copy, or xclip'
+  fi
+}
+
+finish_command() {
+  local command_string="$1"
+  local action="${forced_action:-}"
+
+  if [[ -z "$action" ]]; then
+    action="$(
+      printf '%s\n' \
+        'run' \
+        'print' \
+        'copy' \
+        'export TSHA_CMD' |
+        gum choose --header="$command_string"
+    )"
+  fi
+
+  case "$action" in
+    run)
+      "${cmd[@]}"
+      ;;
+    print)
+      printf '%s\n' "$command_string"
+      ;;
+    copy)
+      copy_command "$command_string"
+      printf 'copied: %s\n' "$command_string" >&2
+      ;;
+    export|'export TSHA_CMD')
+      printf 'export TSHA_CMD=%q\n' "$command_string"
+      ;;
+  esac
+}
+
+read_file=''
+iface=''
+display_filter=''
+protocol_query='sip.'
+all_fields='0'
+refresh_fields='0'
+forced_action=''
+fields=()
+cmd=()
+
+while (($#)); do
+  case "$1" in
+    -r|--read)
+      [[ $# -ge 2 ]] || fail "$1 requires a file"
+      read_file="$2"
+      shift 2
+      ;;
+    -i|--interface)
+      [[ $# -ge 2 ]] || fail "$1 requires an interface"
+      iface="$2"
+      shift 2
+      ;;
+    -Y|--display)
+      [[ $# -ge 2 ]] || fail "$1 requires a display filter"
+      display_filter="$2"
+      shift 2
+      ;;
+    -e|--field)
+      [[ $# -ge 2 ]] || fail "$1 requires a field"
+      fields+=("$2")
+      shift 2
+      ;;
+    --protocol)
+      [[ $# -ge 2 ]] || fail "$1 requires a protocol name"
+      protocol_query="${2%.}."
+      shift 2
+      ;;
+    --all-fields)
+      all_fields='1'
+      shift
+      ;;
+    --refresh-fields)
+      refresh_fields='1'
+      shift
+      ;;
+    --run)
+      forced_action='run'
+      shift
+      ;;
+    --print)
+      forced_action='print'
+      shift
+      ;;
+    --copy)
+      forced_action='copy'
+      shift
+      ;;
+    --export)
+      forced_action='export'
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      fail "unknown argument: $1"
+      ;;
+  esac
+done
+
+need_cmd tshark
+
+if [[ "$refresh_fields" == "1" ]]; then
+  refresh_field_cache
+  refresh_fields='0'
+fi
+
+if [[ -z "$forced_action" ]]; then
+  need_cmd gum
+fi
+
+if [[ -z "$read_file" && -z "$iface" && -z "$forced_action" ]]; then
+  pick_source
+fi
+
+if [[ -z "$display_filter" && -z "$forced_action" ]]; then
+  case "$(printf '%s\n' 'build display filter' 'skip display filter' | gum choose --header='Display filter')" in
+    'build display filter')
+      display_filter="$(field_filter)" || exit 1
+      ;;
+  esac
+fi
+
+if ((${#fields[@]} == 0)) && [[ -z "$forced_action" ]]; then
+  case "$(printf '%s\n' 'extract fields' 'default tshark output' | gum choose --header='Output')" in
+    'extract fields')
+      while read -r field; do
+        [[ -n "$field" ]] && fields+=("$field")
+      done < <(pick_fields "$protocol_query")
+      ;;
+  esac
+fi
+
+build_command
+finish_command "$(shell_quote "${cmd[@]}")"

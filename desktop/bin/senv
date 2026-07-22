@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+Usage: senv <command> [args...]
+
+Loads shared secrets into the command environment, then execs the command.
+
+Defaults:
+  LITELLM_BASE_URL=http://litellm-aiswe.query.prod.telnyx.io:4000
+  AVANTE_MODEL=aiswe/coding-model
+  LITELLM_API_KEY from gopass path ai/litellm for vi/vim/nvim/opencode
+
+Also loads the nearest .sec file unless SENV_NO_SEC=1.
+Set SENV_FILE=/path/to/.sec to load a specific file.
+Set SENV_LITELLM=1 to force LiteLLM loading for any command.
+
+.sec format:
+  ENV_VAR gopass/path
+EOF
+}
+
+fail() {
+  printf 'senv: %s\n' "$*" >&2
+  exit 1
+}
+
+gopass_show() {
+  local path="$1"
+
+  command -v gopass >/dev/null 2>&1 || fail "gopass is required to load ${path}"
+  env gopass show -o "$path"
+}
+
+load_secret() {
+  local name="$1"
+  local path="$2"
+  local value
+
+  [[ -n "$name" ]] || fail "empty env var name"
+  [[ -n "$path" ]] || fail "missing gopass path for ${name}"
+
+  if [[ -n "${!name:-}" ]]; then
+    return 0
+  fi
+
+  if ! value="$(gopass_show "$path")"; then
+    fail "failed to load ${name} from ${path}"
+  fi
+  [[ -n "$value" ]] || fail "empty secret for ${name} at ${path}"
+  export "${name}=${value}"
+}
+
+find_sec_file() {
+  local dir="$PWD"
+
+  if [[ -n "${SENV_FILE:-}" ]]; then
+    [[ -f "$SENV_FILE" ]] || fail "SENV_FILE does not exist: ${SENV_FILE}"
+    printf '%s\n' "$SENV_FILE"
+    return 0
+  fi
+
+  while :; do
+    if [[ -f "${dir}/.sec" ]]; then
+      printf '%s\n' "${dir}/.sec"
+      return 0
+    fi
+    [[ "$dir" == "/" ]] && return 1
+    dir="$(dirname "$dir")"
+  done
+}
+
+load_sec_file() {
+  local file="$1"
+  local name path rest
+
+  while read -r name path rest || [[ -n "${name:-}" ]]; do
+    case "$name" in
+      ""|\#*) continue ;;
+    esac
+    load_secret "$name" "${path:-}"
+  done < "$file"
+}
+
+load_litellm_env() {
+  export LITELLM_BASE_URL="${LITELLM_BASE_URL:-http://litellm-aiswe.query.prod.telnyx.io:4000}"
+  export AVANTE_MODEL="${AVANTE_MODEL:-aiswe/coding-model}"
+  export LITELLM_API_KEY_GOPASS_PATH="${LITELLM_API_KEY_GOPASS_PATH:-ai/litellm}"
+
+  load_secret LITELLM_API_KEY "$LITELLM_API_KEY_GOPASS_PATH"
+  export AVANTE_PROVIDER="${AVANTE_PROVIDER:-litellm}"
+}
+
+load_shared_env() {
+  if [[ "${SENV_NO_SEC:-0}" != "1" ]]; then
+    local sec_file
+    if sec_file="$(find_sec_file)"; then
+      load_sec_file "$sec_file"
+    fi
+  fi
+}
+
+if [[ "$#" -eq 0 ]]; then
+  usage
+  exit 2
+fi
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+load_shared_env
+
+case "${SENV_LITELLM:-auto}:$1" in
+  1:*|auto:vi|auto:vim|auto:nvim|auto:opencode)
+    load_litellm_env
+    ;;
+esac
+
+case "$1" in
+  vi)
+    shift
+    set -- "${VISUAL:-${EDITOR:-nvim}}" "$@"
+    ;;
+esac
+
+exec "$@"

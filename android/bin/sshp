@@ -1,0 +1,26 @@
+#!/data/data/com.termux/files/usr/bin/sh
+set -eu
+
+config="${SSH_CONFIG:-$HOME/.ssh/config}"
+
+if [ ! -f "$config" ]; then
+  printf 'sshp: missing %s\n' "$config" >&2
+  exit 1
+fi
+
+if ! command -v fzf >/dev/null 2>&1; then
+  printf 'sshp: fzf is required\n' >&2
+  exit 1
+fi
+
+host="$(
+  awk '
+    tolower($1) == "host" {
+      for (i = 2; i <= NF; i++) {
+        if ($i !~ /[*?]/) print $i
+      }
+    }
+  ' "$config" | sort -u | fzf --prompt='ssh > '
+)"
+
+[ -n "$host" ] && exec ssh "$host"

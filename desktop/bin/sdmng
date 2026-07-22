@@ -29,7 +29,9 @@ unlock_macos_keychain() {
 
   echo "Unlocking macOS login keychain for SDM..." >&2
   if ! security unlock-keychain "$SDM_KEYCHAIN_PATH"; then
-    echo "warning: could not unlock $SDM_KEYCHAIN_PATH; SDM login may fail to store its token" >&2
+    echo "error: could not unlock $SDM_KEYCHAIN_PATH; SDM login cannot store its token" >&2
+    echo "Run this from an interactive macOS session, then retry: security unlock-keychain $SDM_KEYCHAIN_PATH" >&2
+    return 1
   fi
 }
 

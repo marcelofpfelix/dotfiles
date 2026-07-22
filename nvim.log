@@ -1,1 +1,4 @@
 WRN 2026-06-15T09:41:39.425 ?.71266    server_start:197: Failed to start server: operation not permitted: /var/folders/d5/mm1yj3_d2_s825mrv_6p0x_40000gn/T/nvim.marcelof/duqEJy/nvim.71266.0
+WRN 2026-07-20T11:42:59.614 ?.6989     server_start:197: Failed to start server: operation not permitted: /var/folders/d5/mm1yj3_d2_s825mrv_6p0x_40000gn/T/nvim.marcelof/1Kixzf/nvim.6989.0
+WRN 2026-07-20T11:43:07.909 ?.7079     server_start:197: Failed to start server: operation not permitted: /var/folders/d5/mm1yj3_d2_s825mrv_6p0x_40000gn/T/nvim.marcelof/s7xRkN/nvim.7079.0
+WRN 2026-07-20T12:39:24.091 ?.34052    server_start:197: Failed to start server: operation not permitted: /var/folders/d5/mm1yj3_d2_s825mrv_6p0x_40000gn/T/nvim.marcelof/gluDIS/nvim.34052.0

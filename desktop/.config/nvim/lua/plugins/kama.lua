@@ -3,7 +3,7 @@ return {
 
   -- 1. vim-kamailio-syntax
   { "kamailio/vim-kamailio-syntax",
-    ft = "kamailio", lazy = true
+    lazy = false,
   },
 
   -- 2. vim-kamailio-autocomplete

@@ -15,6 +15,7 @@ require('lazy').setup({
   {
     "mistricky/codesnap.nvim",
     build = "make",
+    enabled = false,
   },
   {
     "NeogitOrg/neogit",
@@ -50,7 +51,8 @@ require('lazy').setup({
   'folke/zen-mode.nvim',
   'tpope/vim-obsession',
 
-  -- Tree
+  -- Tree fallback: Oil is the default directory editor. Keep nvim-tree available
+  -- temporarily as a sidebar/file-tree escape hatch while the Oil workflow settles.
   {
     "nvim-tree/nvim-tree.lua",
     version = "*",
@@ -237,11 +239,6 @@ require('lazy').setup({
     }
   },
 
-  { -- Autocompletion
-    'hrsh7th/nvim-cmp',
-    dependencies = { 'hrsh7th/cmp-nvim-lsp', 'L3MON4D3/LuaSnip', 'saadparwaiz1/cmp_luasnip' },
-  },
-
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     branch = 'master',
@@ -275,6 +272,8 @@ require('lazy').setup({
 --  compare with obsidian and render-markdown
   {
     "OXY2DEV/markview.nvim",
+    cmd = { "Markview" },
+    ft = {},
     keys = {
       { "<leader>mv", "<cmd>Markview Toggle<cr>", desc = "Toggle Markview" },
     },
@@ -290,7 +289,10 @@ require('lazy').setup({
 
   {
     "rcarriga/nvim-dap-ui",
-    dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"},
+    dependencies = {
+      "mfussenegger/nvim-dap",
+      "nvim-neotest/nvim-nio",
+    },
     config = function()
       require("dapui").setup()
     end,

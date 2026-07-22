@@ -52,6 +52,7 @@ Some aliases and scripts use these when present:
 - `docker`
 - `tmux`
 - `gum`
+- `tshark`
 - `gitleaks`
 - `jq`
 - `act`
