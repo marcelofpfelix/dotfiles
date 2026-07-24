@@ -21,7 +21,8 @@
 - [x] `Win+Space` opens the Quickshell launcher; the old floating-focus behavior is not kept because app launch is the accepted default.
 - [x] `Win+Shift+E` uses the Quickshell exit confirmation instead of exiting immediately.
 - [x] `Win+Alt+L` calls the Quickshell lock IPC target so `Win+Ctrl+L` can stay resize-right.
-- [x] `Win+Ctrl+W` opens the Quickshell network panel.
+- [x] `Win+Ctrl+A` opens the Quickshell controls popup, which now acts as the all-menus hub.
+- [x] Network is reachable from the Quickshell controls menu instead of `Win+Ctrl+W`, which conflicts with app close-tab/window behavior.
 
 ## Omarchy profile parity
 
@@ -30,7 +31,7 @@
 - [x] `Win+S` uses the local `hypr-scratch` helper and `Win+Alt+S` moves a window there.
 - [x] `Win+Escape` and `Win+Shift+E` open the local Quickshell exit confirmation.
 - [x] `Win+Ctrl+L` calls the local Quickshell lock IPC target.
-- [x] `Win+Ctrl+W` opens the local Quickshell network panel through `qs ipc call network toggle`.
+- [x] The local Quickshell controls menu opens the network panel through `qs ipc call network toggle`.
 - [x] `Win+K` opens local Quickshell keybindings, matching Omarchy quattro behavior without upstream binaries.
 - [x] `Win+Ctrl+A` opens local Quickshell controls/audio, matching Omarchy quattro intent without upstream binaries.
 - [x] `Win+Shift+Space` toggles the local Quickshell bar.
@@ -41,7 +42,7 @@
 - [x] Avoid upstream runtime binaries; implement similar behavior with generic tools and local Quickshell IPC.
 - [x] Use local Quickshell IPC and common Wayland apps/CLIs for launcher, network, lock, screenshot, audio, and related actions.
 - [x] Media playback keys use generic `playerctl`; volume and brightness use `pactl` and `brightnessctl`.
-- [x] Clipboard history binding is wired to the local Quickshell clipboard picker backed by `cliphist decode | wl-copy`; `cliphist`, `wl-copy`, and `wl-paste` are tracked.
+- [x] Clipboard history is available from the Quickshell controls menu backed by `cliphist decode | wl-copy`; `cliphist`, `wl-copy`, and `wl-paste` are tracked.
 
 ## Quickshell replacements
 
@@ -207,7 +208,7 @@
 ## Notes
 
 - `default` is the i3-compatible profile. There is intentionally no separate `i3` profile.
-- Quickshell owns bar, launcher, tray, wallpaper, controls, calendar, notification history, network panel, lock IPC, and exit confirmation.
+- Quickshell owns bar, launcher, tray, wallpaper, controls, calendar, notification history, network panel, lock IPC, and exit confirmation; controls also acts as the all-menus hub.
 - Both profiles use the local lightweight Quickshell shell. The `omarchy` profile does not install or call upstream runtime binaries.
 - Adapted reference patterns already landed locally: Caelestia-like session actions behind local commands, end-4-like `Super+/` keybinding help and cliphist watcher refresh, Noctalia-like compact popup/control surfaces, and cxOrz-like cliphist as backend plumbing.
 - Rust system-metrics helper is intentionally not active work. The future note lives in `wiki/main/resources/dev/desktop.md`; build it only if measured Quickshell status polling cost becomes a real problem.

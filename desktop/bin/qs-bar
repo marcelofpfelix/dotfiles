@@ -14,7 +14,7 @@ list_instances() {
 }
 
 usage() {
-  printf 'use: qs-bar [start|stop|restart|reload|status|toggle|show|hide|tray|controls|calendar|notifications|power|keybindings|clipboard|clipboard-update|websearch|media|screen|wallpaper|close-panels]\n' >&2
+  printf 'use: qs-bar [start|stop|restart|reload|status|toggle|show|hide|tray|controls|calendar|notifications|power|keybindings|clipboard|clipboard-update|websearch|media|screen|wallpaper|launcher|close-panels]\n' >&2
 }
 
 kill_all() {
@@ -54,6 +54,7 @@ case "${1:-status}" in
     ;;
   status) list_instances ;;
   toggle|show|hide) ipc "$1" ;;
+  launcher) ipc_target launcher toggle ;;
   tray|tray-manage) ipc trayManage ;;
   controls) ipc controls ;;
   media|audio) ipc media ;;

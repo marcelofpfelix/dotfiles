@@ -523,6 +523,14 @@ ShellRoot {
     }
   }
 
+  function toggleNetworkPanel() {
+    const next = !networkPanel.visible
+    root.closeTransientPanels()
+    networkPanel.visible = next
+    if (next)
+      networkRefresh.running = true
+  }
+
   function toggleMediaPanel() {
     const next = !root.mediaPanelOpen
     root.closeTransientPanels()
@@ -1847,6 +1855,33 @@ ShellRoot {
             ActionButton { icon: "⏻"; label: "Power"; tooltip: "Power menu"; onTriggered: exitDialog.visible = true }
           }
 
+          Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Menus" }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            ActionButton { icon: "󰀻"; label: "Apps"; minWidth: 68; tooltip: "App launcher"; onTriggered: { root.closeTransientPanels(); root.toggleLauncher() } }
+            ActionButton { icon: "󰇧"; label: "Web"; minWidth: 68; tooltip: "Web search"; onTriggered: root.toggleWebSearch("google") }
+            ActionButton { icon: "󰌌"; label: "Keys"; minWidth: 68; tooltip: "Keybindings"; onTriggered: root.toggleKeybindings() }
+            ActionButton { icon: "󰅇"; label: "Clip"; minWidth: 68; tooltip: "Clipboard history"; onTriggered: root.openClipboard() }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            ActionButton { icon: "󰸉"; label: "Wall"; minWidth: 68; tooltip: "Wallpaper"; onTriggered: root.toggleWallpaperPanel() }
+            ActionButton { icon: "󰍹"; label: "Screen"; minWidth: 68; tooltip: "Screen tools"; onTriggered: root.toggleScreenPanel() }
+            ActionButton { icon: "󰕾"; label: "Media"; minWidth: 68; tooltip: "Media controls"; onTriggered: root.toggleMediaPanel() }
+            ActionButton { icon: "󰖩"; label: "Net"; minWidth: 68; tooltip: "Network panel"; onTriggered: root.toggleNetworkPanel() }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            ActionButton { icon: "󰥔"; label: "Time"; minWidth: 68; tooltip: "Calendar and time"; onTriggered: root.toggleCalendar() }
+            ActionButton { icon: "󰂚"; label: "Notes"; minWidth: 68; tooltip: "Notifications"; onTriggered: root.toggleNotifications() }
+          }
+
           RowLayout {
             Layout.fillWidth: true
             spacing: 10
@@ -2739,11 +2774,7 @@ ShellRoot {
 
     IpcHandler {
       target: "network"
-      function toggle() {
-        networkPanel.visible = !networkPanel.visible
-        if (networkPanel.visible)
-          networkRefresh.running = true
-      }
+      function toggle() { root.toggleNetworkPanel() }
       function hide() { networkPanel.visible = false }
     }
 
