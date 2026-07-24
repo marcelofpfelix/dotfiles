@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+device() {
+    brightnessctl --list 2>/dev/null | awk -F"'" '/kbd_backlight/ { print $2; exit }'
+}
+
+dev=$(device || true)
+[ -n "$dev" ] || exit 1
+
+case "${1:-status}" in
+    status)
+        brightnessctl -d "$dev" -m 2>/dev/null | awk -F, '{ print $4 }'
+        ;;
+    up|increase)
+        brightnessctl -d "$dev" set +1 >/dev/null
+        ;;
+    down|decrease)
+        brightnessctl -d "$dev" set 1- >/dev/null
+        ;;
+    *)
+        printf 'use: kbd-brightness [status|up|down]\n' >&2
+        exit 2
+        ;;
+esac

@@ -13,7 +13,7 @@ STATUS_FILE="${STATUS_FILE:-$HOME/script-status.ini}"
 . "$LIBS_DIR/lib_utils.sh"
 . "$LIBS_DIR/lib_status.sh"
 
-LEMONBAR=1
+BAR_COLOR_FORMAT="${BAR_COLOR_FORMAT:-plain}"
 
 if [ ! -f "$STATUS_FILE" ]; then
     log ERRO "No status file found at $STATUS_FILE"

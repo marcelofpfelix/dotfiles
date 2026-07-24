@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:$PATH"
+export QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"
+
+qs_bin="${QS_BIN:-$HOME/.nix-profile/bin/qs}"
+quickshell_bin="${QUICKSHELL_BIN:-$HOME/.nix-profile/bin/quickshell}"
+config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
+log_file="${QS_BAR_LOG:-/tmp/qs-bar.log}"
+
+list_instances() {
+  "$qs_bin" list --all
+}
+
+usage() {
+  printf 'use: qs-bar [start|stop|restart|reload|status|toggle|show|hide|tray|controls|calendar|notifications|power|keybindings|clipboard|clipboard-update|websearch|media|screen|wallpaper|close-panels]\n' >&2
+}
+
+kill_all() {
+  local ids id
+
+  ids=$(list_instances | awk '/^Instance / {gsub(":", "", $2); print $2}')
+  if [ -z "$ids" ]; then
+    return 0
+  fi
+
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    "$qs_bin" kill --id "$id" 2>/dev/null || true
+  done <<<"$ids"
+}
+
+ipc() {
+  "$qs_bin" ipc --path "$config_path" --any-display call bar "$1"
+}
+
+ipc_target() {
+  local target=$1
+  shift
+  "$qs_bin" ipc --path "$config_path" --any-display call "$target" "$@"
+}
+
+start() {
+  "$quickshell_bin" --path "$config_path" --no-duplicate --daemonize >>"$log_file" 2>&1 || true
+}
+
+case "${1:-status}" in
+  start) start ;;
+  stop) kill_all ;;
+  restart|reload)
+    kill_all
+    start
+    ;;
+  status) list_instances ;;
+  toggle|show|hide) ipc "$1" ;;
+  tray|tray-manage) ipc trayManage ;;
+  controls) ipc controls ;;
+  media|audio) ipc media ;;
+  screen|screenshot|record) ipc screen ;;
+  wallpaper) ipc wallpaper ;;
+  calendar) ipc calendar ;;
+  notifications) ipc notifications ;;
+  network) ipc_target network toggle ;;
+  websearch) ipc_target websearch toggle ;;
+  lock) ipc_target lock lock ;;
+  power|session) ipc power ;;
+  keybindings|keys) ipc keybindings ;;
+  clipboard) ipc clipboard ;;
+  clipboard-update) ipc clipboardUpdate ;;
+  close-panels) ipc closePanels ;;
+  *) usage; exit 2 ;;
+esac

@@ -1,0 +1,2 @@
+-- Local Hyprland binding overrides.
+-- Keep empty to use the selected profile defaults.

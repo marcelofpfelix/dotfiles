@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+wrapper="$HOME/bin/chrome-wayland"
+[ -d "$app_dir" ] || exit 0
+[ -x "$wrapper" ] || exit 0
+
+changed=0
+shopt -s nullglob
+for file in "$app_dir"/google-chrome.desktop "$app_dir"/chrome-*.desktop; do
+  if grep -qE "^Exec=/opt/google/chrome/google-chrome|^Exec=/usr/bin/google-chrome(-stable)?" "$file"; then
+    sed -i -E "s#^Exec=(/opt/google/chrome/google-chrome|/usr/bin/google-chrome(-stable)?)( |$)#Exec=$wrapper #" "$file"
+    changed=1
+  fi
+done
+
+if [ "$changed" -eq 1 ] && command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database "$app_dir" >/dev/null 2>&1 || true
+fi

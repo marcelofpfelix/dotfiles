@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v sensors >/dev/null 2>&1; then
+  rpm=$(sensors 2>/dev/null | awk '/fan[0-9]+:/ { print $2 " " $3; exit }')
+  if [ -n "${rpm:-}" ]; then
+    printf 'Fan %s\n' "$rpm"
+    exit 0
+  fi
+fi
+
+printf 'Fan --\n'

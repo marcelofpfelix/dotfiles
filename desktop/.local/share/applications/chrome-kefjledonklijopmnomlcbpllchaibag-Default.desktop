@@ -1,0 +1,10 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Version=1.0
+Terminal=false
+Type=Application
+Name=Slides
+Exec=/home/marcelof/bin/chrome-wayland --profile-directory=Default --app-id=kefjledonklijopmnomlcbpllchaibag
+Icon=chrome-kefjledonklijopmnomlcbpllchaibag-Default
+NoDisplay=true
+StartupWMClass=crx_kefjledonklijopmnomlcbpllchaibag

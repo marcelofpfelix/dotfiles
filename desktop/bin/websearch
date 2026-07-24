@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:$PATH"
+
+site="google"
+browser="${BROWSER:-}"
+picker="${WEBSEARCH_PICKER:-quickshell}"
+
+usage() {
+  printf 'usage: websearch [-s site] [-b browser] [-p quickshell|walker|terminal] [query]\n' >&2
+  exit 2
+}
+
+site_url() {
+  case "$1" in
+    google) printf '%s' 'https://www.google.com/search?q=' ;;
+    youtube) printf '%s' 'https://www.youtube.com/results?search_query=' ;;
+    github) printf '%s' 'https://github.com/search?q=org%3Ateam-telnyx+' ;;
+    jira) printf '%s' 'https://telnyx.atlassian.net/secure/QuickSearch.jspa?searchString=' ;;
+    guru) printf '%s' 'https://app.getguru.com/search?q=' ;;
+    call) printf '%s' 'http://search-tools.internal.telnyx.com/#!/session-lookup?sip_call_id=' ;;
+    *) return 1 ;;
+  esac
+}
+
+urlencode() {
+  if command -v jq >/dev/null 2>&1; then
+    jq -rn --arg v "$1" '$v|@uri'
+  else
+    printf '%s' "$1" | sed 's/ /+/g'
+  fi
+}
+
+open_url() {
+  local base encoded url
+  base="$(site_url "$site")" || {
+    printf 'unknown search site: %s\n' "$site" >&2
+    exit 2
+  }
+  encoded="$(urlencode "$*")"
+  url="${base}${encoded}"
+
+  if [ -n "$browser" ]; then
+    exec "$browser" "$url"
+  elif command -v chrome-wayland >/dev/null 2>&1; then
+    exec chrome-wayland "$url"
+  elif command -v xdg-open >/dev/null 2>&1; then
+    exec xdg-open "$url"
+  else
+    printf '%s\n' "$url"
+  fi
+}
+
+while getopts ':s:b:p:h' opt; do
+  case "$opt" in
+    s) site="$OPTARG" ;;
+    b) browser="$OPTARG" ;;
+    p) picker="$OPTARG" ;;
+    h) usage ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+if [ "$#" -gt 0 ]; then
+  open_url "$*"
+fi
+
+case "$picker" in
+  quickshell|qs)
+    if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v qs >/dev/null 2>&1; then
+      config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
+      qs ipc --path "$config_path" --any-display call websearch open "$site" && exit 0
+    fi
+    ;;
+  walker|terminal|term|auto)
+    . "${HOME}/lib/lib_picker.sh"
+    query=$(PICKER_BACKEND="$picker" picker_input "Search") || exit 0
+    [ -n "$query" ] && open_url "$query"
+    exit 0
+    ;;
+  *) printf "unknown picker: %s\n" "$picker" >&2; exit 2 ;;
+esac
+
+printf "query: " >&2
+IFS= read -r query
+[ -n "$query" ] && open_url "$query"

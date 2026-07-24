@@ -1,0 +1,2 @@
+-- Local Hyprland look-and-feel overrides.
+-- Keep empty to use the selected profile defaults.

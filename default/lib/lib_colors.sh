@@ -13,11 +13,17 @@
 
 
 RICHPY=${RICHPY:=0}
-LEMONBAR=${LEMONBAR:=0}
+BAR_COLOR_FORMAT=${BAR_COLOR_FORMAT:-}
 NO_COLOR=${NO_COLOR:-}
 
+case "$BAR_COLOR_FORMAT" in
+    quickshell) NO_COLOR=; RICHPY=0 ;;
+    rich|richpy) NO_COLOR=; RICHPY=1 ;;
+    plain|none) NO_COLOR=1; RICHPY=0 ;;
+esac
+
+
 #[[ -z "$RICHPY" ]] && RICHPY=0 # default richpy format is 0
-#[[ -z "$LEMONBAR" ]] && LEMONBAR=0 # default lemonbar format is 0
 
 
 declare -A color16=(
@@ -115,24 +121,28 @@ function color() {
         color='[default]'
     fi
 
-    # check if richpy is enabled
-    if [[ $LEMONBAR -eq 1 ]]; then
-        # colours
+    if [[ "$BAR_COLOR_FORMAT" == "quickshell" ]]; then
         declare -A cid=(
-            ['k']=${color16['surface0']} # Black
-            ['r']=${color16['red']}      # Red
-            ['g']=${color16['green']}    # Green
-            ['y']=${color16['yellow']}   # Yellow
-            ['b']=${color16['blue']}     # Blue
-            ['p']=${color16['pink']}     # Purple
-            ['c']=${color16['teal']}     # Cyan
-            ['w']=${color16['text']}     # White
+            ['k']=${color16['surface0']}
+            ['r']=${color16['red']}
+            ['g']=${color16['green']}
+            ['y']=${color16['yellow']}
+            ['b']=${color16['blue']}
+            ['p']=${color16['pink']}
+            ['c']=${color16['teal']}
+            ['w']=${color16['text']}
         )
-        escape='%%{'
-        style='F'
-        color='F-'
-        suffix='}'
+        escape='<span style="color:'
+        style=''
+        color=''
+        suffix='">'
+        local close='</span>'
+        if [[ ${1:-} == "n" ]]; then
+            printf '%s' "$close"
+            return
+        fi
     fi
+
     # if the size of the id is 1, then it's a color
     if [[ ${#1} == 1 ]]; then
         # if the is is n, the sytle is empty

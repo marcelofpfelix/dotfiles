@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+scratch_workspace="special:scratchpad"
+
+bar_state() {
+    out=()
+    group="$(group_count)"
+    scratch="$(scratch_count)"
+
+    if [ "${group:-0}" -gt 0 ]; then
+        out+=("󰓩 $group")
+    fi
+
+    if [ "${scratch:-0}" -gt 0 ]; then
+        out+=("󰆍 $scratch")
+    fi
+
+    printf '%s\n' "${out[*]:-}"
+}
+
+event_socket() {
+    local socket="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr/${HYPRLAND_INSTANCE_SIGNATURE:-}/.socket2.sock"
+    [ -S "$socket" ] || return 1
+    printf '%s\n' "$socket"
+}
+
+watch_bar() {
+    bar_state
+
+    local socket
+    socket=$(event_socket) || exit 0
+    socat -U - "UNIX-CONNECT:$socket" 2>/dev/null | while IFS= read -r event; do
+        case "$event" in
+            activewindow*|openwindow*|closewindow*|movewindow*|changefloatingmode*|togglegroup*|moveintogroup*|moveoutofgroup*|activegroup*|changegroupactive*|workspace*|focusedmon*|activespecial*|openlayer*|closelayer*)
+                bar_state
+                ;;
+        esac
+    done
+}
+
+scratch_count() {
+    hyprctl clients -j 2>/dev/null |
+        jq --arg workspace "$scratch_workspace" '[.[] | select(.workspace.name == $workspace)] | length' 2>/dev/null ||
+        printf 0
+}
+
+scratch_visible() {
+    hyprctl monitors -j 2>/dev/null |
+        jq --arg workspace "$scratch_workspace" 'any(.[]; .specialWorkspace.name == $workspace)' 2>/dev/null ||
+        printf false
+}
+
+group_count() {
+    hyprctl activewindow -j 2>/dev/null |
+        jq '.grouped | length' 2>/dev/null ||
+        printf 0
+}
+
+case "${1:-bar}" in
+    bar)
+        bar_state
+        ;;
+    watch)
+        watch_bar
+        ;;
+    scratch-count)
+        scratch_count
+        ;;
+    scratch-visible)
+        scratch_visible
+        ;;
+    group-count)
+        group_count
+        ;;
+    *)
+        printf 'use: hypr-state [bar|watch|scratch-count|scratch-visible|group-count]\n' >&2
+        exit 2
+        ;;
+esac

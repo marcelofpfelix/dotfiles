@@ -1,0 +1,11 @@
+[Unit]
+Description=Elephant
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/home/marcelof/.nix-profile/bin/elephant
+Restart=on-failure
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+
+floating=0
+if [ "${1:-}" = "--floating" ]; then
+    floating=1
+    shift
+fi
+
+notify() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "Hyprland" "$1"
+    else
+        printf '%s\n' "$1" >&2
+    fi
+}
+
+if [ "$floating" -eq 1 ]; then
+    hyprctl eval 'hl.dispatch(hl.dsp.focus({ workspace = "8" }))' >/dev/null 2>&1 || true
+fi
+
+launch() {
+    if command -v "$1" >/dev/null 2>&1; then
+        nohup hypr-clean-env "$@" >/tmp/hypr-term.log 2>&1 </dev/null &
+        exit 0
+    fi
+}
+
+if [ $# -gt 0 ]; then
+    if [ "$floating" -eq 1 ]; then
+        launch ghostty -e "$@"
+        launch /snap/bin/ghostty -e "$@"
+        launch wezterm start --always-new-process --class floating -- "$@"
+    fi
+    launch ghostty -e "$@"
+    launch /snap/bin/ghostty -e "$@"
+    launch wezterm start -- "$@"
+    launch gnome-terminal -- "$@"
+    launch terminator -x "$@"
+    launch x-terminal-emulator -e "$@"
+else
+    if [ "$floating" -eq 1 ]; then
+        launch ghostty
+        launch /snap/bin/ghostty
+        launch wezterm start --always-new-process --class floating
+    fi
+    launch ghostty
+    launch /snap/bin/ghostty
+    launch wezterm start
+    launch gnome-terminal
+    launch terminator
+    launch x-terminal-emulator
+fi
+
+notify "No terminal emulator found. Install ghostty, gnome-terminal, wezterm, terminator, or x-terminal-emulator."
+exit 1

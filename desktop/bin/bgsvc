@@ -1,0 +1,331 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+################################################################################
+# Config
+################################################################################
+
+# Format:
+#   name|scope|unit_or_autostart_file|recommended|description
+#
+# Scopes:
+#   user    systemctl --user unit
+#   system  systemctl unit
+#   xdg     XDG autostart desktop file, disabled by creating a user override
+#
+# Recommended intentionally excludes syncthing and mpd. Falcon is included
+# because this host has falcon-sensor enabled even though it is not running now.
+SERVICES=(
+    "evolution-addressbook|user|evolution-addressbook-factory.service|yes|Evolution address book service"
+    "evolution-calendar|user|evolution-calendar-factory.service|yes|Evolution calendar service"
+    "evolution-source|user|evolution-source-registry.service|yes|Evolution source registry"
+    "evolution-alarm|xdg|org.gnome.Evolution-alarm-notify.desktop|yes|Evolution events and task reminders"
+    "snap-desktop|user|snap.snapd-desktop-integration.snapd-desktop-integration.service|yes|Snap desktop integration helper"
+    "thunar|user|thunar.service|yes|Thunar file manager daemon"
+    "cups-browsed|system|cups-browsed.service|yes|Remote printer discovery"
+    "gnome-remote-desktop|system|gnome-remote-desktop.service|yes|GNOME remote desktop"
+    "modem-manager|system|ModemManager.service|yes|Mobile broadband modem manager"
+    "bluetooth|system|bluetooth.service|yes|Bluetooth daemon"
+    "avahi|system|avahi-daemon.service|yes|mDNS and local service discovery"
+    "falcon|system|falcon-sensor.service|yes|Falcon sensor"
+    "syncthing|user|syncthing.service|no|Syncthing file synchronization"
+    "mpd-user|user|mpd.service|no|User Music Player Daemon"
+    "mpd-system|system|mpd.service|no|System Music Player Daemon"
+)
+
+################################################################################
+# Implementation
+################################################################################
+
+SCRIPT_NAME="$(basename "$0")"
+APPLY=false
+ACTION=status
+TARGET=recommended
+
+usage() {
+    cat <<EOF
+Usage:
+  $SCRIPT_NAME [status|stop|start|disable|enable] [recommended|all|NAME] [--apply]
+  $SCRIPT_NAME list [recommended|all]
+
+Examples:
+  $SCRIPT_NAME
+  $SCRIPT_NAME list all
+  $SCRIPT_NAME status recommended
+  $SCRIPT_NAME disable recommended
+  $SCRIPT_NAME disable recommended --apply
+  $SCRIPT_NAME stop evolution-alarm --apply
+
+Mutating actions require --apply. Without it, the script prints the commands it
+would run.
+EOF
+}
+
+die() {
+    printf 'error: %s\n' "$*" >&2
+    exit 1
+}
+
+run() {
+    if "$APPLY"; then
+        "$@"
+    else
+        printf '+'
+        printf ' %q' "$@"
+        printf '\n'
+    fi
+}
+
+systemctl_cmd() {
+    local scope="$1"
+    shift
+
+    case "$scope" in
+        user) systemctl --user "$@" ;;
+        system) systemctl "$@" ;;
+        *) die "invalid systemctl scope: $scope" ;;
+    esac
+}
+
+run_systemctl() {
+    local scope="$1"
+    shift
+
+    case "$scope" in
+        user) run systemctl --user "$@" ;;
+        system) run sudo systemctl "$@" ;;
+        *) die "invalid systemctl scope: $scope" ;;
+    esac
+}
+
+systemctl_is_enabled() {
+    local scope="$1" ref="$2"
+
+    systemctl_cmd "$scope" is-enabled "$ref" 2>/dev/null || true
+}
+
+disable_unit() {
+    local scope="$1" ref="$2" enabled_state
+
+    enabled_state="$(systemctl_is_enabled "$scope" "$ref")"
+    case "$enabled_state" in
+        static)
+            run_systemctl "$scope" stop "$ref"
+            run_systemctl "$scope" mask "$ref"
+            ;;
+        masked)
+            printf 'already masked: %s\n' "$ref"
+            ;;
+        *)
+            run_systemctl "$scope" disable --now "$ref"
+            ;;
+    esac
+}
+
+enable_unit() {
+    local scope="$1" ref="$2" enabled_state
+
+    enabled_state="$(systemctl_is_enabled "$scope" "$ref")"
+    case "$enabled_state" in
+        static)
+            run_systemctl "$scope" start "$ref"
+            ;;
+        masked)
+            run_systemctl "$scope" unmask "$ref"
+            run_systemctl "$scope" start "$ref"
+            ;;
+        *)
+            run_systemctl "$scope" enable --now "$ref"
+            ;;
+    esac
+}
+
+autostart_source() {
+    local desktop_file="$1"
+
+    if [ -f "$HOME/.config/autostart/$desktop_file" ]; then
+        printf '%s\n' "$HOME/.config/autostart/$desktop_file"
+    elif [ -f "/etc/xdg/autostart/$desktop_file" ]; then
+        printf '%s\n' "/etc/xdg/autostart/$desktop_file"
+    else
+        return 1
+    fi
+}
+
+autostart_status() {
+    local desktop_file="$1"
+    local user_file="$HOME/.config/autostart/$desktop_file"
+
+    if [ -f "$user_file" ] && grep -Eq '^Hidden=true$' "$user_file"; then
+        printf 'disabled'
+    elif autostart_source "$desktop_file" >/dev/null; then
+        printf 'enabled'
+    else
+        printf 'missing'
+    fi
+}
+
+autostart_disable() {
+    local desktop_file="$1"
+    local src dst
+
+    src="$(autostart_source "$desktop_file")" || die "autostart file not found: $desktop_file"
+    dst="$HOME/.config/autostart/$desktop_file"
+
+    if "$APPLY"; then
+        mkdir -p "$HOME/.config/autostart"
+        if [ "$src" != "$dst" ]; then
+            cp "$src" "$dst"
+        fi
+        if grep -Eq '^Hidden=' "$dst"; then
+            sed -i 's/^Hidden=.*/Hidden=true/' "$dst"
+        else
+            printf '\nHidden=true\n' >>"$dst"
+        fi
+    else
+        printf '+ mkdir -p %q\n' "$HOME/.config/autostart"
+        if [ "$src" != "$dst" ]; then
+            printf '+ cp %q %q\n' "$src" "$dst"
+        fi
+        printf '+ set Hidden=true in %q\n' "$dst"
+    fi
+}
+
+autostart_enable() {
+    local desktop_file="$1"
+    local dst="$HOME/.config/autostart/$desktop_file"
+
+    if [ ! -f "$dst" ]; then
+        printf 'already enabled: %s\n' "$desktop_file"
+        return
+    fi
+
+    if "$APPLY"; then
+        sed -i '/^Hidden=true$/d' "$dst"
+    else
+        printf '+ sed -i %q %q\n' '/^Hidden=true$/d' "$dst"
+    fi
+}
+
+service_matches() {
+    local name="$1" recommended="$2"
+
+    case "$TARGET" in
+        all) return 0 ;;
+        recommended) [ "$recommended" = "yes" ] ;;
+        "$name") return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+print_service() {
+    local name="$1" scope="$2" ref="$3" recommended="$4" description="$5"
+
+    printf '%-24s %-7s %-64s recommended=%-3s %s\n' "$name" "$scope" "$ref" "$recommended" "$description"
+}
+
+show_status() {
+    local name="$1" scope="$2" ref="$3" recommended="$4" description="$5"
+    local load_state active_state enabled_state
+
+    case "$scope" in
+        user|system)
+            load_state="$(systemctl_cmd "$scope" show "$ref" -P LoadState 2>/dev/null || true)"
+            active_state="$(systemctl_cmd "$scope" show "$ref" -P ActiveState 2>/dev/null || true)"
+            enabled_state="$(systemctl_cmd "$scope" is-enabled "$ref" 2>/dev/null || true)"
+            printf '%-24s %-7s load=%-10s active=%-10s enabled=%-10s %s\n' \
+                "$name" "$scope" "${load_state:-missing}" "${active_state:-unknown}" "${enabled_state:-unknown}" "$description"
+            ;;
+        xdg)
+            printf '%-24s %-7s autostart=%-10s %s\n' \
+                "$name" "$scope" "$(autostart_status "$ref")" "$description"
+            ;;
+        *) die "invalid scope: $scope" ;;
+    esac
+}
+
+manage_service() {
+    local name="$1" scope="$2" ref="$3" recommended="$4" description="$5"
+
+    case "$ACTION" in
+        list) print_service "$name" "$scope" "$ref" "$recommended" "$description" ;;
+        status) show_status "$name" "$scope" "$ref" "$recommended" "$description" ;;
+        stop)
+            case "$scope" in
+                user|system) run_systemctl "$scope" stop "$ref" ;;
+                xdg) printf 'skip stop for xdg autostart: %s\n' "$name" ;;
+            esac
+            ;;
+        start)
+            case "$scope" in
+                user|system) run_systemctl "$scope" start "$ref" ;;
+                xdg) printf 'skip start for xdg autostart: %s\n' "$name" ;;
+            esac
+            ;;
+        disable)
+            case "$scope" in
+                user|system) disable_unit "$scope" "$ref" ;;
+                xdg) autostart_disable "$ref" ;;
+            esac
+            ;;
+        enable)
+            case "$scope" in
+                user|system) enable_unit "$scope" "$ref" ;;
+                xdg) autostart_enable "$ref" ;;
+            esac
+            ;;
+        *) die "unknown action: $ACTION" ;;
+    esac
+}
+
+parse_args() {
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            --apply)
+                APPLY=true
+                ;;
+            list|status|stop|start|disable|enable)
+                ACTION="$1"
+                ;;
+            recommended|all)
+                TARGET="$1"
+                ;;
+            *)
+                TARGET="$1"
+                ;;
+        esac
+        shift
+    done
+
+    case "$ACTION" in
+        list|status|stop|start|disable|enable) ;;
+        *) die "unknown action: $ACTION" ;;
+    esac
+}
+
+main() {
+    local entry name scope ref recommended description matched=false
+
+    parse_args "$@"
+
+    if ! "$APPLY" && [[ "$ACTION" =~ ^(stop|start|disable|enable)$ ]]; then
+        printf 'dry-run: add --apply to execute\n'
+    fi
+
+    for entry in "${SERVICES[@]}"; do
+        IFS='|' read -r name scope ref recommended description <<<"$entry"
+        if service_matches "$name" "$recommended"; then
+            matched=true
+            manage_service "$name" "$scope" "$ref" "$recommended" "$description"
+        fi
+    done
+
+    "$matched" || die "no service matched target: $TARGET"
+}
+
+main "$@"

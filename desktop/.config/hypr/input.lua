@@ -1,0 +1,2 @@
+-- Local Hyprland input overrides.
+-- Keep empty to use the selected profile defaults.

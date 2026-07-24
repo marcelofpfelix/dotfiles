@@ -18,7 +18,7 @@ section() {
 }
 
 section "core binaries"
-for cmd in codex claude opencode openclaw bd task-master serena uv uvx rtk rg fd ast-grep jq tmux gh git node npm docker; do
+for cmd in codex claude opencode openclaw bd task-master serena uv uvx rtk rg fd ast-grep jq tmux gh git node npm docker ponytail-install; do
   check_cmd "$cmd" yes
 done
 
@@ -52,6 +52,17 @@ install:
   claude plugin marketplace add a5c-ai/babysitter
   claude plugin install --scope user babysitter@a5c.ai
 EOF
+fi
+
+
+section "ponytail"
+if [[ -f "$HOME/.config/ponytail/config.json" ]]; then
+  printf 'ok      %-24s %s\n' "config" "$HOME/.config/ponytail/config.json"
+else
+  printf 'missing %-24s %s\n' "config" "$HOME/.config/ponytail/config.json"
+fi
+if command -v codex >/dev/null 2>&1; then
+  codex plugin list 2>/dev/null | grep -E '(^|[[:space:]])ponytail([@[:space:]]|$)' || printf 'missing %-24s run ponytail-install\n' "codex plugin"
 fi
 
 section "hindsight"

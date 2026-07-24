@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v task >/dev/null 2>&1; then
+    printf 'Taskwarrior not installed'
+    exit 0
+fi
+
+items=$(task rc.verbose:nothing +READY status:pending limit:6 export 2>/dev/null | jq -r '.[] | "  - " + .description' 2>/dev/null || true)
+if [ -z "$items" ]; then
+    printf 'No ready tasks'
+else
+    printf '%s\n' "$items"
+fi

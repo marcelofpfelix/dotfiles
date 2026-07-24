@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+detect_profile() {
+    if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || ! command -v hyprctl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+        printf 'default'
+        return
+    fi
+
+    local kb_options gaps_out
+    kb_options=$(hyprctl getoption input:kb_options -j 2>/dev/null | jq -r '.str // ""' 2>/dev/null || true)
+    gaps_out=$(hyprctl getoption general:gaps_out -j 2>/dev/null | jq -r '.css // ""' 2>/dev/null || true)
+    if [[ "$kb_options" == *compose:caps* || "$gaps_out" == 16* ]]; then
+        printf 'omarchy'
+    else
+        printf 'default'
+    fi
+}
+
+profile="${1:-${HYPR_PROFILE:-$(detect_profile)}}"
+profile_dir="${HYPR_KEYS_PROFILE_DIR:-$HOME/.config/hypr/profiles}"
+file="$profile_dir/$profile.lua"
+
+if [ ! -r "$file" ] && [ -r "desktop/.config/hypr/profiles/$profile.lua" ]; then
+    file="desktop/.config/hypr/profiles/$profile.lua"
+fi
+
+if [ ! -r "$file" ]; then
+    printf 'HYPR_PROFILE\t%s not found\n' "$profile"
+    exit 0
+fi
+
+pretty_key() {
+    local key=$1
+    key=${key# } ; key=${key% }
+    key=${key#\"} ; key=${key%\"}
+    key=${key//mod .. \"/SUPER}
+    key=${key//\" .. key/1..0}
+    key=${key//\"/}
+    key=${key// + /+}
+    key=${key//SUPER/Win}
+    key=${key//SHIFT/Shift}
+    key=${key//CTRL/Ctrl}
+    key=${key//ALT/Alt}
+    key=${key//RETURN/Enter}
+    key=${key//SPACE/Space}
+    key=${key//TAB/Tab}
+    key=${key//ESCAPE/Esc}
+    key=${key//SLASH/\/}
+    key=${key//PERIOD/.}
+    key=${key//LEFT/Left}
+    key=${key//RIGHT/Right}
+    key=${key//UP/Up}
+    key=${key//DOWN/Down}
+    key=${key//comma/,}
+    key=${key//mouse_down/WheelDown}
+    key=${key//mouse_up/WheelUp}
+    key=${key//mouse:272/MouseLeft}
+    key=${key//mouse:273/MouseRight}
+    printf '%s' "$key"
+}
+
+pretty_action() {
+    local line=$1 action=$2
+    case "$line" in
+        *'sh(terminal)'*) printf 'Terminal' ;;
+        *'sh(launcher)'*) printf 'Apps' ;;
+        *'qs-bar keybindings'*) printf 'Keybindings' ;;
+        *'qs-bar power'*) printf 'Session menu' ;;
+        *'qs-bar controls'*) printf 'Controls' ;;
+        *'qs-bar network'*) printf 'Network' ;;
+        *'qs-bar clipboard'*) printf 'Clipboard history' ;;
+        *'qs-bar websearch'*) printf 'Web search' ;;
+        *'qs-bar toggle'*) printf 'Toggle bar' ;;
+        *'qs-bar lock'*) printf 'Lock' ;;
+        *'screenshot-wayland edit'*) printf 'Screenshot' ;;
+        *'hyprpicker'*) printf 'Color picker' ;;
+        *'hypr-scratch toggle'*) printf 'Scratchpad' ;;
+        *'hypr-scratch move'*) printf 'Move window to scratchpad' ;;
+        *'window.close'*) printf 'Close window' ;;
+        *'dsp.focus({ direction'*) printf 'Focus window' ;;
+        *'window.move({ direction'*) printf 'Move window' ;;
+        *'window.swap'*) printf 'Swap window' ;;
+        *'workspace.move({ monitor'*) printf 'Move workspace to monitor' ;;
+        *'focus({ monitor'*) printf 'Focus monitor' ;;
+        *'focus({ workspace'*) printf 'Workspace' ;;
+        *'window.move({ workspace'*) printf 'Move window to workspace' ;;
+        *'resizeactive'*) printf 'Resize window' ;;
+        *'group.toggle'*) printf 'Toggle group' ;;
+        *'out_of_group'*) printf 'Ungroup window' ;;
+        *'into_group'*) printf 'Move window into group' ;;
+        *'group.next'*) printf 'Next grouped window' ;;
+        *'group.prev'*) printf 'Previous grouped window' ;;
+        *'layout("splith")'*) printf 'Horizontal split' ;;
+        *'layout("splitv")'*) printf 'Vertical split' ;;
+        *'layout("togglesplit")'*) printf 'Toggle split' ;;
+        *'fullscreenstate'*) printf 'Fullscreen state' ;;
+        *'fullscreen({ mode = "maximized"'*) printf 'Maximize window' ;;
+        *'fullscreen'*) printf 'Fullscreen' ;;
+        *'window.float'*) printf 'Toggle floating' ;;
+        *'window.pseudo'*) printf 'Pseudo tile' ;;
+        *'togglefloating; hyprctl dispatch pin'*) printf 'Toggle pinned floating' ;;
+        *'hypr-session reload'*) printf 'Reload Hyprland' ;;
+        *'cyclenext prev'*) printf 'Previous window' ;;
+        *'cyclenext'*) printf 'Next window' ;;
+        *'focus parent has no dwindle equivalent'*) printf 'Focus parent unavailable' ;;
+        *'resize mode is mapped'*) printf 'Resize mode notice' ;;
+        *'monitor'*) printf 'Display settings' ;;
+        *'gnome-calculator'*) printf 'Calculator' ;;
+        *'tmux list-keys'*) printf 'Tmux keys' ;;
+        *'tmx'*) printf 'Tmux launcher' ;;
+        *'about:blank'*) printf 'Browser' ;;
+        *'universal_clipboard_shortcut("CTRL", "C"'*) printf 'Copy' ;;
+        *'universal_clipboard_shortcut("CTRL", "V"'*) printf 'Paste' ;;
+        *'send_shortcut_once("CTRL", "X"'*) printf 'Cut' ;;
+        *'htop'*) printf 'System monitor' ;;
+        *'nautilus'*) printf 'Files' ;;
+        *'nvim'*) printf 'Neovim' ;;
+        *'window.drag'*) printf 'Drag window' ;;
+        *'window.resize'*) printf 'Resize window' ;;
+        *'lazydocker'*) printf 'Lazydocker' ;;
+        *'obsidian'*) printf 'Obsidian' ;;
+        *'typora'*) printf 'Typora' ;;
+        *'pactl set-sink-volume'*) printf 'Volume' ;;
+        *'set-sink-mute'*) printf 'Mute volume' ;;
+        *'set-source-mute'*) printf 'Mute mic' ;;
+        *'playerctl next'*) printf 'Next track' ;;
+        *'playerctl previous'*) printf 'Previous track' ;;
+        *'audioctl play-pause-all'*) printf 'Start/stop saved audio' ;;
+        *'KbdBrightness'*) printf 'Keyboard brightness' ;;
+        *'MonBrightness'*) printf 'Screen brightness' ;;
+        *'bri +1'*) printf 'Screen brightness fine up' ;;
+        *'bri -1'*) printf 'Screen brightness fine down' ;;
+        *'bri +10'*) printf 'Screen brightness up' ;;
+        *'bri -10'*) printf 'Screen brightness down' ;;
+        *'brightnessctl set 100%'*) printf 'Max brightness' ;;
+        *'brightnessctl set 1%'*) printf 'Min brightness' ;;
+        *)
+            action=${action# } ; action=${action% }
+            action=${action#sh\(} ; action=${action%\)}
+            action=${action#\"} ; action=${action%\"}
+            printf '%s' "$action"
+            ;;
+    esac
+}
+
+printf 'Profile\t%s\n' "$profile"
+seen=''
+while IFS= read -r line; do
+    line=${line%%--*}
+    [[ $line == *"function bind_app("* ]] && continue
+    case "$line" in
+        *'function bind_app('*) continue ;;
+        *'hl.bind('*|*'bind_app('*) ;;
+        *) continue ;;
+    esac
+    rest=${line#*(}
+    key=${rest%%,*}
+    action=${rest#*,}
+    [ "${key// /}" = keys ] && continue
+    key=$(pretty_key "$key")
+    [ -n "$key" ] || continue
+    row="$key	$(pretty_action "$line" "$action")"
+    case "$seen" in *$'\n'"$row"$'\n'*) continue ;; esac
+    seen="$seen"$'\n'"$row"$'\n'
+    printf '%b\n' "$row"
+done <"$file"

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+app_bin="${DISCORD_BIN:-/usr/bin/discord}"
+if [ ! -x "$app_bin" ]; then
+  app_bin="$(command -v discord)"
+fi
+
+# Keep Electron apps out of inherited Nix/Mesa loader state from Hyprland.
+unset __EGL_VENDOR_LIBRARY_FILENAMES
+unset LD_LIBRARY_PATH
+unset LIBGL_DRIVERS_PATH
+unset LIBVA_DRIVERS_PATH
+unset GBM_BACKENDS_PATH
+unset VDPAU_DRIVER_PATH
+unset VK_ICD_FILENAMES
+unset VK_LAYER_PATH
+unset __GLX_VENDOR_LIBRARY_NAME
+unset QT_QUICK_BACKEND
+
+exec "$app_bin" \
+  --ozone-platform=wayland \
+  --enable-features=UseOzonePlatform,WebRTCPipeWireCapturer \
+  "$@"

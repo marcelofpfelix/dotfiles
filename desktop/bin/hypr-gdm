@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+user_name="${HYPR_GDM_USER:-${SUDO_USER:-$USER}}"
+session_file="/usr/share/wayland-sessions/hyprland.desktop"
+gdm_config="/etc/gdm3/custom.conf"
+accounts_file="/var/lib/AccountsService/users/$user_name"
+dmrc_file="/home/$user_name/.dmrc"
+
+need_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        printf 'Run: sudo %s %s\n' "$(readlink -f "$0")" "${1:-install}" >&2
+        exit 1
+    fi
+}
+
+install_session() {
+    install -d -m 755 /usr/share/wayland-sessions
+    cat >"$session_file" <<EOF
+[Desktop Entry]
+Name=Hyprland
+Comment=Hyprland Wayland session
+Exec=/home/$user_name/bin/hypr-session start
+TryExec=/home/$user_name/.nix-profile/bin/start-hyprland
+Type=Application
+DesktopNames=Hyprland
+EOF
+    chmod 644 "$session_file"
+}
+
+enable_gdm_wayland() {
+    if [ -f "$gdm_config" ]; then
+        sed -i 's/^[[:space:]]*WaylandEnable=false/#WaylandEnable=false/' "$gdm_config"
+    fi
+}
+
+set_account_value() {
+    local key="$1"
+    local value="$2"
+
+    if grep -q "^${key}=" "$accounts_file"; then
+        sed -i "s/^${key}=.*/${key}=${value}/" "$accounts_file"
+    else
+        printf '%s=%s\n' "$key" "$value" >>"$accounts_file"
+    fi
+}
+
+set_dmrc_session() {
+    cat >"$dmrc_file" <<EOF
+[Desktop]
+Session=hyprland
+EOF
+    chown "$user_name:$user_name" "$dmrc_file" 2>/dev/null || true
+    chmod 600 "$dmrc_file"
+}
+
+set_default_session() {
+    install -d -m 755 /var/lib/AccountsService/users
+    touch "$accounts_file"
+    if grep -q '^\[User\]' "$accounts_file"; then
+        :
+    else
+        printf '[User]\n' >>"$accounts_file"
+    fi
+
+    set_account_value Session hyprland
+    set_account_value XSession hyprland
+    set_dmrc_session
+}
+
+install_hypr_gdm() {
+    need_root install
+    install_session
+    enable_gdm_wayland
+    set_default_session
+    printf 'Installed Hyprland GDM session for %s.\n' "$user_name"
+    printf 'Reboot, or log out and choose Hyprland.\n'
+}
+
+rollback_hypr_gdm() {
+    need_root rollback
+    rm -f "$session_file"
+    if [ -f "$accounts_file" ]; then
+        if grep -q '^Session=hyprland' "$accounts_file"; then
+            sed -i 's/^Session=hyprland/Session=i3/' "$accounts_file"
+        fi
+        if grep -q '^XSession=hyprland' "$accounts_file"; then
+            sed -i 's/^XSession=hyprland/XSession=i3/' "$accounts_file"
+        fi
+    fi
+    if [ -f "$dmrc_file" ] && grep -q '^Session=hyprland' "$dmrc_file"; then
+        sed -i 's/^Session=hyprland/Session=i3/' "$dmrc_file"
+        chown "$user_name:$user_name" "$dmrc_file" 2>/dev/null || true
+        chmod 600 "$dmrc_file"
+    fi
+    printf 'Removed Hyprland GDM session for %s.\n' "$user_name"
+}
+
+case "${1:-install}" in
+    install) install_hypr_gdm ;;
+    rollback) rollback_hypr_gdm ;;
+    *)
+        printf 'usage: %s [install|rollback]\n' "${0##*/}" >&2
+        exit 2
+        ;;
+esac

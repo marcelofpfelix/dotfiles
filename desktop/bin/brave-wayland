@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+brave_bin="${BRAVE_BIN:-/usr/bin/brave-browser-stable}"
+if [ ! -x "$brave_bin" ]; then
+  brave_bin="$(command -v brave-browser-stable || command -v brave-browser)"
+fi
+
+unset __EGL_VENDOR_LIBRARY_FILENAMES
+unset LD_LIBRARY_PATH
+unset LIBGL_DRIVERS_PATH
+unset LIBVA_DRIVERS_PATH
+unset GBM_BACKENDS_PATH
+unset VDPAU_DRIVER_PATH
+unset VK_ICD_FILENAMES
+unset VK_LAYER_PATH
+unset __GLX_VENDOR_LIBRARY_NAME
+unset QT_QUICK_BACKEND
+
+flags=(
+  --ozone-platform=wayland
+  --enable-native-notifications
+  --enable-features=UseOzonePlatform,WebRTCPipeWireCapturer
+  --disable-features=Vulkan
+  --disable-vulkan
+)
+
+exec "$brave_bin" "${flags[@]}" "$@"

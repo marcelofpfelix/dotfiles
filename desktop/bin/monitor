@@ -2,20 +2,37 @@
 
 ################################################################################
 #                                 FILE INFO
-# connect to the 2nd monitor
+# toggle the second monitor for Hyprland
 ################################################################################
 
+set -euo pipefail
+
+if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+    echo "Error: monitor requires Hyprland." >&2
+    exit 1
+fi
+
 primary=eDP-1
-second="DP-2"
+second=DP-2
 
-# check if we have a monitor connected
-secondary=$(xrandr | grep " connected " | awk '{ print$1 }' | grep -v $primary)
+monitor_enable() {
+    hyprctl -q eval "hl.monitor({ output = \"$1\", disabled = false, mode = \"preferred\", position = \"auto-right\", scale = 1 })"
+}
 
-if [ -z "$secondary" ]; then
-    xrandr --auto && xrandr --output $second --off
-    echo "No secondary monitor connected"
+monitor_disable() {
+    hyprctl -q eval "hl.monitor({ output = \"$1\", disabled = true })"
+}
+
+connected=$(hyprctl monitors all -j 2>/dev/null | jq -r ".[] | select(.name != \"$primary\") | select(.disabled == false) | .name" | head -n 1)
+available=$(hyprctl monitors all -j 2>/dev/null | jq -r ".[] | select(.name != \"$primary\") | select(.disabled == true) | .name" | head -n 1)
+
+if [ -n "$connected" ]; then
+    monitor_disable "$connected"
+    echo "Disabled $connected"
+elif [ -n "$available" ]; then
+    monitor_enable "$available"
+    echo "Connected $available to the right of $primary"
 else
-    xrandr --output $secondary --auto --right-of $primary
-    feh --bg-fill $HOME/.local/share/backgrounds/bkg2.png
-    echo "Connected $secondary to the right of $primary"
+    monitor_disable "$second" || true
+    echo "No secondary monitor detected"
 fi

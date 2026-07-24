@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+location=${WEATHER_LOCATION:-Lisbon}
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof
+cache_file="$cache_dir/weather.txt"
+max_age=${WEATHER_MAX_AGE_SECONDS:-900}
+mkdir -p "$cache_dir"
+
+if [ -s "$cache_file" ]; then
+    now=$(date +%s)
+    mtime=$(stat -c %Y "$cache_file" 2>/dev/null || printf 0)
+    if [ $((now - mtime)) -lt "$max_age" ]; then
+        cat "$cache_file"
+        exit 0
+    fi
+fi
+
+encoded=${location// /+}
+raw=$(curl -fsS --max-time 3 "https://wttr.in/${encoded}?format=%C+%t" 2>/dev/null || true)
+raw=${raw//$'\n'/ }
+raw=$(printf '%s' "$raw" | sed 's/[[:space:]]\+/ /g; s/^ //; s/ $//')
+
+if [ -z "$raw" ]; then
+    if [ -s "$cache_file" ]; then
+        cat "$cache_file"
+    else
+        printf '󰖐 --'
+    fi
+    exit 0
+fi
+
+condition=${raw% *}
+temp=${raw##* }
+lower=$(printf '%s' "$condition" | tr '[:upper:]' '[:lower:]')
+icon='󰖐'
+case "$lower" in
+    *sunny*|*clear*) icon='󰖙' ;;
+    *rain*|*drizzle*|*shower*) icon='󰖗' ;;
+    *thunder*|*storm*) icon='󰖓' ;;
+    *snow*|*sleet*|*ice*) icon='󰖘' ;;
+    *fog*|*mist*|*haze*) icon='󰖑' ;;
+    *cloud*) icon='󰖐' ;;
+esac
+
+printf '%s %s' "$icon" "$temp" | tee "$cache_file"

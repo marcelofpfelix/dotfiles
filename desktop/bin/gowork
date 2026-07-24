@@ -1,15 +1,28 @@
 #!/usr/bin/env bash
 
-i3-msg "workspace 4"
+set -euo pipefail
+
+workspace() {
+    if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        echo "Error: gowork requires Hyprland." >&2
+        exit 1
+    fi
+    hyprctl dispatch workspace "$1"
+}
+
+workspace_with_layout() {
+    workspace "$1"
+}
+
+workspace 4
 wezterm start -- tmux new -s dash &
 sleep 1
 
-i3-msg "workspace 5"
+workspace 5
 slack &
 sleep 1
 
-#; layout tabbed
-i3-msg "workspace 3; append_layout $HOME/.config/i3/layouts/work.json; layout default"
-google-chrome --profile-directory="Default" &
-code ~/work.code-workspace &
-# google-chrome --profile-directory="Default"  --app-id=kjgfgldnnfoeklkmfkjfagphfepbbdan &
+workspace_with_layout 3
+chrome-wayland --profile-directory="Default" &
+zed ~/work.code-workspace &
+# chrome-wayland --profile-directory="Default"  --app-id=kjgfgldnnfoeklkmfkjfagphfepbbdan &

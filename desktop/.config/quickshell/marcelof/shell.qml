@@ -1,0 +1,2868 @@
+import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Bluetooth
+import Quickshell.Io
+import Quickshell.Services.Pipewire
+import Quickshell.Services.Notifications
+import Quickshell.Services.SystemTray
+import Quickshell.Services.UPower
+import Quickshell.Wayland
+import Quickshell.Widgets
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
+
+ShellRoot {
+  id: root
+
+  function toggleLauncher() {
+    launcher.visible = !launcher.visible
+    if (launcher.visible) {
+      search.text = ""
+      launcherMruRefresh.running = true
+      root.rebuildLauncher()
+      search.forceActiveFocus()
+    }
+  }
+
+  function hideLauncher() {
+    launcher.visible = false
+  }
+
+  function shellQuote(value) {
+    return "'" + String(value).replace(/'/g, "'\"'\"'") + "'"
+  }
+
+  function webSearchSiteUrl(site) {
+    for (let i = 0; i < root.webSearchSites.length; i++) {
+      if (root.webSearchSites[i].key === site)
+        return root.webSearchSites[i].url
+    }
+    return root.webSearchSites[0].url
+  }
+
+  function openWebSearch(site) {
+    root.closeTransientPanels()
+    root.webSearchSite = site && String(site).length > 0 ? String(site) : "google"
+    root.webSearchOpen = true
+    webSearchInput.text = ""
+    webSearchInput.forceActiveFocus()
+  }
+
+  function toggleWebSearch(site) {
+    if (root.webSearchOpen) {
+      root.webSearchOpen = false
+      return
+    }
+    root.openWebSearch(site)
+  }
+
+  function runWebSearch() {
+    const query = webSearchInput.text.trim()
+    if (query.length === 0)
+      return
+    const url = root.webSearchSiteUrl(root.webSearchSite) + encodeURIComponent(query)
+    root.webSearchOpen = false
+    Quickshell.execDetached(["sh", "-c", "command -v chrome-wayland >/dev/null 2>&1 && exec chrome-wayland " + root.shellQuote(url) + "; exec xdg-open " + root.shellQuote(url)])
+  }
+
+  function toggleKeybindings() {
+    const next = !root.keybindingsOpen
+    root.closeTransientPanels()
+    root.keybindingsOpen = next
+    if (next)
+      keybindingsRefresh.running = true
+  }
+
+  function clipboardScore(entry, query) {
+    const q = query.trim().toLowerCase()
+    const text = String(entry || "").toLowerCase()
+    if (q.length === 0)
+      return 0
+    const terms = q.split(/\s+/)
+    for (let i = 0; i < terms.length; i++) {
+      const term = terms[i]
+      if (term.length > 0 && text.indexOf(term) < 0)
+        return -1
+    }
+    const idx = text.indexOf(q)
+    if (idx === 0) return 10000 - text.length
+    if (idx > 0) return 8000 - idx * 10 - text.length
+    return 5000 - text.length
+  }
+
+  function rebuildClipboardModel() {
+    const query = clipSearch ? clipSearch.text : ""
+    const rows = []
+    for (let i = 0; i < root.clipboardEntries.length; i++) {
+      const entry = String(root.clipboardEntries[i] || "")
+      if (entry.length === 0)
+        continue
+      const score = root.clipboardScore(entry, query)
+      if (score < 0)
+        continue
+      rows.push({ entry: entry, score: score, key: entry.toLowerCase() })
+    }
+    rows.sort((a, b) => {
+      if (query.trim().length > 0 && a.score !== b.score)
+        return b.score - a.score
+      return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)
+    })
+    clipboardModel.clear()
+    const count = Math.min(rows.length, 250)
+    for (let i = 0; i < count; i++)
+      clipboardModel.append({ text: rows[i].entry })
+    if (clipList) {
+      clipList.currentIndex = clipboardModel.count > 0 ? 0 : -1
+      Qt.callLater(() => { if (clipboardModel.count > 0) clipList.positionViewAtIndex(clipList.currentIndex, ListView.Contain) })
+    }
+  }
+
+  function updateClipboardEntries(output) {
+    const lines = String(output || "").split(/\n+/)
+    const entries = []
+    for (let i = 0; i < lines.length; i++) {
+      const entry = lines[i].trim()
+      if (entry.length > 0)
+        entries.push(entry)
+    }
+    root.clipboardEntries = entries
+    root.rebuildClipboardModel()
+  }
+
+  function updateKeybindingRows(output) {
+    keybindingModel.clear()
+    const lines = String(output || "").split(/\n+/)
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (line.length === 0)
+        continue
+      const parts = line.split(/\t+/)
+      if (parts.length < 2)
+        continue
+      keybindingModel.append({ shortcut: parts[0], action: parts.slice(1).join(" ") })
+    }
+  }
+
+  function openClipboard() {
+    root.closeTransientPanels()
+    root.clipboardOpen = true
+    clipSearch.text = ""
+    root.clipboardEntries = []
+    clipboardModel.clear()
+    clipboardRefresh.running = true
+    clipSearch.forceActiveFocus()
+  }
+
+  function pasteClipboardEntry() {
+    if (!root.clipboardOpen || clipList.currentIndex < 0 || clipList.currentIndex >= clipboardModel.count)
+      return
+    const entry = clipboardModel.get(clipList.currentIndex).text
+    root.clipboardOpen = false
+    Quickshell.execDetached(["sh", "-c", "printf %s " + root.shellQuote(entry) + " | cliphist decode | wl-copy"])
+  }
+
+  property var launcherEntries: []
+  property var launcherMru: []
+  property var launcherCounts: ({})
+  property var clipboardEntries: []
+  property bool clipboardOpen: false
+  property bool keybindingsOpen: false
+  property bool webSearchOpen: false
+  property string webSearchSite: "google"
+  property var webSearchSites: [
+    { key: "google", label: "Google", url: "https://www.google.com/search?q=" },
+    { key: "youtube", label: "YouTube", url: "https://www.youtube.com/results?search_query=" },
+    { key: "github", label: "GitHub", url: "https://github.com/search?q=org%3Ateam-telnyx+" },
+    { key: "jira", label: "Jira", url: "https://telnyx.atlassian.net/secure/QuickSearch.jspa?searchString=" },
+    { key: "guru", label: "Guru", url: "https://app.getguru.com/search?q=" },
+    { key: "call", label: "Call", url: "http://search-tools.internal.telnyx.com/#!/session-lookup?sip_call_id=" }
+  ]
+
+  function launcherEntryText(entry) {
+    const keywords = entry && entry.keywords && entry.keywords.join ? entry.keywords.join(" ") : ""
+    return [entry ? entry.name : "", entry ? entry.genericName : "", entry ? entry.comment : "", entry ? entry.id : "", keywords].join(" ").toLowerCase()
+  }
+
+  function launcherAcronym(entry) {
+    const text = [entry ? entry.name : "", entry ? entry.genericName : "", entry ? entry.id : ""].join(" ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[._:/\-]+/g, " ").toLowerCase()
+    const parts = text.split(/[^a-z0-9]+/)
+    let result = ""
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i].length > 0)
+        result += parts[i][0]
+    }
+    return result
+  }
+
+  function launcherScore(entry, query) {
+    const q = query.trim().toLowerCase()
+    const name = String(entry && entry.name || "").toLowerCase()
+    const id = String(entry && entry.id || "").toLowerCase()
+    const haystack = root.launcherEntryText(entry)
+    if (q.length === 0)
+      return 0
+
+    const terms = q.split(/\s+/)
+    for (let i = 0; i < terms.length; i++) {
+      const term = terms[i]
+      if (term.length === 0)
+        continue
+      if (haystack.indexOf(term) < 0 && !(term.length <= 5 && root.launcherAcronym(entry).indexOf(term) >= 0))
+        return -1
+    }
+
+    const nameIndex = name.indexOf(q)
+    const idIndex = id.indexOf(q)
+    if (nameIndex === 0) return 10000 - name.length
+    if (idIndex === 0) return 9500 - id.length
+    if (nameIndex > 0) return 8000 - nameIndex * 10 - name.length
+    if (idIndex > 0) return 7600 - idIndex * 10 - id.length
+
+    const hayIndex = haystack.indexOf(q)
+    if (hayIndex >= 0) return 6000 - hayIndex
+
+    const acronymIndex = root.launcherAcronym(entry).indexOf(q)
+    if (acronymIndex === 0) return 5000
+    if (acronymIndex > 0) return 4600 - acronymIndex * 10
+    return 4000 - name.length
+  }
+
+  function launcherMruIndex(entry) {
+    const id = String(entry && entry.id || "")
+    if (id.length === 0)
+      return -1
+    for (let i = 0; i < root.launcherMru.length; i++) {
+      if (root.launcherMru[i] === id)
+        return i
+    }
+    return -1
+  }
+
+  function launcherMruBoost(entry) {
+    const index = root.launcherMruIndex(entry)
+    return index < 0 ? 0 : 300 - Math.min(index, 49) * 5
+  }
+
+  function launcherMfuBoost(entry) {
+    const id = String(entry && entry.id || "")
+    const count = Number(root.launcherCounts[id] || 0)
+    return Math.min(count, 20) * 10
+  }
+
+  function updateLauncherMru(output) {
+    const lines = String(output || "").split(/\n+/)
+    const seen = {}
+    const entries = []
+    const counts = {}
+    for (let i = 0; i < lines.length && entries.length < 50; i++) {
+      const fields = lines[i].trim().split(/\t+/)
+      const id = fields[0]
+      if (id.length === 0 || seen[id])
+        continue
+      const count = Number(fields[1] || 1)
+      seen[id] = true
+      entries.push(id)
+      counts[id] = count > 0 ? count : 1
+    }
+    root.launcherMru = entries
+    root.launcherCounts = counts
+    if (launcher.visible)
+      root.rebuildLauncher()
+  }
+
+  function recordLauncherUse(entry) {
+    const id = String(entry && entry.id || "")
+    if (id.length === 0)
+      return
+    const next = [id]
+    for (let i = 0; i < root.launcherMru.length && next.length < 50; i++) {
+      if (root.launcherMru[i] !== id)
+        next.push(root.launcherMru[i])
+    }
+    const counts = Object.assign({}, root.launcherCounts)
+    counts[id] = Number(counts[id] || 0) + 1
+    root.launcherMru = next
+    root.launcherCounts = counts
+    let cache = ""
+    for (let i = 0; i < next.length; i++)
+      cache += next[i] + "\t" + Number(counts[next[i]] || 1) + "\n"
+    Quickshell.execDetached(["sh", "-c", "dir=${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof; file=$dir/launcher-mru.txt; tmp=$file.tmp; mkdir -p \"$dir\"; printf %s " + root.shellQuote(cache) + " > \"$tmp\" && mv \"$tmp\" \"$file\""])
+  }
+
+
+  function rebuildLauncher() {
+    const values = DesktopEntries.applications.values || []
+    const query = search ? search.text : ""
+    const rows = []
+    for (let i = 0; i < values.length; i++) {
+      const entry = values[i]
+      if (!entry || entry.noDisplay || !entry.name)
+        continue
+      const score = root.launcherScore(entry, query)
+      if (score < 0)
+        continue
+      const boost = root.launcherMruBoost(entry) + root.launcherMfuBoost(entry)
+      rows.push({ entry: entry, score: score + boost, key: String(entry.name).toLowerCase(), mru: root.launcherMruIndex(entry), boost: boost })
+    }
+
+    rows.sort((a, b) => {
+      if (query.trim().length > 0 && a.score !== b.score)
+        return b.score - a.score
+      if (query.trim().length === 0 && a.boost !== b.boost)
+        return b.boost - a.boost
+      if (query.trim().length === 0 && a.mru !== b.mru)
+        return a.mru < 0 ? 1 : (b.mru < 0 ? -1 : a.mru - b.mru)
+      return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)
+    })
+
+    launcherModel.clear()
+    launcherEntries = []
+    const count = Math.min(rows.length, 200)
+    for (let i = 0; i < count; i++) {
+      const entry = rows[i].entry
+      launcherEntries.push(entry)
+      launcherModel.append({
+        name: String(entry.name || entry.id || "Application"),
+        subtext: String(entry.genericName || entry.comment || entry.id || ""),
+        icon: String(entry.icon || "application-x-executable")
+      })
+    }
+
+    if (appList) {
+      appList.currentIndex = launcherModel.count > 0 ? 0 : -1
+      Qt.callLater(() => { if (launcherModel.count > 0) appList.positionViewAtIndex(appList.currentIndex, ListView.Contain) })
+    }
+  }
+
+  function launchCurrentApp() {
+    if (!launcher.visible || appList.currentIndex < 0 || appList.currentIndex >= launcherEntries.length)
+      return
+    const entry = launcherEntries[appList.currentIndex]
+    launcher.visible = false
+    search.text = ""
+    root.recordLauncherUse(entry)
+    if (entry && entry.id)
+      Quickshell.execDetached(["gtk-launch", String(entry.id).replace(/\.desktop$/, "")])
+    else if (entry)
+      entry.execute()
+  }
+
+  function launchAppAtIndex(index) {
+    if (!launcher.visible || index < 0 || index >= launcherEntries.length)
+      return
+    appList.currentIndex = index
+    root.launchCurrentApp()
+  }
+
+  readonly property var laptopScreen: Quickshell.screens.find(screen => screen.name === "eDP-1") || Quickshell.screens[0]
+
+  property bool barHidden: false
+  property bool trayExpanded: false
+  property bool trayManageOpen: false
+  property bool controlPanelOpen: false
+  property bool mediaPanelOpen: false
+  property bool screenPanelOpen: false
+  property bool wallpaperPanelOpen: false
+  property bool calendarOpen: false
+  property bool notificationCenterOpen: false
+  property bool notificationToastOpen: false
+  property int selectedNotificationIndex: -1
+  property var notificationObjects: []
+  property string notificationToastApp: ""
+  property string notificationToastSummary: ""
+  property string notificationToastBody: ""
+  property int notificationToastSerial: 0
+  property string brightnessText: "--"
+  property real brightnessValue: 0
+  property string kbdBrightnessText: ""
+  property string networkStatusText: ""
+  property string powerStatusText: ""
+  property string fanStatusText: "Fan --"
+  property string lisbonClockText: "--"
+  property string timePanelText: ""
+  property string todoPanelText: ""
+  property string sinkDescription: "Default output"
+  property string audioIconText: "󰐊"
+  property string audioDisplayText: ""
+  property string recordingStatusText: ""
+  property string portalStatusText: ""
+  property string wallpaperSource: "file:///home/marcelof/.local/share/backgrounds/bkg2.png"
+  property string tooltipText: ""
+  readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/quickshell/marcelof"
+  property real tooltipX: 0
+  property real tooltipY: 0
+
+  readonly property var allTrayItems: SystemTray.items.values || []
+  readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
+  readonly property var bluetoothDevices: Bluetooth.devices.values || []
+  readonly property var pinnedTrayItems: allTrayItems.filter(item => root.isTrayPinned(item) && !root.isTrayHidden(item))
+  readonly property var drawerTrayItems: allTrayItems.filter(item => !root.isTrayPinned(item) && !root.isTrayHidden(item))
+
+  function trayItemId(item) {
+    return item.id || item.title || item.tooltipTitle || ""
+  }
+
+  function trayItemText(item) {
+    const id = root.trayItemId(item)
+    const rawTitle = item.tooltipTitle || item.title || id || "tray item"
+    const title = rawTitle === "update-notifier" && id.length > 0 ? id.replace(/-/g, " ") : rawTitle
+    const description = item.tooltipDescription || ""
+    return description.length > 0 && title !== description && title.toLowerCase() !== description.toLowerCase() ? title + " - " + description : title
+  }
+
+  function isTrayPinned(item) {
+    return shellSettings.pinnedTrayIds.indexOf(root.trayItemId(item)) !== -1
+  }
+
+  function isTrayHidden(item) {
+    return shellSettings.hiddenTrayIds.indexOf(root.trayItemId(item)) !== -1
+  }
+
+  function toggleTrayPin(item) {
+    const id = root.trayItemId(item)
+    if (id.length === 0)
+      return
+
+    const next = shellSettings.pinnedTrayIds.slice()
+    const idx = next.indexOf(id)
+    if (idx === -1)
+      next.push(id)
+    else
+      next.splice(idx, 1)
+    shellSettings.pinnedTrayIds = next
+  }
+
+  function toggleTrayHide(item) {
+    const id = root.trayItemId(item)
+    if (id.length === 0)
+      return
+
+    const next = shellSettings.hiddenTrayIds.slice()
+    const idx = next.indexOf(id)
+    if (idx === -1)
+      next.push(id)
+    else
+      next.splice(idx, 1)
+    shellSettings.hiddenTrayIds = next
+  }
+
+  function showTooltip(target, text) {
+    if (!target || !text)
+      return
+
+    const point = bar.contentItem.mapFromItem(target, target.width / 2 - 1, target.height + 6)
+    tooltipX = Math.max(8, Math.round(point.x))
+    tooltipY = Math.round(point.y)
+    tooltipText = text
+  }
+
+  function hideTooltip() {
+    tooltipText = ""
+  }
+
+  function isNetworkTrayItem(item) {
+    const text = root.trayItemSearchText(item)
+    return text.indexOf("nm-applet") !== -1 || text.indexOf("network") !== -1
+  }
+
+  function trayItemSearchText(item) {
+    return ((item.id || "") + " " + (item.title || "") + " " + (item.tooltipTitle || "") + " " + (item.tooltipDescription || "")).toLowerCase()
+  }
+
+  function trayDirectCommand(item) {
+    const text = root.trayItemSearchText(item)
+
+    if (text.indexOf("nm-applet") !== -1 || text.indexOf("network") !== -1)
+      return ["hypr-clean-env", "nm-connection-editor"]
+    if (text.indexOf("software_update") !== -1 || text.indexOf("software update") !== -1 || text.indexOf("update-notifier") !== -1)
+      return ["hypr-clean-env", "update-manager"]
+    if (text.indexOf("livepatch") !== -1)
+      return ["hypr-clean-env", "software-properties-gtk"]
+    if (text.indexOf("slack") !== -1)
+      return ["hypr-clean-env", "slack"]
+
+    return []
+  }
+
+  function runTrayDirectAction(item) {
+    const command = root.trayDirectCommand(item)
+    if (command.length === 0)
+      return false
+
+    Quickshell.execDetached(command)
+    return true
+  }
+
+  function closeTransientPanels() {
+    root.trayManageOpen = false
+    root.controlPanelOpen = false
+    root.mediaPanelOpen = false
+    root.screenPanelOpen = false
+    root.wallpaperPanelOpen = false
+    root.calendarOpen = false
+    root.notificationCenterOpen = false
+    root.keybindingsOpen = false
+    root.webSearchOpen = false
+    if (typeof networkPanel !== 'undefined')
+      networkPanel.visible = false
+    if (typeof exitDialog !== 'undefined')
+      exitDialog.visible = false
+  }
+
+  function toggleControlPanel() {
+    const next = !root.controlPanelOpen
+    root.closeTransientPanels()
+    root.controlPanelOpen = next
+    if (next) {
+      brightnessRefresh.running = true
+      kbdBrightnessRefresh.running = true
+      networkStatusRefresh.running = true
+      powerStatusRefresh.running = true
+      fanStatusRefresh.running = true
+    }
+  }
+
+  function toggleMediaPanel() {
+    const next = !root.mediaPanelOpen
+    root.closeTransientPanels()
+    root.mediaPanelOpen = next
+    if (next)
+      root.refreshAudioState()
+  }
+
+  function refreshScreenState() {
+    screenRecordStatus.running = true
+    portalStatusRefresh.running = true
+  }
+
+  function toggleScreenPanel() {
+    const next = !root.screenPanelOpen
+    root.closeTransientPanels()
+    root.screenPanelOpen = next
+    if (next)
+      root.refreshScreenState()
+  }
+
+  function runScreenRecord(action) {
+    Quickshell.execDetached(["/home/marcelof/bin/screen-record-wayland", action])
+    screenRecordStatusLater.restart()
+  }
+
+  function updateWallpaperRows(output) {
+    wallpaperModel.clear()
+    const rows = output.trim().length > 0 ? output.trim().split("\n") : []
+    for (let i = 0; i < rows.length; i++) {
+      const parts = rows[i].split("\t")
+      if (parts.length >= 2)
+        wallpaperModel.append({ name: parts[0], path: parts[1], active: parts[2] === "*" })
+    }
+  }
+
+  function refreshWallpapers() {
+    wallpaperCurrent.running = true
+    wallpaperListRefresh.running = true
+  }
+
+  function toggleWallpaperPanel() {
+    const next = !root.wallpaperPanelOpen
+    root.closeTransientPanels()
+    root.wallpaperPanelOpen = next
+    if (next)
+      root.refreshWallpapers()
+  }
+
+  function setWallpaper(path) {
+    root.wallpaperSource = "file://" + path
+    Quickshell.execDetached(["/home/marcelof/bin/wallpaper-wayland", "set", path])
+    wallpaperListRefreshLater.restart()
+  }
+
+  function toggleCalendar() {
+    const next = !root.calendarOpen
+    root.closeTransientPanels()
+    root.calendarOpen = next
+    if (next) {
+      timePanelRefresh.running = true
+      todoPanelRefresh.running = true
+    }
+  }
+
+  function toggleNotifications() {
+    const next = !root.notificationCenterOpen
+    root.closeTransientPanels()
+    root.notificationCenterOpen = next
+  }
+
+  function clearNotifications() {
+    for (let i = 0; i < root.notificationObjects.length; i++) {
+      const notification = root.notificationObjects[i]
+      if (notification && notification.dismiss)
+        notification.dismiss()
+    }
+    root.notificationObjects = []
+    notificationHistory.clear()
+    notificationInboxModel.clear()
+    root.selectedNotificationIndex = -1
+  }
+
+  function notificationAppAt(index) {
+    if (index < 0 || index >= notificationHistory.count)
+      return ""
+    return String(notificationHistory.get(index).app || "")
+  }
+
+  function clearNotificationsForApp(app) {
+    const target = String(app || "")
+    if (target.length === 0)
+      return
+    for (let i = notificationHistory.count - 1; i >= 0; i--) {
+      if (String(notificationHistory.get(i).app || "") === target)
+        root.dismissNotification(i)
+    }
+  }
+
+  function rebuildNotificationInbox() {
+    const apps = []
+    const counts = ({})
+    for (let i = 0; i < notificationHistory.count; i++) {
+      const app = String(notificationHistory.get(i).app || "Notification")
+      if (!counts[app]) {
+        counts[app] = 0
+        apps.push(app)
+      }
+      counts[app] += 1
+    }
+
+    notificationInboxModel.clear()
+    // ponytail: O(apps * notifications), capped at 50; index by app only if history grows.
+    for (let appIndex = 0; appIndex < apps.length; appIndex++) {
+      const app = apps[appIndex]
+      notificationInboxModel.append({ kind: "group", app: app, count: counts[app], sourceIndex: -1, summary: "", body: "", text: "", actionsText: "", time: "" })
+      for (let i = 0; i < notificationHistory.count; i++) {
+        const row = notificationHistory.get(i)
+        if (String(row.app || "Notification") !== app)
+          continue
+        notificationInboxModel.append({ kind: "notification", app: row.app, count: counts[app], sourceIndex: i, summary: row.summary, body: row.body, text: row.text, actionsText: row.actionsText, time: row.time })
+      }
+    }
+  }
+
+  function cleanNotificationText(value) {
+    return String(value || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim()
+  }
+
+  function notificationActionLabelsFrom(notification) {
+    if (!notification || !notification.actions)
+      return []
+
+    const labels = []
+    for (let i = 0; i < notification.actions.length; i++) {
+      const text = root.cleanNotificationText(notification.actions[i].text)
+      if (text.length > 0)
+        labels.push(text)
+    }
+    return labels
+  }
+
+  function notificationPreview(summary, body, app) {
+    if (summary.length > 0 && body.length > 0)
+      return summary + " - " + body
+    return summary.length > 0 ? summary : (body.length > 0 ? body : app)
+  }
+
+  function rememberNotification(notification) {
+    if (!notification)
+      return
+
+    const app = root.cleanNotificationText(notification.appName || "Notification")
+    const summary = root.cleanNotificationText(notification.summary)
+    const body = root.cleanNotificationText(notification.body)
+    const actionLabels = root.notificationActionLabelsFrom(notification)
+
+    notificationHistory.insert(0, {
+      app: app,
+      summary: summary,
+      body: body,
+      text: root.notificationPreview(summary, body, app),
+      actionsText: actionLabels.join(" | "),
+      time: Qt.formatDateTime(new Date(), "HH:mm")
+    })
+    root.notificationObjects = [notification].concat(root.notificationObjects)
+    root.selectedNotificationIndex = 0
+    root.notificationToastApp = app
+    root.notificationToastSummary = summary.length > 0 ? summary : app
+    root.notificationToastBody = body
+    root.notificationToastSerial += 1
+    root.notificationToastOpen = false
+    Qt.callLater(() => {
+      root.notificationToastOpen = true
+      notificationToastTimer.restart()
+    })
+    while (notificationHistory.count > 50) {
+      notificationHistory.remove(notificationHistory.count - 1)
+      root.notificationObjects.pop()
+    }
+    root.rebuildNotificationInbox()
+  }
+
+  function dismissNotification(index) {
+    if (index < 0 || index >= notificationHistory.count)
+      return
+    const notification = root.notificationObjects[index]
+    if (notification && notification.dismiss)
+      notification.dismiss()
+    const next = root.notificationObjects.slice()
+    next.splice(index, 1)
+    root.notificationObjects = next
+    notificationHistory.remove(index)
+    root.rebuildNotificationInbox()
+    if (notificationHistory.count === 0)
+      root.selectedNotificationIndex = -1
+    else if (root.selectedNotificationIndex === index)
+      root.selectedNotificationIndex = -1
+    else if (root.selectedNotificationIndex > index)
+      root.selectedNotificationIndex -= 1
+    else if (root.selectedNotificationIndex >= notificationHistory.count)
+      root.selectedNotificationIndex = notificationHistory.count - 1
+  }
+
+
+  function notificationActionLabels(index) {
+    return root.notificationActionLabelsFrom(root.notificationObjects[index])
+  }
+
+  function invokeNotificationAction(index, actionIndex) {
+    const notification = root.notificationObjects[index]
+    if (!notification || !notification.actions || actionIndex < 0 || actionIndex >= notification.actions.length)
+      return
+
+    notification.actions[actionIndex].invoke()
+    if (!notification.resident)
+      root.dismissNotification(index)
+  }
+
+  function updateAudioStreams(output) {
+    audioStreams.clear()
+    const lines = String(output || "").trim().split(/\n+/)
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (line.length === 0)
+        continue
+      const parts = line.split("|")
+      if (parts.length < 5)
+        continue
+      audioStreams.append({ id: parts[0], app: parts[1], media: parts[2], volume: parts[3], muted: parts[4] })
+    }
+  }
+
+  function refreshAudioMixer() {
+    audioStreamsRefresh.running = true
+  }
+
+  function refreshAudioState() {
+    audioStreamsRefresh.running = true
+    audioIconRefresh.running = true
+    audioDisplayRefresh.running = true
+  }
+
+  function scheduleAudioRefresh() {
+    audioRefreshLater.restart()
+  }
+
+  function runAudioctl(action) {
+    Quickshell.execDetached(["/home/marcelof/bin/audioctl", action])
+    root.scheduleAudioRefresh()
+  }
+
+  function runPlayerctl(action) {
+    Quickshell.execDetached(["playerctl", "--all-players", action])
+    root.scheduleAudioRefresh()
+  }
+
+  function sinkInputCommand(id, action) {
+    if (!id)
+      return []
+    if (action === "mute")
+      return ["pactl", "set-sink-input-mute", String(id), "toggle"]
+    if (action === "up")
+      return ["pactl", "set-sink-input-volume", String(id), "+5%"]
+    if (action === "down")
+      return ["pactl", "set-sink-input-volume", String(id), "-5%"]
+    return []
+  }
+
+  function runSinkInputAction(id, action) {
+    const command = root.sinkInputCommand(id, action)
+    if (command.length === 0)
+      return
+    Quickshell.execDetached(command)
+    root.scheduleAudioRefresh()
+  }
+
+  function setSinkInputVolume(id, value) {
+    if (!id)
+      return
+    Quickshell.execDetached(["pactl", "set-sink-input-volume", String(id), Math.round(value * 100) + "%"])
+    root.scheduleAudioRefresh()
+  }
+
+  function bluetoothStatusText() {
+    if (!root.bluetoothAdapter)
+      return "No adapter"
+    if (!root.bluetoothAdapter.enabled)
+      return "Bluetooth off"
+
+    const names = []
+    for (let i = 0; i < root.bluetoothDevices.length; i++) {
+      const device = root.bluetoothDevices[i]
+      if (device && device.state === BluetoothDeviceState.Connected)
+        names.push(device.name || "Connected device")
+    }
+    return names.length > 0 ? names.join(", ") : "No devices connected"
+  }
+
+  function runNetwork(action) {
+    Quickshell.execDetached(["/home/marcelof/bin/network-status", action])
+    networkStatusRefreshLater.restart()
+  }
+
+  function setPowerProfile(profile) {
+    Quickshell.execDetached(["/home/marcelof/bin/power-status", "set-profile", profile])
+    powerStatusRefreshLater.restart()
+  }
+
+  function toggleBluetooth() {
+    if (root.bluetoothAdapter)
+      root.bluetoothAdapter.enabled = !root.bluetoothAdapter.enabled
+  }
+
+  function showTrayMenu(item, visualItem, mouse) {
+    if (!shellSettings.nativeTrayMenus)
+      return false
+    if (!item.hasMenu)
+      return false
+
+    const point = bar.contentItem.mapFromItem(visualItem, mouse.x, mouse.y)
+    item.display(bar, point.x, point.y)
+    return true
+  }
+
+
+
+  Component.onCompleted: Quickshell.execDetached(["mkdir", "-p", root.stateDir])
+
+  FileView {
+    id: settingsFile
+    path: root.stateDir + "/settings.json"
+    watchChanges: true
+    printErrors: false
+    onFileChanged: reload()
+    onAdapterUpdated: writeAdapter()
+
+    JsonAdapter {
+      id: shellSettings
+      property var pinnedTrayIds: ["nm-applet"]
+      property var hiddenTrayIds: []
+      property bool nativeTrayMenus: false
+    }
+  }
+
+  ListModel { id: notificationHistory }
+  ListModel { id: notificationInboxModel }
+  ListModel { id: audioStreams }
+  ListModel { id: wallpaperModel }
+
+  Timer {
+    id: notificationToastTimer
+    interval: 5000
+    repeat: false
+    onTriggered: root.notificationToastOpen = false
+  }
+
+  NotificationServer {
+    id: notifications
+    keepOnReload: false
+    actionsSupported: true
+    onNotification: function(notification) { root.rememberNotification(notification) }
+  }
+
+  PwObjectTracker {
+    objects: Pipewire.defaultAudioSink ? [Pipewire.defaultAudioSink] : []
+  }
+
+  SystemClock {
+    id: clock
+    precision: SystemClock.Seconds
+  }
+
+  Process {
+    id: lisbonClock
+    command: ["env", "TZ=Europe/Lisbon", "date", "+%a-%d %H:%M:%S"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.lisbonClockText = this.text.trim() }
+  }
+
+  Timer {
+    interval: 1000
+    running: true
+    repeat: true
+    onTriggered: lisbonClock.running = true
+  }
+
+  Process {
+    id: timePanelRefresh
+    command: ["/home/marcelof/bin/check-time-panel"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.timePanelText = this.text.trim() }
+  }
+
+  Process {
+    id: todoPanelRefresh
+    command: ["/home/marcelof/bin/check-todo-panel"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.todoPanelText = this.text.trim() }
+  }
+
+  Timer {
+    interval: 1000
+    running: true
+    repeat: true
+    onTriggered: timePanelRefresh.running = root.calendarOpen
+  }
+
+  Timer {
+    interval: 60000
+    running: true
+    repeat: true
+    onTriggered: todoPanelRefresh.running = root.calendarOpen
+  }
+
+  Process {
+    id: audioStreamsRefresh
+    command: ["/home/marcelof/bin/check-audio-streams"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.updateAudioStreams(this.text) }
+  }
+
+  Process {
+    id: audioIconRefresh
+    command: ["/home/marcelof/bin/audioctl", "icon"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.audioIconText = this.text.trim().length > 0 ? this.text.trim() : "󰐊" }
+  }
+
+  Process {
+    id: audioDisplayRefresh
+    command: ["/home/marcelof/bin/audioctl", "display"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.audioDisplayText = this.text.trim() }
+  }
+
+  Timer {
+    id: audioRefreshLater
+    interval: 350
+    repeat: false
+    onTriggered: root.refreshAudioState()
+  }
+
+  Timer {
+    interval: 3000
+    running: true
+    repeat: true
+    onTriggered: root.refreshAudioState()
+  }
+
+  function defaultSinkAudio() {
+    return Pipewire.defaultAudioSink && Pipewire.defaultAudioSink.audio ? Pipewire.defaultAudioSink.audio : null
+  }
+
+  function adjustVolume(delta) {
+    const audio = root.defaultSinkAudio()
+    if (!audio)
+      return
+
+    audio.volume = Math.max(0, Math.min(1.5, audio.volume + delta))
+  }
+
+  function toggleMute() {
+    const audio = root.defaultSinkAudio()
+    if (audio) {
+      audio.muted = !audio.muted
+      root.scheduleAudioRefresh()
+    }
+  }
+
+  function runBrightness(action) {
+    Quickshell.execDetached(["/home/marcelof/bin/bri", action])
+    brightnessRefreshLater.restart()
+  }
+
+  function setBrightness(value) {
+    root.brightnessValue = Math.max(0, Math.min(100, Math.round(value)))
+    root.brightnessText = root.brightnessValue + "%"
+    root.runBrightness(String(root.brightnessValue))
+  }
+
+  function runKbdBrightness(action) {
+    Quickshell.execDetached(["/home/marcelof/bin/kbd-brightness", action])
+    kbdBrightnessRefreshLater.restart()
+  }
+
+  function lockSession() {
+    Quickshell.execDetached(["sh", "-c", "command -v hyprlock >/dev/null 2>&1 && exec hyprlock; command -v swaylock >/dev/null 2>&1 && exec swaylock -f; loginctl lock-session || notify-send Hyprland \"No Wayland locker found\""])
+  }
+
+  function suspendSession() {
+    Quickshell.execDetached(["systemctl", "suspend"])
+  }
+
+  component IconButton: Rectangle {
+    property string icon: ""
+    property string tooltip: ""
+    signal triggered()
+
+    readonly property int pad: 8
+
+    implicitHeight: {
+      const h = iconLabel.implicitHeight + pad * 2
+      return h % 2 === 0 ? h : h + 1
+    }
+    implicitWidth: implicitHeight
+    Layout.preferredWidth: implicitWidth
+    Layout.preferredHeight: implicitHeight
+    radius: Math.round(implicitHeight / 2)
+    color: iconMouse.containsMouse ? "#45475a" : "#313244"
+
+    Text {
+      id: iconLabel
+      anchors.centerIn: parent
+      anchors.verticalCenterOffset: 1
+      color: "#cdd6f4"
+      font.family: "FiraCode Nerd Font"
+      font.pixelSize: 15
+      text: parent.icon
+    }
+
+    MouseArea {
+      id: iconMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onEntered: if (parent.tooltip.length > 0) root.showTooltip(parent, parent.tooltip)
+      onExited: root.hideTooltip()
+      onClicked: parent.triggered()
+    }
+  }
+
+  component ActionButton: Rectangle {
+    id: actionButtonRoot
+    property string icon: ""
+    property string label: ""
+    property string tooltip: ""
+    property int minWidth: 76
+    signal triggered()
+
+    implicitHeight: 30
+    implicitWidth: Math.max(minWidth, actionRow.implicitWidth + 18)
+    radius: 6
+    color: actionMouse.containsMouse ? "#45475a" : "#313244"
+
+    RowLayout {
+      id: actionRow
+      anchors.centerIn: parent
+      spacing: 6
+
+      Text { color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: actionButtonRoot.icon }
+      Text { color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: actionButtonRoot.label }
+    }
+
+    MouseArea {
+      id: actionMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onEntered: if (parent.tooltip.length > 0) root.showTooltip(parent, parent.tooltip)
+      onExited: root.hideTooltip()
+      onClicked: parent.triggered()
+    }
+  }
+
+  component TrayButton: Item {
+    required property var modelData
+    property string label: root.trayItemText(modelData)
+
+    width: 22
+    height: 22
+
+    Image {
+      anchors.centerIn: parent
+      width: 18
+      height: 18
+      source: modelData.icon
+    }
+
+    MouseArea {
+      anchors.fill: parent
+      acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onEntered: root.showTooltip(parent, label)
+      onExited: root.hideTooltip()
+      onPressed: mouse => {
+        root.showTooltip(parent, label)
+
+        if (mouse.button === Qt.MiddleButton) {
+          root.toggleTrayPin(modelData)
+        } else if (mouse.button === Qt.RightButton || modelData.onlyMenu || root.isNetworkTrayItem(modelData)) {
+          if (root.runTrayDirectAction(modelData))
+            return
+
+          if (!root.showTrayMenu(modelData, parent, mouse))
+            modelData.activate()
+        } else {
+          modelData.activate()
+        }
+      }
+      onWheel: wheel => modelData.scroll(wheel.angleDelta.y, false)
+    }
+  }
+
+  IpcHandler {
+    target: "bar"
+
+    function toggle() { root.barHidden = !root.barHidden }
+    function show() { root.barHidden = false }
+    function hide() { root.barHidden = true }
+    function trayManage() { root.trayManageOpen = !root.trayManageOpen }
+    function controls() { root.toggleControlPanel() }
+    function media() { root.toggleMediaPanel() }
+    function screen() { root.toggleScreenPanel() }
+    function wallpaper() { root.toggleWallpaperPanel() }
+    function calendar() { root.toggleCalendar() }
+    function notifications() { root.toggleNotifications() }
+    function power() { exitDialog.visible = true }
+    function keybindings() { root.toggleKeybindings() }
+    function clipboard() { root.openClipboard() }
+    function clipboardUpdate() { clipboardRefresh.running = true }
+    function closePanels() { root.closeTransientPanels() }
+  }
+
+  IpcHandler {
+    target: "websearch"
+
+    function open() { root.openWebSearch("google") }
+    function toggle() { root.toggleWebSearch("google") }
+    function hide() { root.closeTransientPanels() }
+  }
+
+  IpcHandler {
+    target: "lock"
+
+    function lock() { root.lockSession() }
+  }
+
+  PanelWindow {
+    id: wallpaper
+    screen: root.laptopScreen
+
+    anchors {
+      top: true
+      bottom: true
+      left: true
+      right: true
+    }
+
+    WlrLayershell.layer: WlrLayer.Background
+    color: "#11111b"
+
+    Image {
+      anchors.fill: parent
+      source: root.wallpaperSource
+      fillMode: Image.PreserveAspectCrop
+      asynchronous: true
+    }
+  }
+
+  PanelWindow {
+    id: bar
+    screen: root.laptopScreen
+
+    anchors {
+      top: true
+      left: true
+      right: true
+    }
+
+    visible: !root.barHidden
+    WlrLayershell.layer: WlrLayer.Top
+    color: "#1e1e2e"
+    implicitHeight: 32
+
+    RowLayout {
+      anchors.fill: parent
+      anchors.leftMargin: 10
+      anchors.rightMargin: 10
+      spacing: 12
+
+      RowLayout {
+        Layout.alignment: Qt.AlignVCenter
+        Layout.maximumWidth: 620
+        spacing: 8
+
+        Row {
+          spacing: 4
+          Layout.alignment: Qt.AlignVCenter
+
+          Repeater {
+            model: Hyprland.workspaces
+
+            Rectangle {
+              required property var modelData
+
+              readonly property int windowCount: modelData.toplevels && modelData.toplevels.values ? modelData.toplevels.values.length : 0
+              readonly property string workspaceName: String(modelData.name || modelData.id || "")
+              readonly property bool specialWorkspace: workspaceName.indexOf("special:") === 0
+              readonly property string workspaceLabel: workspaceName
+
+              visible: !specialWorkspace
+              width: visible ? 28 : 0
+              height: 24
+              radius: 4
+              color: Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.id === modelData.id ? "#313244" : "transparent"
+
+              Text {
+                anchors.centerIn: parent
+                color: parent.windowCount > 0 ? "#cdd6f4" : "#7f849c"
+                font.family: "FiraCode Nerd Font"
+                font.styleName: "Retina"
+                font.pixelSize: 12
+                font.bold: Hyprland.focusedWorkspace && Hyprland.focusedWorkspace.id === modelData.id
+                text: parent.workspaceLabel
+              }
+
+              MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: modelData.activate()
+              }
+            }
+          }
+        }
+
+        StatusText {
+          command: ["/home/marcelof/bin/hypr-state", "watch"]
+          interval: 30000
+          watch: true
+        }
+      }
+
+      Item { Layout.fillWidth: true }
+
+      Row {
+        id: trayRow
+        spacing: 3
+        Layout.alignment: Qt.AlignVCenter
+
+        HoverHandler {
+          onHoveredChanged: root.trayExpanded = hovered
+        }
+
+        Rectangle {
+          width: 22
+          height: 22
+          radius: 4
+          visible: root.drawerTrayItems.length > 0 || shellSettings.hiddenTrayIds.length > 0
+          color: root.trayExpanded || root.trayManageOpen ? "#313244" : "transparent"
+
+          Text {
+            anchors.centerIn: parent
+            color: "#cdd6f4"
+            font.family: "FiraCode Nerd Font"
+            font.styleName: "Retina"
+            font.pixelSize: 12
+            text: root.trayExpanded ? "" : ""
+          }
+
+          MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onEntered: root.showTooltip(parent, "Tray drawer")
+            onExited: root.hideTooltip()
+            onClicked: mouse => {
+              if (mouse.button === Qt.RightButton)
+                root.trayManageOpen = !root.trayManageOpen
+              else
+                root.trayExpanded = !root.trayExpanded
+            }
+          }
+        }
+
+        Row {
+          spacing: 3
+          clip: true
+          width: root.trayExpanded ? implicitWidth : 0
+          height: 22
+          Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+
+          Repeater {
+            model: root.drawerTrayItems
+            TrayButton {}
+          }
+        }
+
+        Repeater {
+          model: root.pinnedTrayItems
+          TrayButton {}
+        }
+      }
+
+      StatusText { command: ["env", "BAR_COLOR_FORMAT=quickshell", "board", "render", "quickshell", "quickshell-bar"]; interval: 1000; rich: true }
+
+      Text {
+        Layout.alignment: Qt.AlignVCenter
+        color: "#9399b2"
+        font.family: "FiraCode Nerd Font"
+              font.styleName: "Retina"
+        font.pixelSize: 12
+        text: {
+          const audio = root.defaultSinkAudio()
+          if (!audio)
+            return " --"
+
+          return (audio.muted ? "󰝟 " : " ") + Math.round(audio.volume * 100) + "%"
+        }
+
+        MouseArea {
+          anchors.fill: parent
+          acceptedButtons: Qt.LeftButton | Qt.RightButton
+          cursorShape: Qt.PointingHandCursor
+          onClicked: mouse => {
+            if (mouse.button === Qt.RightButton)
+              root.toggleMediaPanel()
+            else
+              root.toggleMute()
+          }
+          onWheel: wheel => {
+            if (wheel.angleDelta.y > 0)
+              root.adjustVolume(0.05)
+            else if (wheel.angleDelta.y < 0)
+              root.adjustVolume(-0.05)
+          }
+        }
+      }
+
+      Rectangle {
+        Layout.alignment: Qt.AlignVCenter
+        width: 24
+        height: 22
+        radius: 4
+        color: pauseAllMouse.containsMouse ? "#313244" : "transparent"
+
+        Text {
+          anchors.centerIn: parent
+          color: "#cdd6f4"
+          font.family: "FiraCode Nerd Font"
+          font.pixelSize: 12
+          text: root.audioIconText
+        }
+
+        MouseArea {
+          id: pauseAllMouse
+          anchors.fill: parent
+          acceptedButtons: Qt.LeftButton | Qt.RightButton
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onEntered: root.showTooltip(parent, "Play/pause audio. Right-click for media")
+          onExited: root.hideTooltip()
+          onClicked: mouse => {
+            if (mouse.button === Qt.RightButton)
+              root.toggleMediaPanel()
+            else
+              root.runAudioctl("play-pause-all")
+          }
+        }
+      }
+
+
+      StatusText { command: ["/home/marcelof/bin/check-weather"]; interval: 900000 }
+      StatusText { command: ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print \"󰃠 \" $4}' || printf '󰃠 --'"]; interval: 5000; leftClickCommand: ["/home/marcelof/bin/qs-bar", "controls"]; rightClickCommand: ["/home/marcelof/bin/qs-bar", "controls"]; wheelUpCommand: ["brightnessctl", "set", "+5%"]; wheelDownCommand: ["brightnessctl", "set", "5%-"] }
+      StatusText { command: ["sh", "-c", "nmcli -t -f active dev wifi 2>/dev/null | awk -F: '$1 == \"yes\" {found=1} END {if (found) print \"󰖩\"; else print \"󰖪\"}'"]; interval: 10000; leftClickCommand: ["hypr-clean-env", "nm-connection-editor"]; rightClickCommand: ["hypr-clean-env", "nm-connection-editor"] }
+
+      Text {
+        Layout.alignment: Qt.AlignVCenter
+        color: "#9399b2"
+        font.family: "FiraCode Nerd Font"
+              font.styleName: "Retina"
+        font.pixelSize: 12
+        text: UPower.displayDevice.ready ? "󰁹 " + Math.round(UPower.displayDevice.percentage * 100) + "%" : ""
+      }
+
+      Text {
+        Layout.alignment: Qt.AlignVCenter
+        color: "#9399b2"
+        font.family: "FiraCode Nerd Font"
+              font.styleName: "Retina"
+        font.pixelSize: 12
+        text: " " + root.lisbonClockText
+
+        MouseArea {
+          anchors.fill: parent
+          cursorShape: Qt.PointingHandCursor
+          onClicked: root.toggleCalendar()
+        }
+      }
+
+      Text {
+        Layout.alignment: Qt.AlignVCenter
+        color: notificationHistory.count > 0 ? "#f9e2af" : "#9399b2"
+        font.family: "FiraCode Nerd Font"
+        font.styleName: "Retina"
+        font.pixelSize: 12
+        text: notificationHistory.count > 0 ? "󰂚 " + notificationHistory.count : "󰂜"
+
+        MouseArea {
+          anchors.fill: parent
+          cursorShape: Qt.PointingHandCursor
+          onClicked: root.toggleNotifications()
+        }
+      }
+    }
+
+    PopupWindow {
+      visible: root.tooltipText.length > 0
+      color: "transparent"
+      implicitWidth: tooltipBubble.implicitWidth
+      implicitHeight: tooltipBubble.implicitHeight
+      anchor.window: bar
+      anchor.rect.x: root.tooltipX
+      anchor.rect.y: root.tooltipY
+
+      Rectangle {
+        id: tooltipBubble
+        radius: 5
+        color: "#313244"
+        border.color: "#585b70"
+        border.width: 1
+        implicitWidth: tooltipLabel.implicitWidth + 18
+        implicitHeight: tooltipLabel.implicitHeight + 12
+
+        Text {
+          id: tooltipLabel
+          anchors.centerIn: parent
+          color: "#cdd6f4"
+          font.family: "FiraCode Nerd Font"
+          font.styleName: "Retina"
+          font.pixelSize: 12
+          text: root.tooltipText
+        }
+      }
+    }
+
+    PopupWindow {
+      id: trayManageWindow
+      visible: root.trayManageOpen
+      color: "transparent"
+      implicitWidth: 390
+      implicitHeight: trayManageFrame.implicitHeight
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        id: trayManageFrame
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+        implicitHeight: trayManageColumn.implicitHeight + 18
+
+        Column {
+          id: trayManageColumn
+          anchors.fill: parent
+          anchors.margins: 10
+          spacing: 7
+
+          Text {
+            color: "#cdd6f4"
+            font.family: "FiraCode Nerd Font"
+            font.styleName: "Retina"
+            font.pixelSize: 13
+            text: "Tray items"
+          }
+
+          Repeater {
+            model: root.allTrayItems
+
+            RowLayout {
+              required property var modelData
+              width: trayManageColumn.width
+              spacing: 8
+
+              Image { source: modelData.icon; width: 18; height: 18 }
+
+              Text {
+                Layout.fillWidth: true
+                color: root.isTrayHidden(modelData) ? "#6c7086" : "#bac2de"
+                elide: Text.ElideRight
+                font.family: "FiraCode Nerd Font"
+                font.styleName: "Retina"
+                font.pixelSize: 12
+                text: root.trayItemText(modelData)
+              }
+
+              Rectangle {
+                width: 54
+                height: 24
+                radius: 4
+                color: root.isTrayPinned(modelData) ? "#b4befe" : "#313244"
+                Text { anchors.centerIn: parent; color: root.isTrayPinned(modelData) ? "#11111b" : "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.isTrayPinned(modelData) ? "Pinned" : "Pin" }
+                MouseArea { anchors.fill: parent; onClicked: root.toggleTrayPin(modelData) }
+              }
+
+              Rectangle {
+                width: 54
+                height: 24
+                radius: 4
+                color: root.isTrayHidden(modelData) ? "#f38ba8" : "#313244"
+                Text { anchors.centerIn: parent; color: root.isTrayHidden(modelData) ? "#11111b" : "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.isTrayHidden(modelData) ? "Hidden" : "Hide" }
+                MouseArea { anchors.fill: parent; onClicked: root.toggleTrayHide(modelData) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+    PopupWindow {
+      id: wallpaperPanelWindow
+      visible: root.wallpaperPanelOpen
+      color: "transparent"
+      implicitWidth: 430
+      implicitHeight: 360
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+
+        ColumnLayout {
+          anchors.fill: parent
+          anchors.margins: 12
+          spacing: 9
+
+          RowLayout {
+            Layout.fillWidth: true
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 15; text: "Wallpaper" }
+            ActionButton { icon: "󰑓"; label: ""; minWidth: 34; tooltip: "Refresh"; onTriggered: root.refreshWallpapers() }
+            ActionButton { icon: "󰈔"; label: ""; minWidth: 34; tooltip: "Open folder"; onTriggered: Quickshell.execDetached(["/home/marcelof/bin/wallpaper-wayland", "open-dir"]) }
+          }
+
+          Image {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 130
+            source: root.wallpaperSource
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+          }
+
+          ListView {
+            id: wallpaperList
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            spacing: 5
+            model: wallpaperModel
+
+            delegate: Rectangle {
+              required property string name
+              required property string path
+              required property bool active
+              width: wallpaperList.width
+              height: 34
+              radius: 4
+              color: active ? "#313244" : (wallpaperMouse.containsMouse ? "#1e1e2e" : "transparent")
+
+              RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 9
+                anchors.rightMargin: 9
+                spacing: 8
+                Text { color: active ? "#a6e3a1" : "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: active ? "󰸉" : "󰋩" }
+                Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: name }
+              }
+
+              MouseArea {
+                id: wallpaperMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.setWallpaper(path)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    PopupWindow {
+      id: screenPanelWindow
+      visible: root.screenPanelOpen
+      color: "transparent"
+      implicitWidth: 430
+      implicitHeight: 360
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+
+        ColumnLayout {
+          anchors.fill: parent
+          anchors.margins: 12
+          spacing: 10
+
+          RowLayout {
+            Layout.fillWidth: true
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 15; text: "Screen" }
+            Text { color: root.recordingStatusText.indexOf("recording") === 0 ? "#f9e2af" : "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.recordingStatusText.length > 0 ? root.recordingStatusText : "--" }
+          }
+
+          Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Screenshot" }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            ActionButton { icon: "󰹑"; label: "Edit"; tooltip: "Select area and edit"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "edit"]) }
+            ActionButton { icon: "󰅇"; label: "Copy"; tooltip: "Copy selected area"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "copy"]) }
+            ActionButton { icon: "󰆞"; label: "Save"; tooltip: "Save selected area"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "save"]) }
+            ActionButton { icon: "󰍹"; label: "Full"; tooltip: "Save full screen"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "full"]) }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            ActionButton { icon: "󰆧"; label: "Window"; tooltip: "Save active window"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "active"]) }
+            ActionButton { icon: "󰭹"; label: "OCR"; tooltip: "OCR selected area to clipboard"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "ocr"]) }
+            ActionButton { icon: "󰈔"; label: "Open"; tooltip: "Open last screenshot"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "open-last"]) }
+            ActionButton { icon: "󰅇"; label: "Path"; tooltip: "Copy last screenshot path"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "copy-path"]) }
+          }
+
+          Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Recording" }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            ActionButton { icon: root.recordingStatusText.indexOf("recording") === 0 ? "󰓛" : "󰐊"; label: root.recordingStatusText.indexOf("recording") === 0 ? "Stop" : "Start"; tooltip: "Start or stop area recording"; onTriggered: root.runScreenRecord("toggle") }
+            ActionButton { icon: "󰈔"; label: "Open"; tooltip: "Open last recording"; onTriggered: root.runScreenRecord("open-last") }
+            ActionButton { icon: "󰅇"; label: "Path"; tooltip: "Copy last recording path"; onTriggered: root.runScreenRecord("copy-path") }
+            ActionButton { icon: "󰑓"; label: "Refresh"; tooltip: "Refresh status"; onTriggered: root.refreshScreenState() }
+          }
+
+          Text { Layout.fillWidth: true; color: "#7f849c"; wrapMode: Text.Wrap; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.portalStatusText.length > 0 ? "Portal: " + root.portalStatusText : "Portal: --" }
+        }
+      }
+    }
+
+    PopupWindow {
+      id: mediaPanelWindow
+      visible: root.mediaPanelOpen
+      color: "transparent"
+      implicitWidth: 500
+      implicitHeight: 420
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+
+        ScrollView {
+          id: mediaScroll
+          anchors.fill: parent
+          anchors.margins: 10
+          clip: true
+
+          ColumnLayout {
+            width: mediaScroll.availableWidth
+            spacing: 9
+
+            RowLayout {
+              Layout.fillWidth: true
+              spacing: 8
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 1
+                Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Media" }
+                Text { Layout.fillWidth: true; color: "#7f849c"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.audioDisplayText.length > 0 ? root.audioDisplayText : "No active playback" }
+              }
+              ActionButton { icon: "󰕾"; label: "Output"; tooltip: "Open volume mixer"; onTriggered: Quickshell.execDetached(["hypr-clean-env", "pavucontrol"]) }
+            }
+
+            RowLayout {
+              Layout.fillWidth: true
+              spacing: 7
+              ActionButton { icon: "󰒮"; label: "Prev"; tooltip: "Previous track"; onTriggered: root.runPlayerctl("previous") }
+              ActionButton { icon: root.audioIconText; label: "Play"; tooltip: "Start/stop saved music and noise"; onTriggered: root.runAudioctl("play-pause-all") }
+              ActionButton { icon: "󰒭"; label: "Next"; tooltip: "Next track"; onTriggered: root.runPlayerctl("next") }
+            }
+
+            RowLayout {
+              Layout.fillWidth: true
+              spacing: 7
+              ActionButton { icon: "󰜗"; label: "Noise"; tooltip: "Toggle brown noise"; onTriggered: root.runAudioctl("noise-toggle") }
+              ActionButton { icon: ""; label: "Music"; tooltip: "Start saved/default music"; onTriggered: root.runAudioctl("music") }
+              ActionButton { icon: "󰓛"; label: "Stop"; tooltip: "Stop saved music and noise"; onTriggered: root.runAudioctl("stop-all") }
+            }
+
+            RowLayout {
+              Layout.fillWidth: true
+              spacing: 10
+              Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.defaultSinkAudio() && !root.defaultSinkAudio().muted ? "" : "󰝟" }
+              Slider { Layout.fillWidth: true; from: 0; to: 1.5; value: root.defaultSinkAudio() ? root.defaultSinkAudio().volume : 0; onMoved: if (root.defaultSinkAudio()) root.defaultSinkAudio().volume = value }
+              Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.defaultSinkAudio() ? Math.round(root.defaultSinkAudio().volume * 100) + "%" : "--" }
+              IconButton { icon: "󰝟"; tooltip: "Mute output"; onTriggered: root.toggleMute() }
+            }
+
+            Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: audioStreams.count > 0 ? "Streams" : "No streams" }
+
+            Repeater {
+              model: audioStreams
+
+              Rectangle {
+                required property string id
+                required property string app
+                required property string media
+                required property string volume
+                required property string muted
+
+                Layout.fillWidth: true
+                implicitHeight: streamColumn.implicitHeight + 12
+                radius: 6
+                color: "#1e1e2e"
+                border.color: "#313244"
+                border.width: 1
+
+                ColumnLayout {
+                  id: streamColumn
+                  anchors.left: parent.left
+                  anchors.right: parent.right
+                  anchors.verticalCenter: parent.verticalCenter
+                  anchors.leftMargin: 9
+                  anchors.rightMargin: 9
+                  spacing: 4
+
+                  RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Text { color: muted === "yes" ? "#f38ba8" : "#a6e3a1"; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: muted === "yes" ? "󰝟" : "" }
+                    ColumnLayout {
+                      Layout.fillWidth: true
+                      spacing: 0
+                      Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: media }
+                      Text { Layout.fillWidth: true; color: "#7f849c"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 10; text: app }
+                    }
+                    Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: volume }
+                    IconButton { icon: muted === "yes" ? "󰕾" : "󰝟"; tooltip: "Mute this stream"; onTriggered: root.runSinkInputAction(id, "mute") }
+                  }
+
+                  Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 1.5
+                    enabled: muted !== "yes"
+                    value: Math.max(0, Number(volume.replace("%", "")) / 100)
+                    onMoved: root.setSinkInputVolume(id, value)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    PopupWindow {
+      id: controlPanelWindow
+      visible: root.controlPanelOpen
+      color: "transparent"
+      implicitWidth: 460
+      implicitHeight: 420
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        id: controlsFrame
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+
+        ScrollView {
+          id: controlsScroll
+          anchors.fill: parent
+          anchors.margins: 10
+          clip: true
+
+          ColumnLayout {
+            id: controlsColumn
+            width: controlsScroll.availableWidth
+            spacing: 9
+
+          Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Quick actions" }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            ActionButton { icon: "󰹑"; label: "Screen"; tooltip: "Screen tools"; onTriggered: root.toggleScreenPanel() }
+            ActionButton { icon: "󰅇"; label: "Copy"; tooltip: "Copy screenshot area"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "copy"]) }
+            ActionButton { icon: "󰌾"; label: "Lock"; tooltip: "Lock session"; onTriggered: root.lockSession() }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            ActionButton { icon: "󰒲"; label: "Sleep"; tooltip: "Suspend system"; onTriggered: root.suspendSession() }
+            ActionButton { icon: "󰜉"; label: "Reboot"; tooltip: "Reboot system"; onTriggered: Quickshell.execDetached(["systemctl", "reboot"]) }
+            ActionButton { icon: "⏻"; label: "Power"; tooltip: "Power menu"; onTriggered: exitDialog.visible = true }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰃠" }
+            Slider { Layout.fillWidth: true; from: 1; to: 100; value: root.brightnessValue; onMoved: root.setBrightness(value) }
+            Text { width: 42; color: "#bac2de"; horizontalAlignment: Text.AlignRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.brightnessText }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            visible: root.kbdBrightnessText.length > 0
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰌌" }
+            Text { Layout.fillWidth: true; color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.kbdBrightnessText }
+            ActionButton { icon: "-"; label: ""; minWidth: 34; tooltip: "Keyboard brightness down"; onTriggered: root.runKbdBrightness("down") }
+            ActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "Keyboard brightness up"; onTriggered: root.runKbdBrightness("up") }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "󰂯" : "󰂲" }
+            Text { Layout.fillWidth: true; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.bluetoothStatusText() }
+            ActionButton { icon: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "󰂲" : "󰂯"; label: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "Off" : "On"; tooltip: "Toggle Bluetooth"; onTriggered: root.toggleBluetooth() }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.networkStatusText.indexOf("Wi-Fi") === 0 ? "󰖩" : "󰈀" }
+            Text { Layout.fillWidth: true; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.networkStatusText.length > 0 ? root.networkStatusText : "Network unavailable" }
+            ActionButton { icon: "󰖩"; label: "Wi-Fi"; tooltip: "Toggle Wi-Fi"; onTriggered: root.runNetwork("wifi-toggle") }
+            ActionButton { icon: "󰍜"; label: "Open"; tooltip: "Open network settings"; onTriggered: Quickshell.execDetached(["hypr-clean-env", "nm-connection-editor"]) }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            visible: root.powerStatusText.length > 0
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰁹" }
+            Text { Layout.fillWidth: true; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.powerStatusText }
+            ActionButton { icon: "󰾅"; label: "Save"; tooltip: "Power saver"; onTriggered: root.setPowerProfile("power-saver") }
+            ActionButton { icon: "󰾆"; label: "Bal"; tooltip: "Balanced"; onTriggered: root.setPowerProfile("balanced") }
+            ActionButton { icon: "󰓅"; label: "Perf"; tooltip: "Performance"; onTriggered: root.setPowerProfile("performance") }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰈐" }
+            Text { Layout.fillWidth: true; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.fanStatusText }
+          }
+          }
+        }
+      }
+    }
+
+    PopupWindow {
+      id: calendarWindow
+      visible: root.calendarOpen
+      color: "transparent"
+      implicitWidth: 430
+      implicitHeight: 560
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 72)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        id: calendarFrame
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+
+        ColumnLayout {
+          id: calendarColumn
+          anchors.fill: parent
+          anchors.margins: 10
+          spacing: 8
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Calendar" }
+            Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Europe/Lisbon" }
+          }
+
+          Text {
+            Layout.fillWidth: true
+            color: "#bac2de"
+            font.family: "FiraCode Nerd Font"
+            font.styleName: "Retina"
+            font.pixelSize: 22
+            horizontalAlignment: Text.AlignHCenter
+            text: Qt.formatDateTime(clock.date, "dd MMMM yyyy")
+          }
+
+          ScrollView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+
+            Text {
+              width: parent.width
+              color: "#bac2de"
+              font.family: "FiraCode Nerd Font"
+              font.pixelSize: 12
+              lineHeight: 1.1
+              wrapMode: Text.Wrap
+              text: root.timePanelText.length > 0 ? root.timePanelText : "Loading time data..."
+            }
+          }
+
+          Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Todo" }
+            Rectangle { width: 62; height: 24; radius: 4; color: "#313244"; Text { anchors.centerIn: parent; color: "#cdd6f4"; font.pixelSize: 11; text: "task" } MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Quickshell.execDetached(["hypr-term", "task", "next"]) } }
+          }
+
+          Text {
+            Layout.fillWidth: true
+            color: "#bac2de"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 12
+            maximumLineCount: 7
+            elide: Text.ElideRight
+            wrapMode: Text.Wrap
+            text: root.todoPanelText.length > 0 ? root.todoPanelText : "No todo data"
+          }
+        }
+      }
+    }
+
+    PopupWindow {
+      id: notificationCenterWindow
+      visible: root.notificationCenterOpen
+      color: "transparent"
+      implicitWidth: 460
+      implicitHeight: 420
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+
+        ColumnLayout {
+          anchors.fill: parent
+          anchors.margins: 10
+          spacing: 8
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Notifications" }
+            Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: notificationHistory.count + "" }
+            ActionButton {
+              visible: root.selectedNotificationIndex >= 0
+              icon: "󰅖"
+              label: "App"
+              minWidth: 58
+              tooltip: "Clear selected app notifications"
+              onTriggered: root.clearNotificationsForApp(root.notificationAppAt(root.selectedNotificationIndex))
+            }
+            ActionButton {
+              icon: "󰅖"
+              label: "All"
+              minWidth: 58
+              tooltip: "Clear all notifications"
+              onTriggered: root.clearNotifications()
+            }
+          }
+
+          Text {
+            Layout.fillWidth: true
+            visible: notificationHistory.count === 0
+            color: "#7f849c"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 12
+            horizontalAlignment: Text.AlignHCenter
+            text: "No notifications"
+          }
+
+          ListView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            spacing: 8
+            model: notificationInboxModel
+
+            delegate: Rectangle {
+              id: notificationDelegate
+
+              required property string kind
+              required property string app
+              required property int count
+              required property int sourceIndex
+              required property string summary
+              required property string body
+              required property string text
+              required property string actionsText
+              required property string time
+
+              readonly property int notificationIndex: sourceIndex
+              readonly property bool isGroup: kind === "group"
+              readonly property bool expanded: !isGroup && root.selectedNotificationIndex === notificationIndex
+              width: ListView.view.width
+              height: isGroup ? 32 : (expanded ? Math.max(104, detailColumn.implicitHeight + 22) : 60)
+              radius: isGroup ? 0 : 5
+              color: isGroup ? "transparent" : (expanded ? "#242438" : "#1e1e2e")
+              border.color: expanded ? "#b4befe" : "transparent"
+              border.width: expanded ? 1 : 0
+
+              Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+
+              MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                enabled: !notificationDelegate.isGroup
+                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: root.selectedNotificationIndex = expanded ? -1 : notificationIndex
+              }
+
+              RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 2
+                anchors.rightMargin: 2
+                visible: notificationDelegate.isGroup
+                spacing: 8
+                Text { Layout.fillWidth: true; color: "#f9e2af"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: app }
+                Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: count + "" }
+                ActionButton { icon: "󰅖"; label: "App"; minWidth: 58; tooltip: "Clear app notifications"; onTriggered: root.clearNotificationsForApp(app) }
+              }
+
+              ColumnLayout {
+                id: detailColumn
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: 10
+                visible: !notificationDelegate.isGroup
+                spacing: 5
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  spacing: 8
+                  Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: summary.length > 0 ? summary : text }
+                  Text { color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: time }
+                  Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 4
+                    color: dismissMouse.containsMouse ? "#45475a" : "transparent"
+                    Text { anchors.centerIn: parent; color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "󰅖" }
+                    MouseArea { id: dismissMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { mouse.accepted = true; root.dismissNotification(notificationIndex) } }
+                  }
+                }
+
+                Text {
+                  Layout.fillWidth: true
+                  visible: !expanded && body.length > 0
+                  color: "#bac2de"
+                  elide: Text.ElideRight
+                  font.family: "FiraCode Nerd Font"
+                  font.pixelSize: 11
+                  maximumLineCount: 1
+                  wrapMode: Text.NoWrap
+                  text: body
+                }
+
+                Text {
+                  Layout.fillWidth: true
+                  visible: expanded && body.length > 0
+                  color: "#bac2de"
+                  elide: expanded ? Text.ElideNone : Text.ElideRight
+                  font.family: "FiraCode Nerd Font"
+                  font.pixelSize: 11
+                  maximumLineCount: expanded ? 8 : 1
+                  wrapMode: expanded ? Text.Wrap : Text.NoWrap
+                  text: expanded ? (body.length > 0 ? body : text) : body
+                }
+
+                RowLayout {
+                  Layout.fillWidth: true
+                  visible: expanded && actionsText.length > 0
+                  spacing: 6
+
+                  Repeater {
+                    model: root.notificationActionLabels(notificationIndex)
+
+                    delegate: Rectangle {
+                      required property string modelData
+                      required property int index
+
+                      Layout.preferredHeight: 24
+                      Layout.preferredWidth: Math.max(64, actionLabel.implicitWidth + 18)
+                      radius: 4
+                      color: actionMouse.containsMouse ? "#45475a" : "#313244"
+
+                      Text {
+                        id: actionLabel
+                        anchors.centerIn: parent
+                        color: "#cdd6f4"
+                        elide: Text.ElideRight
+                        font.family: "FiraCode Nerd Font"
+                        font.pixelSize: 11
+                        text: modelData
+                      }
+
+                      MouseArea {
+                        id: actionMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: mouse => {
+                          mouse.accepted = true
+                          root.invokeNotificationAction(notificationDelegate.notificationIndex, index)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    PopupWindow {
+      visible: root.notificationToastOpen && !root.notificationCenterOpen
+      color: "transparent"
+      implicitWidth: 380
+      implicitHeight: toastCard.implicitHeight
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        id: toastCard
+        width: parent.width
+        implicitHeight: Math.max(96, toastColumn.implicitHeight + 20)
+        radius: 6
+        color: "#1e1e2e"
+        border.color: "#b4befe"
+        border.width: 1
+
+        MouseArea {
+          anchors.fill: parent
+          cursorShape: Qt.PointingHandCursor
+          onClicked: {
+            root.notificationToastOpen = false
+            root.notificationCenterOpen = true
+          }
+        }
+
+        ColumnLayout {
+          id: toastColumn
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: parent.top
+          anchors.margins: 10
+          spacing: 5
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Text { color: "#f9e2af"; font.family: "FiraCode Nerd Font"; font.pixelSize: 14; text: "󰂚" }
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.notificationToastApp }
+            Text { color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "now" }
+          }
+
+          Text {
+            Layout.fillWidth: true
+            color: "#cdd6f4"
+            elide: Text.ElideNone
+            font.family: "FiraCode Nerd Font"
+            font.styleName: "Retina"
+            font.pixelSize: 13
+            maximumLineCount: 2
+            wrapMode: Text.Wrap
+            text: root.notificationToastSummary
+          }
+
+          Text {
+            Layout.fillWidth: true
+            visible: root.notificationToastBody.length > 0
+            color: "#bac2de"
+            elide: Text.ElideNone
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 12
+            maximumLineCount: 4
+            wrapMode: Text.Wrap
+            text: root.notificationToastBody
+          }
+        }
+      }
+    }
+
+  Process {
+    id: wallpaperCurrent
+    command: ["/home/marcelof/bin/wallpaper-wayland", "current"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.wallpaperSource = "file://" + this.text.trim() }
+  }
+
+  Process {
+    id: wallpaperListRefresh
+    command: ["/home/marcelof/bin/wallpaper-wayland", "list"]
+    stdout: StdioCollector { onStreamFinished: root.updateWallpaperRows(this.text) }
+  }
+
+  Timer {
+    id: wallpaperListRefreshLater
+    interval: 250
+    repeat: false
+    onTriggered: wallpaperListRefresh.running = true
+  }
+
+  Process {
+    id: screenRecordStatus
+    command: ["/home/marcelof/bin/screen-record-wayland", "status"]
+    stdout: StdioCollector { onStreamFinished: root.recordingStatusText = this.text.trim() }
+  }
+
+  Timer {
+    id: screenRecordStatusLater
+    interval: 500
+    repeat: false
+    onTriggered: screenRecordStatus.running = true
+  }
+
+  Process {
+    id: portalStatusRefresh
+    command: ["sh", "-c", "printf 'hyprland '; systemctl --user is-active xdg-desktop-portal-hyprland.service 2>/dev/null || printf unavailable; printf ', portal '; systemctl --user is-active xdg-desktop-portal.service 2>/dev/null || printf unavailable"]
+    stdout: StdioCollector { onStreamFinished: root.portalStatusText = this.text.trim() }
+  }
+
+  Process {
+    id: brightnessRefresh
+    command: ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print $4}' || printf -- --"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        root.brightnessText = this.text.trim()
+        root.brightnessValue = Number(root.brightnessText.replace("%", "")) || 0
+      }
+    }
+  }
+
+  Timer {
+    id: brightnessRefreshLater
+    interval: 250
+    repeat: false
+    onTriggered: brightnessRefresh.running = true
+  }
+
+  Process {
+    id: kbdBrightnessRefresh
+    command: ["/home/marcelof/bin/kbd-brightness", "status"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.kbdBrightnessText = this.text.trim() }
+  }
+
+  Timer {
+    id: kbdBrightnessRefreshLater
+    interval: 250
+    repeat: false
+    onTriggered: kbdBrightnessRefresh.running = true
+  }
+
+  Process {
+    id: networkStatusRefresh
+    command: ["/home/marcelof/bin/network-status", "status"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.networkStatusText = this.text.trim() }
+  }
+
+  Timer {
+    id: networkStatusRefreshLater
+    interval: 500
+    repeat: false
+    onTriggered: networkStatusRefresh.running = true
+  }
+
+  Process {
+    id: powerStatusRefresh
+    command: ["/home/marcelof/bin/power-status", "status"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.powerStatusText = this.text.trim() }
+  }
+
+  Process {
+    id: fanStatusRefresh
+    command: ["/home/marcelof/bin/fan-status"]
+    stdout: StdioCollector { onStreamFinished: root.fanStatusText = this.text.trim().length > 0 ? this.text.trim() : "Fan --" }
+  }
+
+  Timer {
+    id: powerStatusRefreshLater
+    interval: 500
+    repeat: false
+    onTriggered: powerStatusRefresh.running = true
+  }
+
+  ListModel { id: launcherModel }
+
+  Process {
+    id: launcherMruRefresh
+    command: ["sh", "-c", "cat \"${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof/launcher-mru.txt\" 2>/dev/null || true"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.updateLauncherMru(this.text) }
+  }
+  ListModel { id: clipboardModel }
+  ListModel { id: keybindingModel }
+
+  Process {
+    id: clipboardRefresh
+    command: ["sh", "-c", "cliphist list 2>/dev/null"]
+    stdout: StdioCollector { onStreamFinished: root.updateClipboardEntries(this.text) }
+  }
+
+  Process {
+    id: keybindingsRefresh
+    command: ["/home/marcelof/bin/hypr-keys"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.updateKeybindingRows(this.text) }
+  }
+
+  Connections {
+    target: DesktopEntries.applications
+    function onValuesChanged() { if (launcher.visible) root.rebuildLauncher() }
+  }
+
+  FloatingWindow {
+    id: launcher
+    title: "quickshell-launcher"
+    screen: root.laptopScreen
+    visible: false
+    implicitWidth: 720
+    implicitHeight: 520
+    color: "transparent"
+
+    HyprlandFocusGrab {
+      active: launcher.visible
+      windows: [launcher]
+      onCleared: root.hideLauncher()
+    }
+
+    IpcHandler {
+      target: "launcher"
+
+      function toggle() { root.toggleLauncher() }
+      function open() {
+        launcher.visible = true
+        search.text = ""
+        root.rebuildLauncher()
+        search.forceActiveFocus()
+      }
+      function show() { open() }
+      function hide() { root.hideLauncher() }
+    }
+
+
+    Rectangle {
+      anchors.fill: parent
+      color: "#11111b"
+      border.color: "#45475a"
+      border.width: 1
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 14
+        spacing: 10
+
+        Rectangle {
+          Layout.fillWidth: true
+          height: 42
+          color: "#1e1e2e"
+          border.color: search.activeFocus ? "#b4befe" : "#313244"
+          border.width: 1
+          radius: 6
+
+          TextInput {
+            id: search
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            verticalAlignment: TextInput.AlignVCenter
+            color: "#cdd6f4"
+            selectionColor: "#45475a"
+            selectedTextColor: "#cdd6f4"
+            font.family: "FiraCode Nerd Font"
+              font.styleName: "Retina"
+            font.pixelSize: 16
+            clip: true
+
+            onTextChanged: root.rebuildLauncher()
+            Keys.onEscapePressed: launcher.visible = false
+            Keys.onDownPressed: { if (launcherModel.count > 0) appList.currentIndex = (appList.currentIndex + 1) % launcherModel.count }
+            Keys.onUpPressed: { if (launcherModel.count > 0) appList.currentIndex = (appList.currentIndex - 1 + launcherModel.count) % launcherModel.count }
+            Keys.onReturnPressed: root.launchCurrentApp()
+            Keys.onEnterPressed: root.launchCurrentApp()
+            Keys.onPressed: event => {
+              if ((event.modifiers & Qt.AltModifier) && event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
+                root.launchAppAtIndex(event.key - Qt.Key_1)
+                event.accepted = true
+              }
+            }
+          }
+        }
+
+        ListView {
+          id: appList
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          clip: true
+          spacing: 4
+          model: launcherModel
+          currentIndex: -1
+
+          delegate: Rectangle {
+            required property var modelData
+            required property int index
+            width: appList.width
+            height: 48
+            color: ListView.isCurrentItem ? "#313244" : "transparent"
+            radius: 4
+
+            Text {
+              anchors.fill: parent
+              anchors.leftMargin: 44
+              anchors.rightMargin: 10
+              verticalAlignment: Text.AlignVCenter
+              color: "#cdd6f4"
+              elide: Text.ElideRight
+              font.family: "FiraCode Nerd Font"
+              font.styleName: "Retina"
+              font.pixelSize: 14
+              text: modelData.name + (modelData.subtext.length > 0 ? "  " + modelData.subtext : "")
+            }
+
+            Image {
+              anchors.left: parent.left
+              anchors.leftMargin: 10
+              anchors.verticalCenter: parent.verticalCenter
+              width: 22
+              height: 22
+              source: Quickshell.iconPath(modelData.icon, true)
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              hoverEnabled: true
+              onEntered: appList.currentIndex = index
+              onClicked: {
+                appList.currentIndex = index
+                root.launchCurrentApp()
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  FloatingWindow {
+    id: clipboardPicker
+    screen: root.laptopScreen
+    visible: root.clipboardOpen
+    implicitWidth: 720
+    implicitHeight: 520
+    color: "#11111b"
+
+    HyprlandFocusGrab {
+      active: clipboardPicker.visible
+      windows: [clipboardPicker]
+      onCleared: root.clipboardOpen = false
+    }
+
+    Rectangle {
+      anchors.fill: parent
+      color: "#11111b"
+      border.color: "#45475a"
+      border.width: 1
+      radius: 6
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 14
+        spacing: 10
+
+        RowLayout {
+          Layout.fillWidth: true
+          Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 15; text: "Clipboard" }
+          Text { color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: clipboardModel.count + " entries" }
+        }
+
+        Rectangle {
+          Layout.fillWidth: true
+          height: 42
+          color: "#1e1e2e"
+          border.color: clipSearch.activeFocus ? "#b4befe" : "#313244"
+          border.width: 1
+          radius: 6
+
+          TextInput {
+            id: clipSearch
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            verticalAlignment: TextInput.AlignVCenter
+            color: "#cdd6f4"
+            selectionColor: "#45475a"
+            selectedTextColor: "#cdd6f4"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 16
+            clip: true
+            onTextChanged: root.rebuildClipboardModel()
+            Keys.onEscapePressed: root.clipboardOpen = false
+            Keys.onDownPressed: { if (clipboardModel.count > 0) clipList.currentIndex = (clipList.currentIndex + 1) % clipboardModel.count }
+            Keys.onUpPressed: { if (clipboardModel.count > 0) clipList.currentIndex = (clipList.currentIndex - 1 + clipboardModel.count) % clipboardModel.count }
+            Keys.onReturnPressed: root.pasteClipboardEntry()
+            Keys.onEnterPressed: root.pasteClipboardEntry()
+          }
+        }
+
+        ListView {
+          id: clipList
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          clip: true
+          spacing: 4
+          model: clipboardModel
+          currentIndex: -1
+
+          delegate: Rectangle {
+            required property var modelData
+            required property int index
+            width: clipList.width
+            height: 46
+            radius: 4
+            color: ListView.isCurrentItem ? "#313244" : "transparent"
+            Text { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10; verticalAlignment: Text.AlignVCenter; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: modelData.text }
+            MouseArea { anchors.fill: parent; hoverEnabled: true; onEntered: clipList.currentIndex = index; onClicked: { clipList.currentIndex = index; root.pasteClipboardEntry() } }
+          }
+        }
+      }
+    }
+  }
+
+
+
+  PopupWindow {
+    id: keybindingsPanel
+    visible: root.keybindingsOpen
+    implicitWidth: 560
+    implicitHeight: 500
+    color: "transparent"
+    anchor.window: bar
+    anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+    anchor.rect.y: bar.height + 6
+
+    Rectangle {
+      anchors.fill: parent
+      color: "#11111b"
+      border.color: "#45475a"
+      border.width: 1
+      radius: 6
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 14
+        spacing: 8
+        Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 15; text: "Keybindings" }
+        ScrollView {
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          clip: true
+          ColumnLayout {
+            width: parent.width
+            spacing: 5
+            Repeater {
+              model: keybindingModel
+              RowLayout {
+                required property string shortcut
+                required property string action
+                Layout.fillWidth: true
+                spacing: 10
+                Text { width: 170; color: "#b4befe"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: shortcut }
+                Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: action }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  FloatingWindow {
+    id: webSearch
+    title: "quickshell-websearch"
+    screen: root.laptopScreen
+    visible: root.webSearchOpen
+    implicitWidth: 640
+    implicitHeight: 220
+    color: "transparent"
+
+    HyprlandFocusGrab {
+      active: webSearch.visible
+      windows: [webSearch]
+      onCleared: root.webSearchOpen = false
+    }
+
+    Rectangle {
+      anchors.fill: parent
+      color: "#11111b"
+      border.color: "#45475a"
+      border.width: 1
+      radius: 6
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 14
+        spacing: 10
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 8
+          Repeater {
+            model: root.webSearchSites
+            Rectangle {
+              required property var modelData
+              width: Math.max(66, siteLabel.implicitWidth + 22)
+              height: 28
+              radius: 4
+              color: root.webSearchSite === modelData.key ? "#b4befe" : (siteMouse.containsMouse ? "#313244" : "#1e1e2e")
+              Text { id: siteLabel; anchors.centerIn: parent; color: root.webSearchSite === modelData.key ? "#11111b" : "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: modelData.label }
+              MouseArea { id: siteMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { root.webSearchSite = modelData.key; webSearchInput.forceActiveFocus() } }
+            }
+          }
+        }
+
+        Rectangle {
+          Layout.fillWidth: true
+          height: 46
+          color: "#1e1e2e"
+          border.color: webSearchInput.activeFocus ? "#b4befe" : "#313244"
+          border.width: 1
+          radius: 6
+
+          TextInput {
+            id: webSearchInput
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            verticalAlignment: TextInput.AlignVCenter
+            color: "#cdd6f4"
+            selectionColor: "#45475a"
+            selectedTextColor: "#cdd6f4"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 16
+            clip: true
+            Keys.onEscapePressed: root.webSearchOpen = false
+            Keys.onReturnPressed: root.runWebSearch()
+            Keys.onEnterPressed: root.runWebSearch()
+          }
+        }
+      }
+    }
+  }
+
+
+
+  PopupWindow {
+    id: networkPanel
+    visible: false
+    implicitWidth: 420
+    implicitHeight: 260
+    color: "transparent"
+    anchor.window: bar
+    anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+    anchor.rect.y: bar.height + 6
+
+    IpcHandler {
+      target: "network"
+      function toggle() {
+        networkPanel.visible = !networkPanel.visible
+        if (networkPanel.visible)
+          networkRefresh.running = true
+      }
+      function hide() { networkPanel.visible = false }
+    }
+
+    Rectangle {
+      anchors.fill: parent
+      color: "#11111b"
+      border.color: "#45475a"
+      border.width: 1
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 10
+
+        Text {
+          Layout.fillWidth: true
+          color: "#cdd6f4"
+          font.family: "FiraCode Nerd Font"
+              font.styleName: "Retina"
+          font.pixelSize: 15
+          text: "Network"
+        }
+
+        Text {
+          id: networkText
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          color: "#bac2de"
+          font.family: "FiraCode Nerd Font"
+              font.styleName: "Retina"
+          font.pixelSize: 12
+          wrapMode: Text.Wrap
+          text: ""
+        }
+      }
+    }
+
+    Process {
+      id: networkRefresh
+      command: ["sh", "-c", "nmcli -t -f DEVICE,TYPE,STATE,CONNECTION dev status 2>/dev/null | sed 's/:/  /g' || ip -brief addr"]
+      stdout: StdioCollector {
+        onStreamFinished: networkText.text = this.text.trim()
+      }
+    }
+  }
+
+  PopupWindow {
+    id: exitDialog
+    visible: false
+    implicitWidth: 420
+    implicitHeight: 160
+    color: "transparent"
+    anchor.window: bar
+    anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+    anchor.rect.y: bar.height + 6
+
+    IpcHandler {
+      target: "session"
+
+      function confirmExit() { exitDialog.visible = true }
+      function power() { exitDialog.visible = true }
+      function hide() { exitDialog.visible = false }
+    }
+
+    Rectangle {
+      anchors.fill: parent
+      color: "#11111b"
+      border.color: "#f38ba8"
+      border.width: 1
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 16
+        spacing: 14
+
+        Text {
+          Layout.fillWidth: true
+          color: "#cdd6f4"
+          font.family: "FiraCode Nerd Font"
+              font.styleName: "Retina"
+          font.pixelSize: 15
+          text: "Exit Hyprland session?"
+        }
+
+        RowLayout {
+          Layout.alignment: Qt.AlignRight
+          spacing: 10
+
+          Rectangle {
+            width: 92
+            height: 34
+            radius: 4
+            color: "#313244"
+
+            Text { anchors.centerIn: parent; color: "#cdd6f4"; text: "Cancel" }
+            MouseArea { anchors.fill: parent; onClicked: exitDialog.visible = false }
+          }
+
+          Rectangle {
+            width: 92
+            height: 34
+            radius: 4
+            color: "#313244"
+
+            Text { anchors.centerIn: parent; color: "#cdd6f4"; text: "Reboot" }
+            MouseArea { anchors.fill: parent; onClicked: Quickshell.execDetached(["systemctl", "reboot"]) }
+          }
+
+          Rectangle {
+            width: 92
+            height: 34
+            radius: 4
+            color: "#f38ba8"
+
+            Text { anchors.centerIn: parent; color: "#11111b"; text: "Exit" }
+            MouseArea { anchors.fill: parent; onClicked: Quickshell.execDetached(["hyprctl", "dispatch", "exit"]) }
+          }
+        }
+      }
+    }
+  }
+}

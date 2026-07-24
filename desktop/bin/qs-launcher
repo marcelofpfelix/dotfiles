@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:$PATH"
+qs_bin="${QS_BIN:-$HOME/.nix-profile/bin/qs}"
+quickshell_bin="${QUICKSHELL_BIN:-$HOME/.nix-profile/bin/quickshell}"
+config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
+log_file="${QS_LAUNCHER_LOG:-/tmp/qs-launcher.log}"
+export QS_CONFIG_PATH="$config_path"
+export QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"
+
+notify() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "Launcher" "$1"
+    else
+        printf '%s\n' "$1" >&2
+    fi
+}
+
+toggle_quickshell() {
+    "$qs_bin" ipc --path "$config_path" --any-display call launcher toggle >>"$log_file" 2>&1
+}
+
+start_quickshell() {
+    "$quickshell_bin" --path "$config_path" --no-duplicate --daemonize >>"$log_file" 2>&1 || true
+}
+
+
+: >"$log_file"
+if toggle_quickshell; then
+    exit 0
+fi
+
+start_quickshell
+sleep 0.5
+if toggle_quickshell; then
+    exit 0
+fi
+
+
+notify "Quickshell launcher is not available. See $log_file."
+exit 1

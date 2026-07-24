@@ -1,0 +1,12 @@
+[Unit]
+Description=espanso daemon
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/espanso daemon
+Restart=on-failure
+RestartSec=3
+Environment=PATH=/home/marcelof/.nix-profile/bin:/home/marcelof/bin:/home/marcelof/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+[Install]
+WantedBy=default.target

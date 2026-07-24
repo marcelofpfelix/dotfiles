@@ -1,0 +1,293 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/audioctl"
+noise_pid="$state_dir/brown-noise.pid"
+music_pid="$state_dir/music.pid"
+last_music="$state_dir/last-music"
+desired_noise="$state_dir/desired-noise"
+desired_music="$state_dir/desired-music"
+paused_state="$state_dir/paused"
+mkdir -p "$state_dir"
+rm -f "$paused_state"
+
+notify() {
+    notify-send "Audio" "$1" 2>/dev/null || true
+}
+
+
+pid_running() {
+    [ -n "${1:-}" ] || return 1
+    kill -0 "$1" 2>/dev/null
+}
+
+pid_file_running() {
+    [ -s "$1" ] || return 1
+    pid_running "$(cat "$1")"
+}
+
+noise_running() { pid_file_running "$noise_pid"; }
+music_running() { pid_file_running "$music_pid"; }
+
+desired_audio_missing() {
+    { [ -s "$desired_noise" ] && ! noise_running; } || { [ -s "$desired_music" ] && ! music_running; }
+}
+
+helper_stream_rows() {
+    pactl list sink-inputs 2>/dev/null | awk '
+function emit() {
+  if (id == "") return
+  if (app ~ /audioctl/ || app ~ /mpv/ || media ~ /Brown-noise/ || media ~ /mpv/) {
+    gsub(/^[[:space:]]*application.name = "/, "", app); gsub(/"$/, "", app)
+    gsub(/^[[:space:]]*media.name = "/, "", media); gsub(/"$/, "", media)
+    print id "|" app "|" media "|" mute
+  }
+}
+/^Sink Input #[0-9]+/ { emit(); id=$3; sub(/^#/, "", id); app=""; media=""; mute=""; next }
+/^[[:space:]]*application.name = / { app=$0; next }
+/^[[:space:]]*media.name = / { media=$0; next }
+/^[[:space:]]*Mute: / { mute=$2; next }
+END { emit() }
+'
+}
+
+
+helper_running() {
+    noise_running || music_running
+}
+
+kill_pid_group() {
+    local pid_file=$1 pid
+    [ -s "$pid_file" ] || return 0
+    pid=$(cat "$pid_file")
+    pid_running "$pid" || return 0
+    kill -CONT -- "-$pid" 2>/dev/null || kill -CONT "$pid" 2>/dev/null || true
+    kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
+}
+
+cleanup_stale_helpers() {
+    pkill -CONT -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
+    pkill -CONT -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
+    pkill -CONT -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
+    pkill -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
+    pkill -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
+    pkill -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
+}
+
+cleanup_stale_music() {
+    local target current pid
+    [ -s "$desired_music" ] || return 0
+    target=$(cat "$desired_music")
+    [ -n "$target" ] || return 0
+    current=""
+    [ -s "$music_pid" ] && current=$(cat "$music_pid")
+    ps -eo pid=,args= | awk -v target="$target" -v current="$current" '
+$1 != current && /mpv --no-video --force-window=no --loop-file=inf/ && index($0, target) > 0 { print $1 }
+' | while read -r pid; do
+        [ -n "$pid" ] || continue
+        kill -CONT "$pid" 2>/dev/null || true
+        kill "$pid" 2>/dev/null || true
+    done
+}
+
+noise_start() {
+    if noise_running; then
+        printf '1\n' >"$desired_noise"
+        notify "Brown noise is already playing"
+        return 0
+    fi
+    if command -v ffmpeg >/dev/null 2>&1 && command -v pw-cat >/dev/null 2>&1; then
+        nohup setsid sh -c 'ffmpeg -nostdin -hide_banner -loglevel error -f lavfi -i "anoisesrc=color=brown:amplitude=$1" -f s16le -ar 48000 -ac 2 - | pw-cat --playback --rate 48000 --channels 2 --format s16 --properties "application.name=audioctl" --properties "media.name=Brown-noise" -' audioctl-noise "${AUDIOCTL_NOISE_VOLUME:-0.15}" >/tmp/audioctl-brown-noise.log 2>&1 </dev/null &
+    elif command -v play >/dev/null 2>&1; then
+        nohup play -q -n synth 12:00:00 brownnoise vol "${AUDIOCTL_NOISE_VOLUME:-0.15}" >/tmp/audioctl-brown-noise.log 2>&1 </dev/null &
+    else
+        notify "ffmpeg plus pw-cat, or sox play, is required for brown noise"
+        return 1
+    fi
+    printf '%s\n' "$!" >"$noise_pid"
+    printf '1\n' >"$desired_noise"
+    rm -f "$paused_state"
+    notify "Brown noise started"
+}
+
+noise_stop() {
+    kill_pid_group "$noise_pid"
+    cleanup_stale_helpers
+    rm -f "$noise_pid" "$paused_state"
+    notify "Brown noise stopped"
+}
+
+music_stop() {
+    kill_pid_group "$music_pid"
+    cleanup_stale_music
+    rm -f "$music_pid" "$paused_state"
+}
+
+music_play() {
+    local target=${1:-$HOME/Music/panther.mp3}
+    music_stop
+    printf '%s\n' "$target" >"$last_music"
+    printf '%s\n' "$target" >"$desired_music"
+    if command -v mpv >/dev/null 2>&1; then
+        nohup setsid mpv --no-video --force-window=no --loop-file=inf "$target" >/tmp/audioctl-music.log 2>&1 </dev/null &
+    elif command -v ffmpeg >/dev/null 2>&1 && command -v pw-cat >/dev/null 2>&1; then
+        nohup setsid sh -c 'ffmpeg -nostdin -hide_banner -loglevel error -i "$1" -f s16le -ar 48000 -ac 2 - | pw-cat --playback --rate 48000 --channels 2 --format s16 --properties "application.name=audioctl" --properties "media.name=$(basename "$1")" -' audioctl-music "$target" >/tmp/audioctl-music.log 2>&1 </dev/null &
+    elif command -v play >/dev/null 2>&1; then
+        nohup setsid play -q "$target" >/tmp/audioctl-music.log 2>&1 </dev/null &
+    elif command -v cvlc >/dev/null 2>&1; then
+        nohup setsid cvlc --play-and-exit "$target" >/tmp/audioctl-music.log 2>&1 </dev/null &
+    else
+        notify "No local audio player found"
+        return 1
+    fi
+    printf '%s\n' "$!" >"$music_pid"
+    rm -f "$paused_state"
+    notify "Music started"
+}
+
+save_current() {
+    if noise_running || helper_stream_rows | awk -F'|' '$3 ~ /Brown-noise/ { found=1 } END { exit found ? 0 : 1 }'; then
+        printf '1\n' >"$desired_noise"
+    fi
+    if music_running && [ -s "$last_music" ]; then
+        cat "$last_music" >"$desired_music"
+    fi
+}
+
+restore_audio() {
+    local restored=0 target
+    if [ -s "$desired_noise" ] && ! noise_running; then
+        noise_start
+        restored=1
+    fi
+    if [ -s "$desired_music" ] && ! music_running; then
+        target=$(cat "$desired_music")
+        if [ -n "$target" ]; then
+            music_play "$target"
+            restored=1
+        fi
+    fi
+    [ "$restored" -eq 1 ]
+}
+
+play_pause_all() {
+    if desired_audio_missing && restore_audio; then
+        notify "Restored saved audio"
+    elif helper_running; then
+        music_stop
+        noise_stop
+        notify "Audio stopped"
+    elif restore_audio; then
+        notify "Restored saved audio"
+    elif [ -s "$last_music" ]; then
+        music_play "$(cat "$last_music")"
+        notify "Started last music"
+    else
+        notify "No saved audio. Right-click the bar button for mixer controls."
+    fi
+}
+
+stream_display() {
+    local rows labels muted label
+    rows=$(helper_stream_rows || true)
+    if [ -n "$rows" ]; then
+        labels=$(printf '%s\n' "$rows" | awk -F'|' '
+{ label=$3; sub(/ - mpv$/, "", label); if (label == "-" || label == "") label=$2; seen[label]=1; if ($4 != "yes") active=1 }
+END { first=1; for (label in seen) { if (!first) printf " + "; printf "%s", label; first=0 } if (!active) printf " (paused)" }
+')
+        printf ' %s\n' "$labels"
+        return 0
+    fi
+    if [ -s "$desired_noise" ] || [ -s "$desired_music" ]; then
+        labels=""
+        [ -s "$desired_noise" ] && labels="Brown-noise"
+        if [ -s "$desired_music" ]; then
+            label=$(basename "$(cat "$desired_music")")
+            [ -n "$labels" ] && labels="$labels + $label" || labels="$label"
+        fi
+        printf '󰓛 %s\n' "$labels"
+        return 0
+    fi
+    printf ''
+}
+
+audio_icon() {
+    local rows
+    rows=$(helper_stream_rows || true)
+    if [ -n "$rows" ]; then
+        if printf "%s
+" "$rows" | grep -q "|no$"; then
+            printf "󰏤
+"
+        else
+            printf "󰐊
+"
+        fi
+        return 0
+    fi
+    printf "󰐊
+"
+}
+
+case "${1:-status}" in
+    pause-all|pause)
+        music_stop
+        noise_stop
+        ;;
+    resume-all|resume)
+        restore_audio || true
+        ;;
+    play-pause-all|toggle)
+        play_pause_all
+        ;;
+    restore)
+        restore_audio || true
+        ;;
+    stop-all|stop)
+        music_stop
+        noise_stop
+        ;;
+    noise|brown|brown-noise|noise-start)
+        noise_start
+        ;;
+    noise-toggle)
+        if noise_running; then noise_stop; else noise_start; fi
+        ;;
+    noise-stop)
+        noise_stop
+        ;;
+    music|play-file)
+        shift || true
+        music_play "${1:-$HOME/Music/panther.mp3}"
+        ;;
+    last|last-music)
+        if [ -s "$last_music" ]; then cat "$last_music"; fi
+        ;;
+    save-current|save)
+        save_current
+        ;;
+    display|now-playing|playing)
+        stream_display
+        ;;
+    icon)
+        audio_icon
+        ;;
+    status)
+        if noise_running; then
+            printf 'brown-noise: running pid=%s\n' "$(cat "$noise_pid")"
+        else
+            printf 'brown-noise: stopped\n'
+        fi
+        if music_running; then
+            printf 'music: running pid=%s\n' "$(cat "$music_pid")"
+        else
+            printf 'music: stopped\n'
+        fi
+        printf 'helper: playing-or-stopped\n'
+        stream_display | sed 's/^/display: /'
+        ;;
+    *)
+        printf 'use: audioctl [pause-all|resume-all|play-pause-all|restore|stop-all|noise|noise-stop|music [file]|last-music|save-current|display|icon|status]\n' >&2
+        exit 2
+        ;;
+esac

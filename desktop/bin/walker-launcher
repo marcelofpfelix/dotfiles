@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:/nix/var/nix/profiles/default/bin:$PATH"
+exec walker "$@"

@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+notify-send -r 64021 -t 2500 "Key test" "Press a key. Raw input is used, so media/brightness keys work."
+
+stdbuf -oL sudo libinput debug-events | awk '
+function map_key(key) {
+    if (key == "KEY_VOLUMEUP") return "XF86AudioRaiseVolume"
+    if (key == "KEY_VOLUMEDOWN") return "XF86AudioLowerVolume"
+    if (key == "KEY_MUTE") return "XF86AudioMute"
+    if (key == "KEY_MICMUTE") return "XF86AudioMicMute"
+    if (key == "KEY_F20") return "F20"
+    if (key == "KEY_BRIGHTNESSUP") return "XF86MonBrightnessUp"
+    if (key == "KEY_BRIGHTNESSDOWN") return "XF86MonBrightnessDown"
+    if (key == "KEY_KBDILLUMUP") return "XF86KbdBrightnessUp"
+    if (key == "KEY_KBDILLUMDOWN") return "XF86KbdBrightnessDown"
+    if (key == "KEY_PLAYPAUSE") return "XF86AudioPlay"
+    if (key == "KEY_PAUSE") return "XF86AudioPause"
+    if (key == "KEY_NEXTSONG") return "XF86AudioNext"
+    if (key == "KEY_PREVIOUSSONG") return "XF86AudioPrev"
+    if (key == "KEY_PRINT") return "PRINT"
+    if (key == "KEY_ENTER") return "RETURN"
+    if (key == "KEY_SPACE") return "SPACE"
+    if (key == "KEY_TAB") return "TAB"
+    if (key == "KEY_ESC") return "ESCAPE"
+    if (key == "KEY_BACKSPACE") return "BACKSPACE"
+    if (key == "KEY_DELETE") return "DELETE"
+    if (key == "KEY_INSERT") return "INSERT"
+    if (key == "KEY_LEFT") return "LEFT"
+    if (key == "KEY_RIGHT") return "RIGHT"
+    if (key == "KEY_UP") return "UP"
+    if (key == "KEY_DOWN") return "DOWN"
+    if (key == "KEY_LEFTMETA" || key == "KEY_RIGHTMETA") return "SUPER"
+    if (key == "KEY_LEFTCTRL" || key == "KEY_RIGHTCTRL") return "CTRL"
+    if (key == "KEY_LEFTALT" || key == "KEY_RIGHTALT") return "ALT"
+    if (key == "KEY_LEFTSHIFT" || key == "KEY_RIGHTSHIFT") return "SHIFT"
+    if (key ~ /^KEY_[A-Z]$/) return substr(key, 5)
+    if (key ~ /^KEY_[0-9]$/) return substr(key, 5)
+    if (key ~ /^KEY_F[0-9]+$/) return substr(key, 5)
+    if (key ~ /^KEY_/) {
+        out = substr(key, 5)
+        gsub(/_/, "", out)
+        return out
+    }
+    return key
+}
+function describe_key(key, hypr) {
+    if (key == "KEY_MUTE") return "output mute"
+    if (key == "KEY_F20") return "mic mute"
+    if (key == "KEY_MICMUTE") return "mic mute"
+    if (key == "KEY_VOLUMEUP") return "output volume up"
+    if (key == "KEY_VOLUMEDOWN") return "output volume down"
+    if (key == "KEY_BRIGHTNESSUP") return "screen brightness up"
+    if (key == "KEY_BRIGHTNESSDOWN") return "screen brightness down"
+    if (key == "KEY_KBDILLUMUP") return "keyboard brightness up"
+    if (key == "KEY_KBDILLUMDOWN") return "keyboard brightness down"
+    return hypr
+}
+/KEY_[A-Z0-9_]+.*pressed/ {
+    key = $0
+    sub(/^.*KEY_/, "KEY_", key)
+    sub(/ .*/, "", key)
+    hypr = map_key(key)
+    desc = describe_key(key, hypr)
+    print "Hyprland key: " hypr "  (" desc ", raw: " key ")"
+    fflush()
+    system("printf %s " hypr " | wl-copy")
+    system("notify-send -r 64021 -t 2500 \"Hyprland key\" \"" hypr "\n" desc "\nraw: " key "\"")
+}
+'

@@ -24,10 +24,14 @@ load_libs() {
 show_icon() {
   local color=$1 glyph="gpg " prefix="" suffix=""
   declare -F icon >/dev/null 2>&1 && glyph="$(icon gpg)"
-  if [[ -z "${NO_COLOR:-}" && "${LEMONBAR:-0}" == 1 ]]; then
-    case "$color" in
-      r) prefix="%{F#f38ba8}"; suffix="%{F-}" ;;
-      y) prefix="%{F#f9e2af}"; suffix="%{F-}" ;;
+  if [[ -z "${NO_COLOR:-}" ]]; then
+    case "${BAR_COLOR_FORMAT:-}" in
+      quickshell)
+        case "$color" in
+          r) prefix='<span style="color:#f38ba8">'; suffix='</span>' ;;
+          y) prefix='<span style="color:#f9e2af">'; suffix='</span>' ;;
+        esac
+        ;;
     esac
   fi
   printf '%s%s%s\n' "$prefix" "$glyph" "$suffix"

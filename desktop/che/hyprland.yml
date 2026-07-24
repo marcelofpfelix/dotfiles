@@ -1,0 +1,46 @@
+# Hyprland
+
+## key bindings
+
+basics:
+    $mod+Enter: open Ghostty
+    $mod+h/j/k/l: focus left/down/up/right
+    $mod+Space: open Quickshell fuzzy application launcher
+
+moving windows:
+    $mod+Shift+h/j/k/l: move window left/down/up/right
+
+modifying windows:
+    $mod+f: toggle fullscreen
+    $mod+v: split vertically
+    $mod+z: split horizontally
+    $mod+e: toggle split
+    $mod+Shift+Space: toggle floating
+    $mod+Ctrl+h/j/k/l: resize active window
+    $mod+r: show resize mapping
+    $mod+s: toggle scratchpad
+    $mod+w: close focused window
+    $mod+a: show the unsupported focus-parent notice
+
+workspaces:
+    $mod+0-9: switch workspace
+    $mod+Shift+0-9: move focused window to workspace
+    $mod+Tab: next workspace
+    $mod+Shift+Tab: previous workspace
+    $mod+Shift+.: move workspace to next monitor
+
+apps:
+    $mod+d: open Quickshell fuzzy application launcher
+    $mod+u: intentionally unbound
+    $mod+i: open htop
+    $mod+Shift+q: close focused window
+
+session:
+    hypr-session status: check installed tools and active session
+    hypr-session test: start Hyprland with HYPR_PROFILE=default by default
+    hypr-session reload: reload Hyprland and restart Quickshell
+    HYPR_PROFILE=omarchy hypr-session test: test the Wayland-first profile
+
+archive:
+    X11 i3/polybar/rofi/picom files are archived in archive/x11/desktop
+    the active profile has no X11 fallback

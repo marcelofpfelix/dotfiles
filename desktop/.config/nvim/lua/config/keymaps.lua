@@ -1,3 +1,4 @@
+-- leave insert mode
 vim.api.nvim_set_keymap("i", "jj", "<Esc>", {noremap=false})
 -- buffers
 vim.api.nvim_set_keymap("n", "tk", ":blast<enter>", {noremap=false})
@@ -6,8 +7,11 @@ vim.api.nvim_set_keymap("n", "th", ":bprev<enter>", {noremap=false})
 vim.api.nvim_set_keymap("n", "tl", ":bnext<enter>", {noremap=false})
 vim.api.nvim_set_keymap("n", "td", ":bdelete<enter>", {noremap=false})
 -- files
+-- force quit current buffer/window
 vim.api.nvim_set_keymap("n", "QQ", ":q!<enter>", {noremap=false})
+-- toggle transparent editor background
 vim.api.nvim_set_keymap("n", "TT", ":TransparentToggle<CR>", {noremap=true})
+-- clear search highlight
 vim.api.nvim_set_keymap("n", "ss", ":noh<CR>", {noremap=true})
 -- splits
 vim.api.nvim_set_keymap("n", "<C-W>,", ":vertical resize -10<CR>", {noremap=true})
@@ -25,6 +29,7 @@ vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = tr
 vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
 
+-- insert Go if err snippet
 vim.keymap.set("n", "<leader>ee", "<cmd>GoIfErr<cr>",
   {silent = true, noremap = true}
 )
@@ -71,6 +76,8 @@ vim.keymap.set("n", "<leader><tab>d", "<cmd>tabclose<cr>", { desc = "Close Tab" 
 vim.keymap.set("n", "<leader><tab>[", "<cmd>tabprevious<cr>", { desc = "Previous Tab" })
 
 -- twilight
+-- toggle Twilight focus mode
 vim.api.nvim_set_keymap("n", "tw", ":Twilight<enter>", {noremap=false})
 -- Noice
+-- dismiss Noice messages
 vim.api.nvim_set_keymap("n", "<leader>nn", ":Noice dismiss<CR>", {noremap=true})

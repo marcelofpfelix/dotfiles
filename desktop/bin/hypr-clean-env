@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Hyprland is started through Nix on Ubuntu, so GUI apps launched by Hyprland
+# inherit Nix/Mesa loader variables that can break system GTK/EGL clients.
+unset __EGL_VENDOR_LIBRARY_FILENAMES
+unset LD_LIBRARY_PATH
+unset LIBGL_DRIVERS_PATH
+unset LIBVA_DRIVERS_PATH
+unset GBM_BACKENDS_PATH
+unset VDPAU_DRIVER_PATH
+unset VK_ICD_FILENAMES
+unset VK_LAYER_PATH
+unset __GLX_VENDOR_LIBRARY_NAME
+
+exec "$@"

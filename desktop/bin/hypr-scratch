@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+
+scratch_workspace="special:scratchpad"
+
+eval_hypr() {
+    hyprctl eval "$1" >/dev/null
+}
+
+scratch_count() {
+    hyprctl clients -j 2>/dev/null \
+        | jq --arg workspace "$scratch_workspace" '[.[] | select(.workspace.name == $workspace)] | length' 2>/dev/null \
+        || printf 0
+}
+
+move_active() {
+    eval_hypr 'hl.dispatch(hl.dsp.window.move({ workspace = "special:scratchpad", follow = false }))'
+}
+
+toggle_scratch() {
+    eval_hypr 'hl.dispatch(hl.dsp.workspace.toggle_special("scratchpad"))'
+}
+
+case "${1:-toggle}" in
+    toggle)
+        if [ "$(scratch_count)" -eq 0 ]; then
+            move_active
+        fi
+        toggle_scratch
+        ;;
+    move)
+        move_active
+        ;;
+    show)
+        toggle_scratch
+        ;;
+    *)
+        printf 'use: hypr-scratch [toggle|move|show]\n' >&2
+        exit 2
+        ;;
+esac

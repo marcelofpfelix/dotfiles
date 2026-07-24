@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+profile() {
+    powerprofilesctl get 2>/dev/null || printf 'unknown\n'
+}
+
+battery_path() {
+    upower -e 2>/dev/null | awk '/battery_BAT/ { print; exit }'
+}
+
+battery_status() {
+    local path
+    path=$(battery_path || true)
+    [ -n "$path" ] || return 0
+    upower -i "$path" 2>/dev/null | awk '
+        /^[[:space:]]*percentage:/ { pct=$2 }
+        /^[[:space:]]*capacity:/ { cap=$2 }
+        END {
+            if (pct != "" && cap != "") print "Battery " pct " | Health " cap
+            else if (pct != "") print "Battery " pct
+        }
+    '
+}
+
+case "${1:-status}" in
+    status)
+        battery=$(battery_status || true)
+        if [ -n "$battery" ]; then
+            printf '%s | %s\n' "$(profile)" "$battery"
+        else
+            profile
+        fi
+        ;;
+    set-profile)
+        shift || true
+        case "${1:-}" in
+            performance|balanced|power-saver) powerprofilesctl set "$1" ;;
+            *) printf 'use: power-status set-profile [performance|balanced|power-saver]\n' >&2; exit 2 ;;
+        esac
+        ;;
+    *)
+        printf 'use: power-status [status|set-profile]\n' >&2
+        exit 2
+        ;;
+esac

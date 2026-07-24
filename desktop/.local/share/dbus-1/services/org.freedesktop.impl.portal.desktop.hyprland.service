@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.freedesktop.impl.portal.desktop.hyprland
+Exec=/home/marcelof/bin/xdph
+SystemdService=xdg-desktop-portal-hyprland.service

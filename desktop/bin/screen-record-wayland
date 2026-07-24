@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/screen-record-wayland"
+pid_file="$state_dir/pid"
+last_file="$state_dir/last"
+log_file="$state_dir/log"
+
+recordings_dir() {
+  mkdir -p "$HOME/Videos/Recordings"
+  printf '%s\n' "$HOME/Videos/Recordings"
+}
+
+last_path() {
+  [ -s "$last_file" ] && sed -n '1p' "$last_file"
+}
+
+is_running() {
+  [ -s "$pid_file" ] && kill -0 "$(sed -n '1p' "$pid_file")" 2>/dev/null
+}
+
+notify() {
+  notify-send "Screen recording" "$1" 2>/dev/null || true
+}
+
+require_recorder() {
+  if ! command -v wf-recorder >/dev/null 2>&1; then
+    notify "wf-recorder is not installed"
+    printf 'missing wf-recorder\n' >&2
+    exit 127
+  fi
+}
+
+start_recording() {
+  require_recorder
+  mkdir -p "$state_dir"
+  if is_running; then
+    printf 'recording %s\n' "$(basename "$(last_path)")"
+    return
+  fi
+
+  out="$(recordings_dir)/$(date +%Y-%m-%d_%H-%M-%S).mp4"
+  geometry="$(slurp)" || exit 0
+  wf-recorder -g "$geometry" -f "$out" >"$log_file" 2>&1 &
+  printf '%s\n' "$!" >"$pid_file"
+  printf '%s\n' "$out" >"$last_file"
+  notify "$(basename "$out")"
+}
+
+stop_recording() {
+  mkdir -p "$state_dir"
+  if ! is_running; then
+    printf 'idle\n'
+    return
+  fi
+
+  pid="$(sed -n '1p' "$pid_file")"
+  kill -INT "$pid" 2>/dev/null || true
+  rm -f "$pid_file"
+  notify "Saved $(basename "$(last_path)")"
+}
+
+case "${1:-toggle}" in
+  start)
+    start_recording
+    ;;
+  stop)
+    stop_recording
+    ;;
+  toggle)
+    if is_running; then stop_recording; else start_recording; fi
+    ;;
+  status)
+    if is_running; then
+      printf 'recording %s\n' "$(basename "$(last_path)")"
+    elif command -v wf-recorder >/dev/null 2>&1; then
+      printf 'idle\n'
+    else
+      printf 'missing wf-recorder\n'
+    fi
+    ;;
+  open-last)
+    path="$(last_path)"
+    [ -n "${path:-}" ] && [ -e "$path" ] && exec xdg-open "$path"
+    exec xdg-open "$(recordings_dir)"
+    ;;
+  copy-path)
+    path="$(last_path)"
+    [ -n "${path:-}" ] || exit 1
+    printf '%s' "$path" | wl-copy
+    notify "Copied path"
+    ;;
+  *)
+    printf 'use: screen-record-wayland [start|stop|toggle|status|open-last|copy-path]\n' >&2
+    exit 2
+    ;;
+esac

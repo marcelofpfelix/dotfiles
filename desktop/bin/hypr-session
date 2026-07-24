@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:$PATH"
+
+config="${HYPR_CONFIG:-$HOME/.config/hypr/init.lua}"
+shell_config="${QUICKSHELL_CONFIG:-marcelof}"
+profile="${HYPR_PROFILE:-default}"
+start_shell() {
+    QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}" "$HOME/.nix-profile/bin/quickshell" --path "$HOME/.config/quickshell/marcelof/shell.qml" --daemonize
+}
+
+need() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        printf 'missing: %s\n' "$1" >&2
+        return 1
+    fi
+}
+
+service_state() {
+    local scope="$1" unit="$2" state
+    if [ "$scope" = "user" ]; then
+        state=$(systemctl --user is-active "$unit" 2>/dev/null || true)
+    else
+        state=$(systemctl is-active "$unit" 2>/dev/null || true)
+    fi
+    printf '%s\n' "${state:-unknown}"
+}
+
+status() {
+    local missing=0
+    local required_bins=(
+        start-hyprland
+        hyprctl
+        quickshell
+        grim
+        slurp
+        swappy
+        tesseract
+        wf-recorder
+        brightnessctl
+        pactl
+        wpctl
+        dex
+        jq
+        notify-send
+        nmcli
+        wl-copy
+        wl-paste
+        cliphist
+        playerctl
+        pavucontrol
+        xdg-open
+        loginctl
+        xdph
+        xdph-install-system
+    )
+
+    for bin in "${required_bins[@]}"; do
+        need "$bin" || missing=1
+    done
+
+    if [ ! -e /etc/NIXOS ] && command -v start-hyprland >/dev/null 2>&1; then
+        need nixGL || missing=1
+    fi
+
+    if command -v hyprlock >/dev/null 2>&1; then
+        printf 'locker: hyprlock\n'
+    elif command -v swaylock >/dev/null 2>&1; then
+        printf 'locker: swaylock\n'
+    elif command -v loginctl >/dev/null 2>&1; then
+        printf 'locker: loginctl fallback\n'
+    else
+        printf 'missing: hyprlock, swaylock, or loginctl\n' >&2
+        missing=1
+    fi
+
+    if ! command -v hyprpicker >/dev/null 2>&1; then
+        printf 'optional missing: hyprpicker\n' >&2
+    fi
+
+    if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        printf 'session: hyprland\n'
+        if command -v systemctl >/dev/null 2>&1; then
+            local portal_hyprland portal bluetooth
+            portal_hyprland=$(service_state user xdg-desktop-portal-hyprland.service)
+            portal=$(service_state user xdg-desktop-portal.service)
+            printf 'portal-hyprland: %s\n' "$portal_hyprland"
+            printf 'portal: %s\n' "$portal"
+            [[ "$portal_hyprland" = "active" && "$portal" = "active" ]] || missing=1
+            if command -v bluetoothctl >/dev/null 2>&1; then
+                bluetooth=$(service_state system bluetooth.service)
+                printf 'bluetooth: %s\n' "$bluetooth"
+            fi
+        fi
+        hyprctl version || true
+    elif [ -n "${DISPLAY:-}" ]; then
+        printf 'session: x11 or xwayland display=%s\n' "$DISPLAY"
+    else
+        printf 'session: none detected\n'
+    fi
+
+    return "$missing"
+}
+
+test_session() {
+    status || true
+    printf 'config: %s\n' "$config"
+    printf 'quickshell: %s\n' "$shell_config"
+    printf 'hypr_profile: %s\n' "$profile"
+
+    if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        hyprctl reload
+        pkill quickshell 2>/dev/null || true
+        start_shell
+        return 0
+    fi
+
+    exec start-hyprland -- --config "$config"
+}
+
+reload_session() {
+    need hyprctl
+    hyprctl reload
+    if command -v quickshell >/dev/null 2>&1; then
+        pkill quickshell 2>/dev/null || true
+        start_shell
+    fi
+}
+
+rollback() {
+    if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+        hyprctl dispatch exit
+    else
+        printf 'Not inside Hyprland. X11 configs are archived under archive/x11/desktop.\n'
+    fi
+}
+
+case "${1:-status}" in
+    status) status ;;
+    test|start) test_session ;;
+    reload) reload_session ;;
+    rollback|exit) rollback ;;
+    *)
+        printf 'usage: %s [status|test|start|reload|rollback]\n' "${0##*/}" >&2
+        exit 2
+        ;;
+esac

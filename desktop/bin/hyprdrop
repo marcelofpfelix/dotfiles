@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+
+[ "${1:-}" ] || exit 2
+app="$1"
+shift || true
+
+fullscreen=$(hyprctl activewindow -j 2>/dev/null | jq -r '.fullscreen // 0' 2>/dev/null || printf 0)
+if [ "$fullscreen" != "0" ]; then
+    notify-send "Hyprland dropdown" "Opening $app. Current window is fullscreen; press Win+F if you do not see it." 2>/dev/null || true
+else
+    notify-send "Hyprland dropdown" "Opening $app" 2>/dev/null || true
+fi
+
+nohup hypr-clean-env hypr-term "$app" "$@" >/tmp/hyprdrop.log 2>&1 </dev/null &

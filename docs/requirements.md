@@ -93,6 +93,10 @@ On-demand binaries and services:
 - Codex-Workflows from `codex plugin marketplace add
   robzilla1738/Codex-Workflows` and `codex plugin add
   codex-workflows@codex-workflows`
+- Ponytail from `ponytail-install`, or manually with `codex plugin marketplace add
+  DietrichGebert/ponytail` and `codex plugin add ponytail@ponytail`. The tracked
+  default config lives at `desktop/.config/ponytail/config.json` and sets
+  `defaultMode` to `full`.
 - FFF MCP/binary for repeated fuzzy/frecency-heavy search
 - Sourcebot for org-scale multi-repo search
 - LiteLLM, Langfuse, and Helicone for shared API routing and observability

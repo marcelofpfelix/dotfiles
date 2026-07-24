@@ -83,6 +83,9 @@ function icon() {
             ['net_crit']='🦍'
             ['dns_crit']='🐒'
             ['dns_warn']='🦥'
+            ['docker']='▣ '
+            ['mem']='▥ '
+            ['cpu']='▧ '
             ['temp']='🌡️ '
         )
     fi

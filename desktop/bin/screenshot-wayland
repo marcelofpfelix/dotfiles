@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/screenshot-wayland"
+last_file="$state_dir/last"
+
+usage() {
+    printf 'use: screenshot-wayland [edit|copy|save|full|active|open-last|copy-last|copy-path|ocr|ocr-last|last]\n' >&2
+}
+
+ensure_dirs() {
+    mkdir -p "$HOME/Pictures/Screenshots" "$state_dir"
+}
+
+file_name() {
+    ensure_dirs
+    date +"$HOME/Pictures/Screenshots/%Y-%m-%d_%H-%M-%S.png"
+}
+
+remember() {
+    ensure_dirs
+    printf '%s\n' "$1" >"$last_file"
+}
+
+last_path() {
+    [ -s "$last_file" ] && sed -n '1p' "$last_file"
+}
+
+need_last() {
+    path="$(last_path)"
+    [ -n "${path:-}" ] && [ -f "$path" ] && { printf '%s\n' "$path"; return; }
+    notify-send "Screenshot" "No saved screenshot yet" 2>/dev/null || true
+    exit 1
+}
+
+ocr_image() {
+    path=$1
+    command -v tesseract >/dev/null 2>&1 || { notify-send "Screenshot OCR" "tesseract is not installed" 2>/dev/null || true; exit 127; }
+    text="$(tesseract "$path" stdout 2>/dev/null | sed '/^[[:space:]]*$/d')"
+    if [ -z "$text" ]; then
+        notify-send "Screenshot OCR" "No text detected" 2>/dev/null || true
+        return 1
+    fi
+    printf '%s' "$text" | wl-copy
+    notify-send "Screenshot OCR" "Copied text to clipboard" 2>/dev/null || true
+}
+
+case "${1:-edit}" in
+    edit|area)
+        grim -g "$(slurp)" - | swappy -f -
+        ;;
+    copy|clip|clipboard)
+        grim -g "$(slurp)" - | wl-copy
+        notify-send "Screenshot" "Copied selected area to clipboard" 2>/dev/null || true
+        ;;
+    save)
+        out=$(file_name)
+        grim -g "$(slurp)" "$out"
+        remember "$out"
+        notify-send "Screenshot" "$out" 2>/dev/null || true
+        ;;
+    full)
+        out=$(file_name)
+        grim "$out"
+        remember "$out"
+        notify-send "Screenshot" "$out" 2>/dev/null || true
+        ;;
+    active)
+        out=$(file_name)
+        hyprctl -j activewindow | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"' | grim -g - "$out"
+        remember "$out"
+        notify-send "Screenshot" "$out" 2>/dev/null || true
+        ;;
+    ocr)
+        out="$state_dir/ocr.png"
+        ensure_dirs
+        grim -g "$(slurp)" "$out"
+        remember "$out"
+        ocr_image "$out"
+        ;;
+    ocr-last)
+        ocr_image "$(need_last)"
+        ;;
+    open-last|open|share)
+        xdg-open "$(need_last)"
+        ;;
+    copy-last|copy-image)
+        wl-copy --type image/png <"$(need_last)"
+        notify-send "Screenshot" "Copied last screenshot image" 2>/dev/null || true
+        ;;
+    copy-path|path)
+        printf '%s' "$(need_last)" | wl-copy
+        notify-send "Screenshot" "Copied screenshot path" 2>/dev/null || true
+        ;;
+    last)
+        need_last
+        ;;
+    *)
+        usage
+        exit 2
+        ;;
+esac

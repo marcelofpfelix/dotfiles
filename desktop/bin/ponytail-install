@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+if ! command -v codex >/dev/null 2>&1; then
+  printf 'missing codex on PATH
+' >&2
+  exit 1
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  printf 'warning: node is not on PATH; Ponytail skills install, but lifecycle hooks stay inactive
+' >&2
+fi
+
+codex plugin marketplace add DietrichGebert/ponytail
+codex plugin add ponytail@ponytail
+
+cat <<'EOF'
+Ponytail installed for Codex.
+Next: start a new Codex session, open /hooks, and review/trust the Ponytail lifecycle hooks if desired.
+EOF

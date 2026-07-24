@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Screenshot (Wayland)
+GenericName=Screenshot tool
+Comment=Capture and annotate a selected area with grim, slurp, and swappy
+Keywords=screenshot;capture;screen;print;grim;slurp;swappy;flameshot;
+Exec=/home/marcelof/bin/screenshot-wayland edit
+Icon=applets-screenshooter
+Terminal=false
+Categories=Utility;Graphics;
+StartupNotify=false

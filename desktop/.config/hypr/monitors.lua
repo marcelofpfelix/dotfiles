@@ -1,0 +1,2 @@
+-- Local Hyprland monitor overrides.
+-- Keep empty to use the selected profile defaults.

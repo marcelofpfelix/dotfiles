@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  printf 'usage: bri <percent|+percent|-percent>\n' >&2
+  printf 'examples: bri 10, bri 90, bri -10, bri +15\n' >&2
+}
+
+if [ "$#" -ne 1 ]; then
+  usage
+  exit 2
+fi
+
+value=$1
+
+case "$value" in
+  +[0-9]*)
+    percent=${value#+}
+    mode=up
+    ;;
+  -[0-9]*)
+    percent=${value#-}
+    mode=down
+    ;;
+  [0-9]*)
+    percent=$value
+    mode=set
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
+
+case "$percent" in
+  ''|*[!0-9]*)
+    usage
+    exit 2
+    ;;
+esac
+
+if [ "$percent" -gt 100 ]; then
+  printf 'bri: percent must be between 0 and 100\n' >&2
+  exit 2
+fi
+
+case "$mode" in
+  up)
+    exec sudo brightnessctl set "+${percent}%"
+    ;;
+  down)
+    exec sudo brightnessctl set "${percent}%-"
+    ;;
+  set)
+    exec sudo brightnessctl set "${percent}%"
+    ;;
+esac

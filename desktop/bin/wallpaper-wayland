@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/marcelof"
+state_file="$state_dir/wallpaper"
+default_wallpaper="$HOME/.local/share/backgrounds/bkg2.png"
+wallpaper_dirs=(
+  "$HOME/.local/share/backgrounds"
+  "$HOME/Pictures/Wallpapers"
+  "$HOME/Pictures/wallpapers"
+)
+
+is_image() {
+  case "${1,,}" in
+    *.png|*.jpg|*.jpeg|*.webp) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+current() {
+  if [ -s "$state_file" ]; then
+    path="$(sed -n '1p' "$state_file")"
+    [ -f "$path" ] && { printf '%s\n' "$path"; return; }
+  fi
+  printf '%s\n' "$default_wallpaper"
+}
+
+list_wallpapers() {
+  active="$(current)"
+  for dir in "${wallpaper_dirs[@]}"; do
+    [ -d "$dir" ] || continue
+    find "$dir" -maxdepth 2 -type f \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) 2>/dev/null
+  done | sort -u | while IFS= read -r path; do
+    name="${path##*/}"
+    if [ "$path" = "$active" ]; then mark='*'; else mark=''; fi
+    printf '%s\t%s\t%s\n' "$name" "$path" "$mark"
+  done
+}
+
+set_wallpaper() {
+  path="${1:-}"
+  [ -n "$path" ] || { printf 'missing wallpaper path\n' >&2; exit 2; }
+  [ -f "$path" ] || { printf 'not found: %s\n' "$path" >&2; exit 1; }
+  is_image "$path" || { printf 'not an image: %s\n' "$path" >&2; exit 1; }
+  mkdir -p "$state_dir"
+  printf '%s\n' "$path" >"$state_file"
+  notify-send "Wallpaper" "${path##*/}" 2>/dev/null || true
+  printf '%s\n' "$path"
+}
+
+case "${1:-current}" in
+  current)
+    current
+    ;;
+  list)
+    list_wallpapers
+    ;;
+  set)
+    shift
+    set_wallpaper "$1"
+    ;;
+  open-dir)
+    for dir in "${wallpaper_dirs[@]}"; do
+      [ -d "$dir" ] && exec xdg-open "$dir"
+    done
+    mkdir -p "$HOME/.local/share/backgrounds"
+    exec xdg-open "$HOME/.local/share/backgrounds"
+    ;;
+  open-current)
+    path="$(current)"
+    [ -f "$path" ] && exec xdg-open "$path"
+    ;;
+  *)
+    printf 'use: wallpaper-wayland [current|list|set PATH|open-dir|open-current]\n' >&2
+    exit 2
+    ;;
+esac

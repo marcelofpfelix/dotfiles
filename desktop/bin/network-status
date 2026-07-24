@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+wifi_state() {
+    nmcli radio wifi 2>/dev/null || printf 'unknown\n'
+}
+
+primary_connection() {
+    nmcli -t -f DEVICE,TYPE,STATE,CONNECTION dev status 2>/dev/null | awk -F: '
+        $3 ~ /^connected/ && ($2 == "wifi" || $2 == "ethernet") {
+            type = $2 == "wifi" ? "Wi-Fi" : "Ethernet"
+            name = $4 != "" ? $4 : $1
+            print type ": " name
+            found = 1
+            exit
+        }
+        END { if (!found) print "No primary network" }
+    '
+}
+
+case "${1:-status}" in
+    status)
+        printf '%s • Wi-Fi %s\n' "$(primary_connection)" "$(wifi_state)"
+        ;;
+    wifi-toggle)
+        if [ "$(wifi_state)" = "enabled" ]; then
+            nmcli radio wifi off
+        else
+            nmcli radio wifi on
+        fi
+        ;;
+    *)
+        printf 'use: network-status [status|wifi-toggle]\n' >&2
+        exit 2
+        ;;
+esac

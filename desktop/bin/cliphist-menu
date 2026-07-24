@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+notice() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "Clipboard history" "$1"
+    else
+        printf 'Clipboard history: %s\n' "$1" >&2
+    fi
+}
+
+need() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        notice "Install $1 to enable clipboard history."
+        exit 1
+    fi
+}
+
+case "${1:-menu}" in
+    watch)
+        need wl-paste
+        need cliphist
+        wl-paste --type text --watch sh -c 'cliphist store && qs-bar clipboard-update >/dev/null 2>&1 || true' &
+        text_pid=$!
+        wl-paste --type image --watch sh -c 'cliphist store && qs-bar clipboard-update >/dev/null 2>&1 || true' &
+        image_pid=$!
+        trap 'kill "$text_pid" "$image_pid" 2>/dev/null || true' EXIT INT TERM
+        wait
+        ;;
+    menu)
+        need cliphist
+        need wl-copy
+        if [[ -z "${CLIPHIST_FORCE_TERMINAL:-}" && -n "${WAYLAND_DISPLAY:-}" ]] && command -v qs-bar >/dev/null 2>&1; then
+            exec qs-bar clipboard
+        fi
+
+        entries=$(cliphist list) || exit 1
+        if [[ -z "$entries" ]]; then
+            notice "No clipboard history yet."
+            exit 0
+        fi
+
+        if command -v fzf >/dev/null 2>&1; then
+            selection=$(printf '%s\n' "$entries" | fzf) || exit 0
+        else
+            notice "Install fzf to select clipboard history outside Wayland."
+            exit 1
+        fi
+
+        [[ -n "$selection" ]] || exit 0
+        printf '%s' "$selection" | cliphist decode | wl-copy
+        ;;
+    *)
+        printf 'usage: %s [menu|watch]\n' "${0##*/}" >&2
+        exit 2
+        ;;
+esac

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Discord
+StartupWMClass=discord
+Comment=All-in-one voice and text chat for gamers.
+GenericName=Internet Messenger
+Exec=/home/marcelof/bin/discord-wayland
+Icon=discord
+Type=Application
+Categories=Network;InstantMessaging;

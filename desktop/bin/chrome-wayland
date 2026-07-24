@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+chrome_bin="${CHROME_BIN:-/usr/bin/google-chrome-stable}"
+if [ ! -x "$chrome_bin" ]; then
+  chrome_bin="$(command -v google-chrome || command -v google-chrome-stable)"
+fi
+
+# Hyprland is started through Nix on Ubuntu. Drop inherited GL/Vulkan loader
+# overrides before launching Chrome, otherwise Chrome can fall back to disabled GL.
+unset __EGL_VENDOR_LIBRARY_FILENAMES
+unset LD_LIBRARY_PATH
+unset LIBGL_DRIVERS_PATH
+unset LIBVA_DRIVERS_PATH
+unset GBM_BACKENDS_PATH
+unset VDPAU_DRIVER_PATH
+unset VK_ICD_FILENAMES
+unset VK_LAYER_PATH
+unset __GLX_VENDOR_LIBRARY_NAME
+unset QT_QUICK_BACKEND
+
+flags=(
+  --ozone-platform=wayland
+  --enable-native-notifications
+  --enable-features=UseOzonePlatform,WebRTCPipeWireCapturer
+  --disable-features=Vulkan
+  --disable-vulkan
+)
+
+exec "$chrome_bin" "${flags[@]}" "$@"

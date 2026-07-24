@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+
+run_portal() {
+    local bin="$1"
+    shift
+    local real_bin
+    real_bin="$(readlink -f "$bin" 2>/dev/null || printf "%s\n" "$bin")"
+
+    if [[ "$real_bin" == /nix/store/* ]] && command -v nixGL >/dev/null 2>&1; then
+        exec nixGL "$bin" "$@"
+    fi
+
+    exec hypr-clean-env "$bin" "$@"
+}
+
+if command -v xdg-desktop-portal-hyprland >/dev/null 2>&1; then
+    run_portal "$(command -v xdg-desktop-portal-hyprland)" "$@"
+fi
+
+for candidate in /nix/store/*-xdg-desktop-portal-hyprland-*/libexec/xdg-desktop-portal-hyprland; do
+    [ -x "$candidate" ] && run_portal "$candidate" "$@"
+done
+
+printf "xdg-desktop-portal-hyprland not found\n" >&2
+exit 127

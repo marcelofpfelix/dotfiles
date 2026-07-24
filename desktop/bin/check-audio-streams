@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+pactl list sink-inputs 2>/dev/null | awk '
+function emit() {
+    if (id == "") return
+    if (app == "") app = "Application"
+    if (media == "") media = "Playback"
+    if (volume == "") volume = "--"
+    if (mute == "") mute = "--"
+    gsub(/[|]/, " ", app)
+    gsub(/[|]/, " ", media)
+    print id "|" app "|" media "|" volume "|" mute
+}
+/^Sink Input #[0-9]+/ {
+    emit()
+    id = $3
+    sub(/^#/, "", id)
+    app = media = volume = mute = ""
+    next
+}
+/^[[:space:]]*application.name = / {
+    app = $0
+    sub(/^[[:space:]]*application.name = "/, "", app)
+    sub(/"$/, "", app)
+    next
+}
+/^[[:space:]]*media.name = / {
+    media = $0
+    sub(/^[[:space:]]*media.name = "/, "", media)
+    sub(/"$/, "", media)
+    next
+}
+/^[[:space:]]*Mute: / {
+    mute = $2
+    next
+}
+/^[[:space:]]*Volume: / {
+    if (match($0, /[0-9]+%/)) volume = substr($0, RSTART, RLENGTH)
+    next
+}
+END { emit() }
+'

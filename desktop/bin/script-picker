@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:/nix/var/nix/profiles/default/bin:$PATH"
+. "${HOME}/lib/lib_picker.sh"
+
+prompt="${1:-Select}"
+picker_choose "$prompt"
