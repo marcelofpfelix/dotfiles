@@ -159,6 +159,13 @@
 
 ## Follow-up
 
+- [ ] Reduce controls-hub keybindings to one real shortcut.
+  - Problem: `Win+Ctrl+V` and `Win+Ctrl+W` were routed to Controls only to block fall-through into `Win+V` split and `Win+W` close.
+  - Acceptance: keep `Win+Ctrl+A` as the only intentional Controls shortcut, and make `Win+Ctrl+V`/`Win+Ctrl+W` harmless without adding duplicate menu shortcuts.
+- [ ] Fix `Win+V` behavior cleanly.
+  - Problem: `Win+V` is currently overloaded by i3 split parity and can interact badly with modifier fall-through and app paste muscle memory.
+  - Acceptance: decide whether `Win+V` remains split-vertical, moves to another chord, or becomes universal paste; document the chosen behavior and verify it with live Hyprland bindings.
+
 - [x] Build a Quickshell power/session popup for `lock`, `logout`, `suspend`, `hibernate`, `reboot`, and `shutdown`.
   - Use native commands behind a local helper or IPC target: `loginctl lock-session`, `hyprctl dispatch exit`, `systemctl suspend`, `systemctl hibernate`, `systemctl reboot`, and `systemctl poweroff`.
   - Require confirmation for `logout`, `hibernate`, `reboot`, and `shutdown`.
