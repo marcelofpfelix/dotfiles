@@ -1728,17 +1728,17 @@ ShellRoot {
             RowLayout {
               Layout.fillWidth: true
               spacing: 7
-              ActionButton { icon: "󰒮"; label: "Prev"; tooltip: "Previous track"; onTriggered: root.runPlayerctl("previous") }
-              ActionButton { icon: root.audioIconText; label: "Play"; tooltip: "Start/stop saved music and noise"; onTriggered: root.runAudioctl("play-pause-all") }
-              ActionButton { icon: "󰒭"; label: "Next"; tooltip: "Next track"; onTriggered: root.runPlayerctl("next") }
+              ActionButton { Layout.fillWidth: true; icon: "󰒮"; label: "Prev"; tooltip: "Previous track"; onTriggered: root.runPlayerctl("previous") }
+              ActionButton { Layout.fillWidth: true; icon: root.audioIconText; label: "Play"; tooltip: "Start/stop saved music and noise"; onTriggered: root.runAudioctl("play-pause-all") }
+              ActionButton { Layout.fillWidth: true; icon: "󰒭"; label: "Next"; tooltip: "Next track"; onTriggered: root.runPlayerctl("next") }
             }
 
             RowLayout {
               Layout.fillWidth: true
               spacing: 7
-              ActionButton { icon: "󰜗"; label: "Noise"; tooltip: "Toggle brown noise"; onTriggered: root.runAudioctl("noise-toggle") }
-              ActionButton { icon: ""; label: "Music"; tooltip: "Start saved/default music"; onTriggered: root.runAudioctl("music") }
-              ActionButton { icon: "󰓛"; label: "Stop"; tooltip: "Stop saved music and noise"; onTriggered: root.runAudioctl("stop-all") }
+              ActionButton { Layout.fillWidth: true; icon: "󰜗"; label: "Noise"; tooltip: "Toggle brown noise"; onTriggered: root.runAudioctl("noise-toggle") }
+              ActionButton { Layout.fillWidth: true; icon: ""; label: "Music"; tooltip: "Start saved/default music"; onTriggered: root.runAudioctl("music") }
+              ActionButton { Layout.fillWidth: true; icon: "󰓛"; label: "Stop"; tooltip: "Stop saved music and noise"; onTriggered: root.runAudioctl("stop-all") }
             }
 
             RowLayout {

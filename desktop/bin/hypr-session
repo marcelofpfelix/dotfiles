@@ -28,6 +28,55 @@ service_state() {
     printf '%s\n' "${state:-unknown}"
 }
 
+quickshell_status() {
+    local instances
+
+    need qs || return 1
+    instances=$(qs list --all 2>/dev/null || true)
+    if printf '%s\n' "$instances" | grep -q '^Instance '; then
+        printf 'quickshell: active\n'
+        return 0
+    fi
+
+    printf 'quickshell: inactive\n' >&2
+    return 1
+}
+
+time_sync_status() {
+    local props timezone synced ntp chrony timesyncd
+
+    need timedatectl || return 1
+    props=$(timedatectl show -p Timezone -p NTPSynchronized -p NTP 2>/dev/null || true)
+    timezone=$(printf '%s\n' "$props" | awk -F= '$1 == "Timezone" {print $2}')
+    synced=$(printf '%s\n' "$props" | awk -F= '$1 == "NTPSynchronized" {print $2}')
+    ntp=$(printf '%s\n' "$props" | awk -F= '$1 == "NTP" {print $2}')
+
+    printf 'time: synced=%s ntp=%s timezone=%s\n' "${synced:-unknown}" "${ntp:-unknown}" "${timezone:-unknown}"
+    if command -v systemctl >/dev/null 2>&1; then
+        chrony=$(service_state system chrony.service)
+        timesyncd=$(service_state system systemd-timesyncd.service)
+        printf 'time-service: chrony=%s systemd-timesyncd=%s\n' "$chrony" "$timesyncd"
+    fi
+
+    [[ "$synced" = "yes" && "$ntp" = "yes" ]]
+}
+
+audio_status() {
+    if command -v audioctl >/dev/null 2>&1; then
+        audioctl status | sed 's/^/audio: /'
+    fi
+}
+
+dunst_status() {
+    if command -v systemctl >/dev/null 2>&1; then
+        local state enabled
+        state=$(service_state user dunst.service)
+        enabled=$(systemctl --user is-enabled dunst.service 2>/dev/null || true)
+        printf "dunst: %s enabled=%s\n" "$state" "${enabled:-unknown}"
+        [ "$state" != "active" ]
+    fi
+}
+
 status() {
     local missing=0
     local required_bins=(
@@ -60,6 +109,11 @@ status() {
     for bin in "${required_bins[@]}"; do
         need "$bin" || missing=1
     done
+
+    quickshell_status || missing=1
+    dunst_status || missing=1
+    time_sync_status || missing=1
+    audio_status || true
 
     if [ ! -e /etc/NIXOS ] && command -v start-hyprland >/dev/null 2>&1; then
         need nixGL || missing=1
@@ -138,12 +192,12 @@ rollback() {
 }
 
 case "${1:-status}" in
-    status) status ;;
+    status|smoke) status ;;
     test|start) test_session ;;
     reload) reload_session ;;
     rollback|exit) rollback ;;
     *)
-        printf 'usage: %s [status|test|start|reload|rollback]\n' "${0##*/}" >&2
+        printf 'usage: %s [status|smoke|test|start|reload|rollback]\n' "${0##*/}" >&2
         exit 2
         ;;
 esac

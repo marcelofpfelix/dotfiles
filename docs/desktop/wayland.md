@@ -11,7 +11,7 @@ For the short switch procedure, see
 - `desktop/.config/hypr/profiles/default.lua`: profile matching the current i3 workflow.
 - `desktop/.config/hypr/profiles/omarchy.lua`: Omarchy-like Wayland profile implemented with generic Wayland tools.
 - `desktop/.config/quickshell/marcelof/shell.qml`: Quickshell wallpaper, bar, tray/status, launcher, password picker, clipboard picker, web-search popup, keybindings popup, screen tools popup, and session menu.
-- `desktop/bin/hypr-session`: status, test, reload, rollback helper.
+- `desktop/bin/hypr-session`: status, smoke, test, reload, rollback helper.
 - `desktop/bin/hypr-gdm`: installs the generated `/usr/share/wayland-sessions/hyprland.desktop` login-manager entry and GDM account defaults.
 - `desktop/bin/hypr-scratch`: helper-backed special workspace scratchpad.
 - `desktop/bin/hyprdrop`: parked Wayland dropdown experiment for the old archived `ddspawn` behavior; it is not bound by default.
@@ -22,7 +22,7 @@ Copy the dotfiles locally, then run:
 
 ```console
 home -y
-hypr-session status
+hypr-session smoke
 hypr-session test
 HYPR_PROFILE=omarchy hypr-session test
 ```
@@ -55,7 +55,7 @@ Track package intent in `/home/marcelof/gwt/marcelofpfelix/homelab/main/vars/ins
 
 The default profile keeps movement, workspaces, launcher, terminal, monitor toggle, media keys, and screenshot bindings close to the X11 i3 config. Hyprland `dwindle` does not provide direct i3 stacking, tabbed containers, or focus-parent behavior, so grouped windows are only a pragmatic closest match. `Win+W` closes the focused window. `Win+U` is unbound for now because the terminal-backed dropdown path is not reliable enough under the current Wayland terminal class/title behavior. `Win+S` uses the helper-backed special workspace scratchpad and `Win+Alt+S` moves the active window there. Resize is exposed as `Win+Ctrl+h/j/k/l`.
 
-The local Quickshell shell has replaced the Polybar surface for workspace/status/tray coverage, the main `rofi` app launcher, `passmenu`, calendar, clipboard history, web search, keybinding help, and the power/session menu. `passmenu` is Quickshell-only in the active Wayland desktop profile. Secure locking is delegated to a real locker through Quickshell IPC, using `hyprlock`, `swaylock`, or `loginctl lock-session` when available.
+The local Quickshell shell has replaced the Polybar surface for workspace/status/tray coverage, the main `rofi` app launcher, `passmenu`, calendar, clipboard history, web search, keybinding help, notifications, and the power/session menu. `passmenu` is Quickshell-only in the active Wayland desktop profile. Secure locking is delegated to a real locker through Quickshell IPC, using `hyprlock`, `swaylock`, or `loginctl lock-session` when available. `dunst.service` is masked in the tracked user systemd config so Quickshell can own desktop notifications.
 
 Reference ideas adapted locally: Omarchy quattro key behavior, Caelestia-style session panel actions, end-4-style `Super+/` keybinding discoverability and cliphist watcher updates, Noctalia-style compact popup/control surfaces, and cxOrz-style backend-only cliphist ownership. No upstream shell binaries or names are used by this repo.
 

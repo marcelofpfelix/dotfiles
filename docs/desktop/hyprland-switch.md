@@ -20,7 +20,7 @@ home -y
 Check required commands and current session:
 
 ```console
-hypr-session status
+hypr-session smoke
 ```
 
 ## Test

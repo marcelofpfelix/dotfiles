@@ -70,7 +70,7 @@
 - [x] `HYPR_PROFILE=omarchy Hyprland --config desktop/.config/hypr/init.lua --verify-config` passes for `omarchy`.
 - [x] Live files under `$HOME/.config/hypr`, `$HOME/.config/quickshell`, `$HOME/bin`, and `$HOME/lib` are refreshed from the repo.
 - [x] Safe color-format sample proves Quickshell rich text and plain output modes.
-- [x] `hypr-session status` checks the required Wayland runtime tools tracked in homelab and reports optional `hyprpicker` separately.
+- [x] `hypr-session status` and `hypr-session smoke` check required Wayland tools, Quickshell, portals, clock sync, audio state, inactive dunst, and optional `hyprpicker`.
 
 ## References
 
