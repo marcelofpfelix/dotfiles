@@ -166,6 +166,8 @@ hl.bind(mod .. " + SHIFT + E", sh("/home/marcelof/bin/qs-bar power"))
 hl.bind(mod .. " + ESCAPE", sh("/home/marcelof/bin/qs-bar power"))
 hl.bind(mod .. " + SLASH", sh("/home/marcelof/bin/qs-bar keybindings"))
 hl.bind(mod .. " + CTRL + A", sh("/home/marcelof/bin/qs-bar controls"))
+hl.bind(mod .. " + CTRL + V", sh("/home/marcelof/bin/qs-bar controls"))
+hl.bind(mod .. " + CTRL + W", sh("/home/marcelof/bin/qs-bar controls"))
 hl.bind(mod .. " + ALT + L", sh("/home/marcelof/bin/qs-bar lock"), { locked = true })
 
 -- open terminal

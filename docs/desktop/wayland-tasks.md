@@ -22,7 +22,7 @@
 - [x] `Win+Shift+E` uses the Quickshell exit confirmation instead of exiting immediately.
 - [x] `Win+Alt+L` calls the Quickshell lock IPC target so `Win+Ctrl+L` can stay resize-right.
 - [x] `Win+Ctrl+A` opens the Quickshell controls popup, which now acts as the all-menus hub.
-- [x] Network is reachable from the Quickshell controls menu instead of `Win+Ctrl+W`, which conflicts with app close-tab/window behavior.
+- [x] `Win+Ctrl+V` and `Win+Ctrl+W` open the Quickshell controls popup so they do not fall through to `Win+V` split or `Win+W` close.
 
 ## Omarchy profile parity
 
@@ -31,7 +31,7 @@
 - [x] `Win+S` uses the local `hypr-scratch` helper and `Win+Alt+S` moves a window there.
 - [x] `Win+Escape` and `Win+Shift+E` open the local Quickshell exit confirmation.
 - [x] `Win+Ctrl+L` calls the local Quickshell lock IPC target.
-- [x] The local Quickshell controls menu opens the network panel through `qs ipc call network toggle`.
+- [x] `Win+Ctrl+V` and `Win+Ctrl+W` open the local Quickshell controls popup; the controls menu opens the network panel through `qs ipc call network toggle`.
 - [x] `Win+K` opens local Quickshell keybindings, matching Omarchy quattro behavior without upstream binaries.
 - [x] `Win+Ctrl+A` opens local Quickshell controls/audio, matching Omarchy quattro intent without upstream binaries.
 - [x] `Win+Shift+Space` toggles the local Quickshell bar.
