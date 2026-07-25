@@ -12,6 +12,44 @@ local function note(message)
   return sh("notify-send 'Hyprland default profile' " .. string.format("%q", message))
 end
 
+local function noop()
+  return function() end
+end
+
+local function send_shortcut_once(mods, key)
+  return function()
+    hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = key, state = "down", window = "activewindow" }))
+    hl.timer(function()
+      hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = key, state = "up", window = "activewindow" }))
+    end, { timeout = 50, type = "oneshot" })
+  end
+end
+
+local terminal_classes = {
+  alacritty = true,
+  ["com.mitchellh.ghostty"] = true,
+  foot = true,
+  kitty = true,
+  wezterm = true,
+}
+
+local function active_window_is_terminal()
+  local window = hl.get_active_window()
+  if not window or not window.class then
+    return false
+  end
+
+  return terminal_classes[window.class:lower()] == true
+end
+
+local function universal_paste()
+  if active_window_is_terminal() then
+    send_shortcut_once("SHIFT", "Insert")()
+  else
+    send_shortcut_once("CTRL", "V")()
+  end
+end
+
 hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = 1 })
 hl.monitor({ output = "DP-2", mode = "preferred", position = "auto-right", scale = 1 })
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
@@ -127,9 +165,10 @@ hl.bind(mod .. " + SHIFT + UP", hl.dsp.window.move({ direction = "up" }))
 hl.bind(mod .. " + SHIFT + RIGHT", hl.dsp.window.move({ direction = "right" }))
 
 hl.bind(mod .. " + Z", hl.dsp.layout("splith"))
-hl.bind(mod .. " + V", hl.dsp.layout("splitv"))
+hl.bind(mod .. " + V", universal_paste)
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mod .. " + E", hl.dsp.layout("togglesplit"))
+hl.bind(mod .. " + SHIFT + V", hl.dsp.layout("splitv"))
 hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.window.float({ action = "toggle" }))
 hl.bind(mod .. " + SPACE", sh(launcher))
 hl.bind(mod .. " + A", note("focus parent has no dwindle equivalent yet"))
@@ -166,8 +205,8 @@ hl.bind(mod .. " + SHIFT + E", sh("/home/marcelof/bin/qs-bar power"))
 hl.bind(mod .. " + ESCAPE", sh("/home/marcelof/bin/qs-bar power"))
 hl.bind(mod .. " + SLASH", sh("/home/marcelof/bin/qs-bar keybindings"))
 hl.bind(mod .. " + CTRL + A", sh("/home/marcelof/bin/qs-bar controls"))
-hl.bind(mod .. " + CTRL + V", sh("/home/marcelof/bin/qs-bar controls"))
-hl.bind(mod .. " + CTRL + W", sh("/home/marcelof/bin/qs-bar controls"))
+hl.bind(mod .. " + CTRL + V", noop())
+hl.bind(mod .. " + CTRL + W", noop())
 hl.bind(mod .. " + ALT + L", sh("/home/marcelof/bin/qs-bar lock"), { locked = true })
 
 -- open terminal

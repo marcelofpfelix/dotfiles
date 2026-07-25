@@ -22,7 +22,7 @@
 - [x] `Win+Shift+E` uses the Quickshell exit confirmation instead of exiting immediately.
 - [x] `Win+Alt+L` calls the Quickshell lock IPC target so `Win+Ctrl+L` can stay resize-right.
 - [x] `Win+Ctrl+A` opens the Quickshell controls popup, which now acts as the all-menus hub.
-- [x] `Win+Ctrl+V` and `Win+Ctrl+W` open the Quickshell controls popup so they do not fall through to `Win+V` split or `Win+W` close.
+- [x] `Win+Ctrl+V` and `Win+Ctrl+W` are explicit no-op blockers so they do not fall through to `Win+V` paste or `Win+W` close.
 
 ## Omarchy profile parity
 
@@ -31,14 +31,14 @@
 - [x] `Win+S` uses the local `hypr-scratch` helper and `Win+Alt+S` moves a window there.
 - [x] `Win+Escape` and `Win+Shift+E` open the local Quickshell exit confirmation.
 - [x] `Win+Ctrl+L` calls the local Quickshell lock IPC target.
-- [x] `Win+Ctrl+V` and `Win+Ctrl+W` open the local Quickshell controls popup; the controls menu opens the network panel through `qs ipc call network toggle`.
+- [x] `Win+Ctrl+V` and `Win+Ctrl+W` are explicit no-op blockers; the controls menu opens the network panel through `qs ipc call network toggle`.
 - [x] `Win+K` opens local Quickshell keybindings, matching Omarchy quattro behavior without upstream binaries.
 - [x] `Win+Ctrl+A` opens local Quickshell controls/audio, matching Omarchy quattro intent without upstream binaries.
 - [x] `Win+Shift+Space` toggles the local Quickshell bar.
 - [x] `Win+G`, `Win+Alt+G`, `Win+Alt+Arrows`, and `Win+Alt+Tab` use native Hyprland groups.
 - [x] `Win+Shift+Arrows` swaps windows like Omarchy quattro.
 - [x] `Alt+Volume` and `Alt+Brightness` provide precise native adjustments.
-- [x] `Win+C`, `Win+V`, and `Win+X` provide universal clipboard shortcuts without external shell IPC.
+- [x] `Win+C`, `Win+V`, and `Win+X` provide universal clipboard shortcuts without external shell IPC in the Omarchy-like profile; default uses `Win+V` for terminal-aware paste and `Win+Shift+V` for vertical split.
 - [x] Avoid upstream runtime binaries; implement similar behavior with generic tools and local Quickshell IPC.
 - [x] Use local Quickshell IPC and common Wayland apps/CLIs for launcher, network, lock, screenshot, audio, and related actions.
 - [x] Media playback keys use generic `playerctl`; volume and brightness use `pactl` and `brightnessctl`.
@@ -159,12 +159,10 @@
 
 ## Follow-up
 
-- [ ] Reduce controls-hub keybindings to one real shortcut.
-  - Problem: `Win+Ctrl+V` and `Win+Ctrl+W` were routed to Controls only to block fall-through into `Win+V` split and `Win+W` close.
-  - Acceptance: keep `Win+Ctrl+A` as the only intentional Controls shortcut, and make `Win+Ctrl+V`/`Win+Ctrl+W` harmless without adding duplicate menu shortcuts.
-- [ ] Fix `Win+V` behavior cleanly.
-  - Problem: `Win+V` is currently overloaded by i3 split parity and can interact badly with modifier fall-through and app paste muscle memory.
-  - Acceptance: decide whether `Win+V` remains split-vertical, moves to another chord, or becomes universal paste; document the chosen behavior and verify it with live Hyprland bindings.
+- [x] Reduce controls-hub keybindings to one real shortcut.
+  - Current behavior: `Win+Ctrl+A` is the only intentional Controls shortcut; `Win+Ctrl+V` and `Win+Ctrl+W` are explicit no-op blockers, not duplicate menu shortcuts.
+- [x] Fix `Win+V` behavior cleanly.
+  - Current behavior: `Win+V` is terminal-aware paste; vertical split moved to `Win+Shift+V`; live Hyprland bindings verify `Win+Ctrl+V` and `Win+Ctrl+W` are harmless blockers.
 
 - [x] Build a Quickshell power/session popup for `lock`, `logout`, `suspend`, `hibernate`, `reboot`, and `shutdown`.
   - Use native commands behind a local helper or IPC target: `loginctl lock-session`, `hyprctl dispatch exit`, `systemctl suspend`, `systemctl hibernate`, `systemctl reboot`, and `systemctl poweroff`.

@@ -68,6 +68,9 @@ pretty_action() {
         *'qs-bar keybindings'*) printf 'Keybindings' ;;
         *'qs-bar power'*) printf 'Session menu' ;;
         *'qs-bar controls'*) printf 'Controls' ;;
+        *'universal_paste'*) printf 'Paste' ;;
+        *'noop()'*) printf 'No action' ;;
+        *'function() end'*) printf 'No action' ;;
         *'qs-bar network'*) printf 'Network' ;;
         *'qs-bar clipboard'*) printf 'Clipboard history' ;;
         *'qs-bar websearch'*) printf 'Web search' ;;

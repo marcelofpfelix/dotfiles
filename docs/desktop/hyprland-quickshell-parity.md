@@ -16,7 +16,7 @@ This is the active gap list for replacing the old i3, Polybar, rofi, and small X
 - Quickshell owns the bar, launcher, tray/status surface, wallpaper, calendar, password picker, clipboard picker, web search, keybindings popup, network panel, lock IPC, and session menu.
 - `gocode`, `gowork`, `monitor`, and `passmenu` are active Wayland-profile helpers with no i3, rofi, dmenu, zenity, xrandr, or feh fallback path.
 - X11 i3, Polybar, rofi, picom, and `ddspawn` files are archived outside the active `desktop/` tree.
-- `Win+D`, `Win+Space`, `Win+/`, `Win+Ctrl+A`, `Win+Shift+E`, `Win+W`, `Win+S`, `Win+M`, brightness keys, volume keys, screenshots, web search, and power actions are mapped through Hyprland or local Quickshell IPC; `Win+Ctrl+V` and `Win+Ctrl+W` are explicitly routed to Controls so they do not fall through to `Win+V` split or `Win+W` close.
+- `Win+D`, `Win+Space`, `Win+/`, `Win+Ctrl+A`, `Win+Shift+E`, `Win+W`, `Win+S`, `Win+M`, `Win+V`, brightness keys, volume keys, screenshots, web search, and power actions are mapped through Hyprland or local Quickshell IPC; `Win+Ctrl+V` and `Win+Ctrl+W` are explicit no-op blockers so they do not fall through to paste or close.
 - `.tmux.conf` conflict is resolved with the current `board render tmux tmux-top` status renderer.
 
 ## Missing parity
