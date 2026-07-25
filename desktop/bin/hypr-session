@@ -67,6 +67,28 @@ audio_status() {
     fi
 }
 
+notification_owner_status() {
+    if ! command -v gdbus >/dev/null 2>&1; then
+        printf "notifications: unchecked missing gdbus\n"
+        return 0
+    fi
+
+    local owner pid args
+    owner=$(gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.GetNameOwner org.freedesktop.Notifications 2>/dev/null | grep -o ":[0-9.]*" || true)
+    if [ -z "$owner" ]; then
+        printf "notifications: missing owner\n" >&2
+        return 1
+    fi
+
+    pid=$(gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.GetConnectionUnixProcessID "$owner" 2>/dev/null | grep -o "[0-9][0-9]*" | tail -n 1 || true)
+    args=$(ps -p "$pid" -o args= 2>/dev/null || true)
+    printf "notifications: owner=%s pid=%s cmd=%s\n" "$owner" "${pid:-unknown}" "${args%% *}"
+    case "$args" in
+        *quickshell*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 dunst_status() {
     if command -v systemctl >/dev/null 2>&1; then
         local state enabled
@@ -111,6 +133,7 @@ status() {
     done
 
     quickshell_status || missing=1
+    notification_owner_status || missing=1
     dunst_status || missing=1
     time_sync_status || missing=1
     audio_status || true
