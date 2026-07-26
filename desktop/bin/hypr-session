@@ -99,6 +99,35 @@ dunst_status() {
     fi
 }
 
+legacy_launcher_status() {
+    local missing=0
+    local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+    local entries=(
+        compton.desktop
+        feh.desktop
+        i3.desktop
+        kazam.desktop
+        nitrogen.desktop
+        org.freedesktop.Xwayland.desktop
+        rofi-theme-selector.desktop
+        rofi.desktop
+        x11vnc.desktop
+        xtigervncviewer.desktop
+    )
+
+    for entry in "${entries[@]}"; do
+        if ! grep -Eq '^Hidden=true$' "$app_dir/$entry" 2>/dev/null; then
+            printf 'legacy-launcher-mask: missing %s\n' "$entry" >&2
+            missing=1
+        fi
+    done
+
+    if [ "$missing" -eq 0 ]; then
+        printf 'legacy-launcher-mask: ok\n'
+    fi
+    return "$missing"
+}
+
 status() {
     local missing=0
     local required_bins=(
@@ -135,6 +164,7 @@ status() {
     quickshell_status || missing=1
     notification_owner_status || missing=1
     dunst_status || missing=1
+    legacy_launcher_status || missing=1
     time_sync_status || missing=1
     audio_status || true
 
