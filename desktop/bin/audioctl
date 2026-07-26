@@ -32,6 +32,19 @@ helper_running() {
     noise_running || music_running
 }
 
+process_state() {
+    ps -o stat= -p "$1" 2>/dev/null | awk '{ print substr($1, 1, 1) }'
+}
+
+pid_file_stopped() {
+    [ -s "$1" ] || return 1
+    [ "$(process_state "$(cat "$1")")" = T ]
+}
+
+helper_paused() {
+    pid_file_stopped "$noise_pid" || pid_file_stopped "$music_pid"
+}
+
 desired_audio_missing() {
     { [ -s "$desired_noise" ] && ! noise_running; } || { [ -s "$desired_music" ] && ! music_running; }
 }
@@ -213,7 +226,7 @@ restore_audio() {
 }
 
 play_pause_all() {
-    if [ -e "$paused_state" ]; then
+    if [ -e "$paused_state" ] || helper_paused; then
         resume_audio || notify "No saved audio. Right-click the bar button for mixer controls."
     elif desired_audio_missing && restore_audio; then
         notify "Restored saved audio"
@@ -245,7 +258,7 @@ END { first=1; for (label in seen) { if (!first) printf " + "; printf "%s", labe
 
 audio_icon() {
     local rows
-    if [ -e "$paused_state" ]; then
+    if [ -e "$paused_state" ] || helper_paused; then
         printf "󰐊\n"
         return 0
     fi
@@ -259,10 +272,6 @@ audio_icon() {
         return 0
     fi
     printf "󰐊\n"
-}
-
-process_state() {
-    ps -o stat= -p "$1" 2>/dev/null | awk '{ print substr($1, 1, 1) }'
 }
 
 self_test() {
@@ -303,6 +312,12 @@ self_test() {
     XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" resume
     [ "$(process_state "$self_test_child_noise")" != T ] || { printf 'noise was not resumed\n' >&2; rc=1; }
     [ "$(process_state "$self_test_child_music")" != T ] || { printf 'music was not resumed\n' >&2; rc=1; }
+
+    XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" pause
+    rm -f "$self_test_tmp/audioctl/paused"
+    XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" play-pause-all
+    [ "$(process_state "$self_test_child_noise")" != T ] || { printf 'stale-paused noise was not resumed\n' >&2; rc=1; }
+    [ "$(process_state "$self_test_child_music")" != T ] || { printf 'stale-paused music was not resumed\n' >&2; rc=1; }
 
     [ "$rc" -eq 0 ] && printf 'audioctl self-test: ok\n'
     return "$rc"
@@ -363,10 +378,20 @@ case "${1:-status}" in
         fi
         if helper_running; then
             printf "helper: running\n"
-            [ -e "$paused_state" ] && printf "state: paused\n"
+            { [ -e "$paused_state" ] || helper_paused; } && printf "state: paused\n"
             stream_display | sed "s/^/display: /"
         else
             printf "helper: stopped\n"
+        fi
+        if [ -s "$desired_noise" ]; then
+            printf "saved-noise: brown\n"
+        else
+            printf "saved-noise: none\n"
+        fi
+        if [ -s "$desired_music" ]; then
+            printf "saved-music: %s\n" "$(cat "$desired_music")"
+        else
+            printf "saved-music: none\n"
         fi
         ;;
     self-test)
