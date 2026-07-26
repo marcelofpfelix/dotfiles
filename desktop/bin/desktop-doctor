@@ -92,6 +92,10 @@ check_cmd walker yes
 check_cmd gum yes
 check_cmd fzf yes
 
+section "pickers"
+run_required script-picker script-picker --status
+run_required walker-websearch walker-websearch --status
+
 section "session smoke"
 run_required hypr-session hypr-session smoke
 

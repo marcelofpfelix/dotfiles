@@ -5,6 +5,18 @@ export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:/nix/var/nix/prof
 . "${HOME}/lib/lib_picker.sh"
 
 site="google"
+if [[ "${1:-}" == "status" || "${1:-}" == "--status" ]]; then
+  picker_status
+  rc=$?
+  if command -v websearch >/dev/null 2>&1; then
+    printf 'ok   websearch\n'
+  else
+    printf 'missing websearch\n' >&2
+    rc=1
+  fi
+  exit "$rc"
+fi
+
 while getopts ":s:h" opt; do
   case "$opt" in
     s) site="$OPTARG" ;;

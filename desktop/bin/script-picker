@@ -4,5 +4,12 @@ set -euo pipefail
 export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:/nix/var/nix/profiles/default/bin:$PATH"
 . "${HOME}/lib/lib_picker.sh"
 
-prompt="${1:-Select}"
-picker_choose "$prompt"
+case "${1:-}" in
+    status|--status)
+        picker_status
+        ;;
+    *)
+        prompt="${1:-Select}"
+        picker_choose "$prompt"
+        ;;
+esac
