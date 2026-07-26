@@ -256,7 +256,7 @@ gsync_parse_repo_spec() {
 
 gsync_sync_repo() {
     local spec="${1:?repo spec is required}"
-    local default_git="${2:-$DEFAULT_GIT}" default_org="${3:-$DEFAULT_ORG}"
+    local default_git="${2:-$DEFAULT_GIT}" default_org="${3:-$DEFAULT_ORG}" current_branch
     local default_worktree="${4:-$DEFAULT_WORKTREE}" default_mode="${5:-$DEFAULT_MODE}"
     local default_branch="${6:-$DEFAULT_BRANCH}" default_commit_msg="${7:-$DEFAULT_COMMIT_MSG}"
     local default_pre_commit="${8:-$RUN_PRE_COMMIT}"
@@ -276,8 +276,9 @@ gsync_sync_repo() {
     gsync_info "sync $REPO_PATH"
     cd "$REPO_PATH" || return
 
-    if [ "$(git_current_branch)" != "$REPO_BRANCH" ]; then
-        printf 'SKIP %s/%s branch=%s current=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_BRANCH" "$(git_current_branch)"
+    current_branch="$(git_current_branch)"
+    if [ "$current_branch" != "$REPO_BRANCH" ]; then
+        printf 'OK %s/%s mode=%s branch=%s skipped=true reason=branch-mismatch current=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_MODE" "$REPO_BRANCH" "$current_branch"
         return 0
     fi
 
