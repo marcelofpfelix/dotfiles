@@ -7,7 +7,7 @@ state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/screenshot-wayland"
 last_file="$state_dir/last"
 
 usage() {
-    printf 'use: screenshot-wayland [edit|copy|save|full|active|open-last|copy-last|copy-path|ocr|ocr-last|last]\n' >&2
+    printf 'use: screenshot-wayland [edit|copy|save|full|active|open-last|copy-last|copy-path|ocr|ocr-last|last|status]\n' >&2
 }
 
 ensure_dirs() {
@@ -33,6 +33,25 @@ need_last() {
     [ -n "${path:-}" ] && [ -f "$path" ] && { printf '%s\n' "$path"; return; }
     notify-send "Screenshot" "No saved screenshot yet" 2>/dev/null || true
     exit 1
+}
+
+status() {
+    local missing=0 cmd path
+    for cmd in grim slurp swappy wl-copy tesseract hyprctl jq xdg-open notify-send; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+            printf 'ok   %s\n' "$cmd"
+        else
+            printf 'missing %s\n' "$cmd" >&2
+            missing=1
+        fi
+    done
+    path="$(last_path || true)"
+    if [ -n "${path:-}" ] && [ -f "$path" ]; then
+        printf 'last %s\n' "$path"
+    else
+        printf 'last none\n'
+    fi
+    return "$missing"
 }
 
 ocr_image() {
@@ -96,6 +115,9 @@ case "${1:-edit}" in
         ;;
     last)
         need_last
+        ;;
+    status)
+        status
         ;;
     *)
         usage

@@ -85,7 +85,7 @@ check_browser_wrapper() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys qs-bar qs-menu-smoke identify compare audioctl check-audio-streams screen-record-wayland chrome-wayland brave-wayland desktop-package-audit script-picker walker-websearch; do
+for cmd in hypr-session hypr-keys qs-bar qs-menu-smoke identify compare audioctl check-audio-streams screenshot-wayland screen-record-wayland chrome-wayland brave-wayland desktop-package-audit script-picker walker-websearch; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes
@@ -110,6 +110,9 @@ run_required audioctl-self-test audioctl self-test
 if command -v check-audio-streams >/dev/null 2>&1; then
   check-audio-streams || true
 fi
+
+section "screenshots"
+run_required screenshot-wayland screenshot-wayland status
 
 section "screen record"
 run_required screen-record-wayland screen-record-wayland status
