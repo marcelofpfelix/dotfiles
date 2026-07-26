@@ -1,38 +1,58 @@
 #!/usr/bin/env bash
-
-################################################################################
-#                                 FILE INFO
-# toggle the second monitor for Hyprland
-################################################################################
-
 set -euo pipefail
 
-if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+primary=${MONITOR_PRIMARY:-eDP-1}
+hyprctl_bin=${HYPRCTL:-hyprctl}
+
+if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ -z "${HYPRCTL:-}" ]; then
     echo "Error: monitor requires Hyprland." >&2
     exit 1
 fi
 
-primary=eDP-1
-second=DP-2
+monitors_json() {
+    "$hyprctl_bin" monitors all -j 2>/dev/null
+}
+
+active_secondary() {
+    monitors_json | jq -r --arg primary "$primary" '.[] | select(.name != $primary) | select(.disabled == false) | .name' | head -n 1
+}
+
+available_secondary() {
+    monitors_json | jq -r --arg primary "$primary" '.[] | select(.name != $primary) | select(.disabled == true) | select((.availableModes // []) | length > 0) | .name' | head -n 1
+}
 
 monitor_enable() {
-    hyprctl -q eval "hl.monitor({ output = \"$1\", disabled = false, mode = \"preferred\", position = \"auto-right\", scale = 1 })"
+    "$hyprctl_bin" -q eval "hl.monitor({ output = \"$1\", disabled = false, mode = \"preferred\", position = \"auto-right\", scale = 1 })"
 }
 
 monitor_disable() {
-    hyprctl -q eval "hl.monitor({ output = \"$1\", disabled = true })"
+    "$hyprctl_bin" -q eval "hl.monitor({ output = \"$1\", disabled = true })"
 }
 
-connected=$(hyprctl monitors all -j 2>/dev/null | jq -r ".[] | select(.name != \"$primary\") | select(.disabled == false) | .name" | head -n 1)
-available=$(hyprctl monitors all -j 2>/dev/null | jq -r ".[] | select(.name != \"$primary\") | select(.disabled == true) | .name" | head -n 1)
+status() {
+    monitors_json | jq -r --arg primary "$primary" '.[] | [.name, (if .name == $primary then "primary" else "secondary" end), (if .disabled then "disabled" else "active" end), (.description // "")] | @tsv'
+}
 
-if [ -n "$connected" ]; then
-    monitor_disable "$connected"
-    echo "Disabled $connected"
-elif [ -n "$available" ]; then
-    monitor_enable "$available"
-    echo "Connected $available to the right of $primary"
-else
-    monitor_disable "$second" || true
-    echo "No secondary monitor detected"
-fi
+case "${1:-toggle}" in
+    status)
+        status
+        ;;
+    toggle)
+        connected=$(active_secondary)
+        available=$(available_secondary)
+
+        if [ -n "$connected" ]; then
+            monitor_disable "$connected"
+            echo "Disabled $connected"
+        elif [ -n "$available" ]; then
+            monitor_enable "$available"
+            echo "Connected $available to the right of $primary"
+        else
+            echo "No secondary monitor detected"
+        fi
+        ;;
+    *)
+        echo "use: monitor [toggle|status]" >&2
+        exit 2
+        ;;
+esac

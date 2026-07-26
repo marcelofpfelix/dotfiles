@@ -183,7 +183,7 @@ check_screen_share() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys qs-bar qs-menu-smoke identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch; do
+for cmd in hypr-session hypr-keys qs-bar qs-menu-smoke identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland monitor chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes
@@ -227,6 +227,9 @@ run_required wallpaper-wayland wallpaper-wayland status
 
 section "screen record"
 run_required screen-record-wayland screen-record-wayland status
+
+section "monitors"
+run_required monitor monitor status
 
 section "screen share"
 check_screen_share
