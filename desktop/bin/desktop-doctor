@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+
+status=0
+
+section() {
+  printf '\n%s\n' "$1"
+}
+
+ok() {
+  printf 'ok   %-22s %s\n' "$1" "$2"
+}
+
+warn() {
+  printf 'warn %-22s %s\n' "$1" "$2"
+}
+
+fail() {
+  printf 'fail %-22s %s\n' "$1" "$2"
+  status=1
+}
+
+check_cmd() {
+  local name=$1 required=${2:-yes} path
+  path=$(command -v "$name" 2>/dev/null || true)
+  if [ -n "$path" ]; then
+    ok "$name" "$path"
+  elif [ "$required" = yes ]; then
+    fail "$name" missing
+  else
+    warn "$name" missing
+  fi
+}
+
+run_required() {
+  local label=$1
+  shift
+  if "$@"; then
+    return 0
+  fi
+  fail "$label" "command failed: $*"
+}
+
+current_profile() {
+  local line tab
+  tab=$(printf '\t')
+  line=$(hypr-keys 2>/dev/null | sed -n '1p' || true)
+  case "$line" in
+    Profile"$tab"*) ok current-profile "${line#*"$tab"}" ;;
+    *) fail current-profile "hypr-keys did not report profile" ;;
+  esac
+}
+
+check_browser_wrapper() {
+  local name=$1 wrapper=$2 browser=$3 path browser_path
+  path=$(command -v "$wrapper" 2>/dev/null || true)
+  if [ -z "$path" ]; then
+    fail "$wrapper" missing
+    return
+  fi
+  ok "$wrapper" "$path"
+
+  browser_path=$(command -v "$browser" 2>/dev/null || true)
+  if [ -n "$browser_path" ]; then
+    ok "$name-bin" "$browser_path"
+  else
+    warn "$name-bin" "missing $browser"
+  fi
+
+  for flag in '--ozone-platform=wayland' '--enable-native-notifications' 'WebRTCPipeWireCapturer' '--disable-vulkan'; do
+    if grep -Fq -- "$flag" "$path" 2>/dev/null; then
+      ok "$wrapper" "$flag"
+    else
+      fail "$wrapper" "missing $flag"
+    fi
+  done
+
+  if grep -Eq -- '--use-gl=egl|--use-angle=opengl|--use-gl=angle' "$path" 2>/dev/null; then
+    fail "$wrapper" "contains GL flags known to break WebGL here"
+  else
+    ok "$wrapper" "no broken GL override flags"
+  fi
+}
+
+section "required commands"
+for cmd in hypr-session hypr-keys qs-bar audioctl check-audio-streams screen-record-wayland chrome-wayland brave-wayland; do
+  check_cmd "$cmd" yes
+done
+
+section "session smoke"
+run_required hypr-session hypr-session smoke
+
+section "profile"
+current_profile
+
+section "quickshell"
+run_required qs-bar qs-bar status
+
+section "audio"
+run_required audioctl audioctl status
+if command -v check-audio-streams >/dev/null 2>&1; then
+  check-audio-streams || true
+fi
+
+section "screen record"
+run_required screen-record-wayland screen-record-wayland status
+
+section "browser wrappers"
+check_browser_wrapper chrome chrome-wayland google-chrome-stable
+check_browser_wrapper brave brave-wayland brave-browser-stable
+
+exit "$status"

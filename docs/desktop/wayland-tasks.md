@@ -71,6 +71,7 @@
 - [x] Live files under `$HOME/.config/hypr`, `$HOME/.config/quickshell`, `$HOME/bin`, and `$HOME/lib` are refreshed from the repo.
 - [x] Safe color-format sample proves Quickshell rich text and plain output modes.
 - [x] `hypr-session status` and `hypr-session smoke` check required Wayland tools, Quickshell, notification owner, portals, clock sync, audio state, inactive dunst, legacy launcher masks, Hyprland/Quickshell config validity, generated keybinding help, Quickshell IPC menu targets, and optional `hyprpicker`.
+- [x] `desktop-doctor` wraps the live Wayland smoke check with current profile, Quickshell status, audio state, screen-record status, and static browser wrapper flag checks.
 
 ## References
 
