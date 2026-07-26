@@ -25,7 +25,11 @@ capture_panel() {
   local panel=$1 file
   file="$out_dir/$panel.png"
 
-  qs-bar close-panels >/dev/null 2>&1 || true
+  qs-bar close-panels >/dev/null 2>&1 || {
+    printf "fail close-panels before %s\n" "$panel" >&2
+    status=1
+    return
+  }
   sleep "$sleep_time"
   if ! qs-bar "$panel" >/dev/null 2>&1; then
     printf 'fail %s open\n' "$panel" >&2
@@ -39,7 +43,10 @@ capture_panel() {
     printf 'fail %s capture\n' "$panel" >&2
     status=1
   fi
-  qs-bar close-panels >/dev/null 2>&1 || true
+  qs-bar close-panels >/dev/null 2>&1 || {
+    printf "fail close-panels after %s\n" "$panel" >&2
+    status=1
+  }
 }
 
 case "${1:-}" in
