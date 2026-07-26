@@ -32,7 +32,7 @@ hypr-session test
 HYPR_PROFILE=omarchy hypr-session test
 ```
 
-`qs-menu-smoke` writes screenshots plus `summary.tsv` under `~/.local/state/quickshell/menu-smoke/`, with `latest` pointing at the newest run.
+`qs-menu-smoke` writes screenshots plus `summary.tsv` under `~/.local/state/quickshell/menu-smoke/`, with `latest` pointing at the newest run. `desktop-doctor` treats that latest run as stale after 24 hours; set `QS_MENU_SMOKE_MAX_AGE_SECONDS=0` to skip the age check.
 
 Use `HYPR_PROFILE=default` for the current default profile and `HYPR_PROFILE=omarchy` for the Omarchy-like Wayland profile.
 

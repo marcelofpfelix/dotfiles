@@ -237,15 +237,26 @@ check_screen_share() {
 }
 
 check_qs_menu_smoke_latest() {
-  local base latest summary failed
+  local base latest summary failed max_age now mtime age
 
   base="${QS_MENU_SMOKE_BASE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/menu-smoke}"
   latest="${QS_MENU_SMOKE_LATEST:-$base/latest}"
   summary="$latest/summary.tsv"
+  max_age="${QS_MENU_SMOKE_MAX_AGE_SECONDS:-86400}"
 
   if [ ! -r "$summary" ]; then
     warn qs-menu-smoke-latest "not run yet"
     return
+  fi
+
+  if [ "$max_age" -gt 0 ] 2>/dev/null; then
+    now=$(date +%s)
+    mtime=$(stat -c %Y "$summary" 2>/dev/null || printf 0)
+    age=$((now - mtime))
+    if [ "$age" -gt "$max_age" ]; then
+      fail qs-menu-smoke-latest "stale ${age}s" "qs-menu-smoke"
+      return
+    fi
   fi
 
   failed=$(awk -F "\t" 'NR > 1 && $2 != "ok" { count++ } END { print count + 0 }' "$summary")
