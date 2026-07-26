@@ -190,6 +190,41 @@ keybinding_status() {
     return "$missing"
 }
 
+quickshell_ipc_status() {
+    local missing=0
+    local quickshell_file="${QUICKSHELL_FILE:-$HOME/.config/quickshell/$shell_config/shell.qml}"
+    local needles=(
+        "target: \"bar\""
+        "function controls()"
+        "function media()"
+        "function screen()"
+        "function wallpaper()"
+        "function calendar()"
+        "function notifications()"
+        "function power()"
+        "function keybindings()"
+        "function clipboard()"
+        "function clipboardUpdate()"
+        "function closePanels()"
+        "target: \"launcher\""
+        "target: \"websearch\""
+        "target: \"network\""
+        "target: \"lock\""
+    )
+
+    for needle in "${needles[@]}"; do
+        if ! grep -Fq "$needle" "$quickshell_file" 2>/dev/null; then
+            printf "quickshell-ipc: missing %s\n" "$needle" >&2
+            missing=1
+        fi
+    done
+
+    if [ "$missing" -eq 0 ]; then
+        printf "quickshell-ipc: ok\n"
+    fi
+    return "$missing"
+}
+
 status() {
     local missing=0
     local required_bins=(
@@ -229,6 +264,7 @@ status() {
     legacy_launcher_status || missing=1
     config_status || missing=1
     keybinding_status || missing=1
+    quickshell_ipc_status || missing=1
     time_sync_status || missing=1
     audio_status || true
 
