@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+status=0
+
+scan_file() {
+  local file=$1 rel
+  rel="${file#"$root"/}"
+
+  if grep -nE '(^|[^[:alnum:]_.-])(rofi|dmenu|zenity|xrandr|feh)([[:space:];|&`$()<>{}]|$)' "$file"; then
+    printf 'active Wayland file calls legacy X11 helper: %s\n' "$rel" >&2
+    status=1
+  fi
+
+  if grep -nF 'archive/x11/desktop/' "$file"; then
+    printf 'active Wayland file references archived X11 config: %s\n' "$rel" >&2
+    status=1
+  fi
+}
+
+while IFS= read -r -d '' file; do
+  scan_file "$file"
+done < <(
+  find \
+    "$root/desktop/bin" \
+    "$root/desktop/lib" \
+    "$root/desktop/.config/hypr" \
+    "$root/desktop/.config/quickshell" \
+    -type f -print0
+)
+
+exit "$status"

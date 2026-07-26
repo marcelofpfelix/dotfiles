@@ -18,6 +18,11 @@ repos:
         entry: default/bin/check-bin-executables
         language: system
         pass_filenames: false
+    -   id: check-wayland-no-x11
+        name: check active Wayland files do not call X11 helpers
+        entry: default/bin/check-wayland-no-x11
+        language: system
+        pass_filenames: false
     -   id: act-ci
         name: run GitHub Actions locally with act
         entry: act -W .github/workflows/ci.yml
