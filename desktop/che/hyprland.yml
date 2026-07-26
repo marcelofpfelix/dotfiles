@@ -37,9 +37,9 @@ apps:
 
 session:
     hypr-session smoke: check tools, session, Quickshell, notification owner, portals, clock sync, inactive dunst, and audio state
-    hypr-session test: start Hyprland with HYPR_PROFILE=default by default
+    hypr-session test: validate the default Hyprland profile without starting a new session
     hypr-session reload: reload Hyprland and restart Quickshell
-    HYPR_PROFILE=omarchy hypr-session test: test the Wayland-first profile
+    HYPR_PROFILE=omarchy hypr-session test: validate the Wayland-first profile without starting a new session
 
 archive:
     X11 i3/polybar/rofi/picom files are archived in archive/x11/desktop

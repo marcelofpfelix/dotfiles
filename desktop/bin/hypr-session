@@ -353,15 +353,22 @@ status() {
 }
 
 test_session() {
+    local rc=0
+    status || rc=$?
+    printf 'config: %s\n' "$config"
+    printf 'quickshell: %s\n' "$shell_config"
+    printf 'hypr_profile: %s\n' "$profile"
+    return "$rc"
+}
+
+start_session() {
     status || true
     printf 'config: %s\n' "$config"
     printf 'quickshell: %s\n' "$shell_config"
     printf 'hypr_profile: %s\n' "$profile"
 
     if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-        hyprctl reload
-        pkill quickshell 2>/dev/null || true
-        start_shell
+        reload_session
         return 0
     fi
 
@@ -387,7 +394,8 @@ rollback() {
 
 case "${1:-status}" in
     status|smoke) status ;;
-    test|start) test_session ;;
+    test) test_session ;;
+    start) start_session ;;
     reload) reload_session ;;
     rollback|exit) rollback ;;
     *)

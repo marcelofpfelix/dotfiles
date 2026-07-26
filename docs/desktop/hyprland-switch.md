@@ -25,13 +25,13 @@ hypr-session smoke
 
 ## Test
 
-Start the default Hyprland profile:
+Validate the default Hyprland profile:
 
 ```console
 hypr-session test
 ```
 
-Start the Omarchy-like Wayland profile:
+Validate the Omarchy-like Wayland profile:
 
 ```console
 HYPR_PROFILE=omarchy hypr-session test
