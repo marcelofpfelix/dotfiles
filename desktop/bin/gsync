@@ -254,6 +254,20 @@ gsync_parse_repo_spec() {
     fi
 }
 
+gsync_dotfiles_desktop_gate() {
+    [ "$REPO_ORG/$REPO_NAME" = "marcelofpfelix/dotfiles" ] || return 0
+    git status --porcelain -- desktop .pre-commit-config.yaml default/bin/check-wayland-no-x11 | grep -q . || return 0
+
+    if [ -x "$REPO_PATH/desktop/bin/desktop-doctor" ]; then
+        "$REPO_PATH/desktop/bin/desktop-doctor"
+    elif command -v desktop-doctor >/dev/null 2>&1; then
+        desktop-doctor
+    else
+        log ERRO "desktop-doctor not found for dotfiles desktop gate"
+        return 1
+    fi
+}
+
 gsync_sync_repo() {
     local spec="${1:?repo spec is required}"
     local default_git="${2:-$DEFAULT_GIT}" default_org="${3:-$DEFAULT_ORG}" current_branch
@@ -297,6 +311,8 @@ gsync_sync_repo() {
             log WARN "uvx not found; skipping pre-commit"
         fi
     fi
+
+    gsync_dotfiles_desktop_gate || return
 
     local changed=false
     git add .
