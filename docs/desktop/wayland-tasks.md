@@ -77,26 +77,48 @@
 
 ## References
 
-- Caelestia shell: https://github.com/caelestia-dots/shell
-  - Useful ideas to study: Quickshell IPC command surface, structured config files, notification drawers, MPRIS controls, wallpaper handling, and per-monitor config patterns. Do not copy binaries or adopt its CLI/runtime naming.
-- Caelestia dots: https://github.com/caelestia-dots/caelestia (about 3.8k stars; local `/tmp/quickshell-refs/caelestia`)
-  - Useful ideas reviewed: Lua Hyprland config split, shell restart/session/media bindings, configurable special-workspace app placement, workspace group movement, and keeping shell actions behind a small IPC surface. Do not copy its runtime package names or assume its install layout.
-- end-4 dots-hyprland: https://github.com/end-4/dots-hyprland (about 15k stars)
-  - Useful ideas to study: high-polish Quickshell overview, Material-style quick settings, notification surfaces, wallpaper-driven theming, and search panels. Keep local behavior i3-compatible first.
-- Noctalia shell: https://github.com/noctalia-dev/noctalia-shell (about 7.4k stars on the main Noctalia repo)
-  - Useful ideas to study: all-in-one Quickshell bar, notification center, control center, launcher, lock screen, power menu, brightness controls, audio controls, widgets, and plugin-style extension points. Avoid depending on its forked runtime unless this repo explicitly chooses that later.
-- cxOrz dotfiles-hyprland: https://github.com/cxOrz/dotfiles-hyprland (about 200 stars; lower priority, useful for concrete module layout)
-  - Useful ideas to study: ChromeOS-style control center, power menu, notification UI, shelf/workspaces, Wi-Fi/Bluetooth/volume/brightness controls, and launcher ergonomics.
-- Aylur AGS/dotfiles ecosystem: https://github.com/Aylur/ags and https://aylur.github.io/ags/ (local `/tmp/quickshell-refs/ags`)
-  - Useful ideas reviewed: service-style widgets, listen-vs-poll patterns, notification/media/network services, click-away launcher behavior, Alt-number launcher selection, and app-shell ergonomics. Keep this repo Quickshell-first; do not add AGS/Astal for this migration.
-- Omarchy v4 migration note: user reports Omarchy will migrate to Quickshell in v4; this is not in public docs yet, so treat it as directionally useful but unverified until upstream publishes it.
+Reference review snapshot: 2026-07-26. Keep exact star counts out of this file because they drift; use popularity only as a rough priority signal.
 
-- Omarchy quattro local reference: `/tmp/omarchy-quattro`
-  - Useful ideas reviewed: native Hyprland scratchpad, group bindings, groupbar styling, system/keybinding menu shortcuts, and tray/menu interaction patterns. Do not copy upstream command names or runtime binaries.
+- end-4 dots-hyprland: https://github.com/end-4/dots-hyprland
+  - Status: high-signal Quickshell plus Hyprland reference.
+  - Kept locally: visual smoke screenshots, keybinding discoverability, notification/control/media polish goals, and Hyprland 0.55/Lua awareness.
+  - Rejected here: full installer flow, AI/search extras, large theme engine, and distro-wide setup assumptions.
+- Caelestia shell: https://github.com/caelestia-dots/shell
+  - Status: high-signal Quickshell shell reference.
+  - Kept locally: small IPC surface, shell-owned wallpaper/menu behavior, MPRIS/media ideas, hidden launcher entries, and config/state separation.
+  - Rejected here: upstream CLI/runtime names, C++ plugin build path, broad token/theming system, and heavy dependency set.
+- Noctalia shell: https://github.com/noctalia-dev/noctalia-shell
+  - Status: high-signal Wayland shell reference.
+  - Kept locally: desktop-shell boundary, compact control surfaces, notification history, brightness/audio/network/power modules, and clear package boundary thinking.
+  - Rejected here: forked `noctalia-qs` runtime, plugin ecosystem, setup wizard, and shell-managed features better owned by Hyprland or normal apps.
+- Omarchy: https://github.com/basecamp/omarchy
+  - Status: high-signal Hyprland workflow reference, not a runtime dependency.
+  - Kept locally: accepted key behavior, generated keybinding menu idea, local diagnostics/doctor direction, screen/share/menu shortcuts, and package/update hygiene ideas.
+  - Rejected here: Omarchy-named binaries, distro-level refresh/update machinery, and assumptions that conflict with the default i3-compatible profile.
+- cxOrz dotfiles-hyprland: https://github.com/cxOrz/dotfiles-hyprland
+  - Status: lower-star but useful concrete ChromeOS-style layout reference.
+  - Kept locally: compact control center shape, power/menu grouping, and tray/menu ergonomics.
+  - Rejected here: rofi launcher, waybar/dunst ownership, hyprpaper ownership, Arch-only package assumptions, and greetd/session defaults.
+- Aylur AGS/dotfiles ecosystem: https://github.com/Aylur/ags and https://aylur.github.io/ags/
+  - Status: useful service/UI design reference, not part of the active stack.
+  - Kept locally: listen-vs-poll thinking, notification/media/network service boundaries, launcher click-away behavior, and Alt-number launcher selection.
+  - Rejected here: adding AGS/Astal as another shell runtime.
 - surface-dots: https://github.com/snes19xx/surface-dots
-  - Useful ideas reviewed: Hyprland-first session/login assumptions and SDDM session presentation. It did not add a better Quickshell group/scratch implementation for this repo.
+  - Status: limited value for this Quickshell migration.
+  - Kept locally: Hyprland-first login/session presentation checks.
+  - Rejected here: monitor/surface-specific layout assumptions.
 - ilyamiro nixos-configuration: https://github.com/ilyamiro/nixos-configuration
-  - Useful ideas reviewed: `hyprctl` workspace state generation, event-triggered refresh, and Quickshell workspace rendering. Reuse the idea of state from native Hyprland JSON without adopting the full cache daemon here.
+  - Status: useful for native Hyprland state ideas.
+  - Kept locally: `hyprctl -j` state generation and event-triggered refresh.
+  - Rejected here: a dedicated cache daemon until measured polling cost justifies it.
+- ML4W dotfiles: https://github.com/mylinuxforwork/dotfiles
+  - Status: popular Hyprland dotfiles reference, but broad distro/tooling scope.
+  - Kept locally: doctor/setup validation direction and distro-aware package docs.
+  - Rejected here: installer app, distro-wide OS assumptions, and broad app bundle.
+- JaKooLit Hyprland-Dots: https://github.com/JaKooLit/Hyprland-Dots
+  - Status: popular Hyprland install/dots reference, but not Quickshell-first.
+  - Kept locally: installer-package tracking reminder and practical first-login checks.
+  - Rejected here: rofi/waybar/swww/wallust stack and broad install scripts.
 
 ## Reference-derived implementation tasks
 
