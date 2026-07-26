@@ -166,6 +166,30 @@ config_status() {
     return "$missing"
 }
 
+keybinding_status() {
+    local missing=0 output
+    local hypr_dir="${HYPR_CONFIG_DIR:-$HOME/.config/hypr}"
+    local tab
+    tab=$(printf "\t")
+
+    need hypr-keys || return 1
+    for name in default omarchy; do
+        output=$(HYPR_KEYS_PROFILE_DIR="$hypr_dir/profiles" hypr-keys "$name" 2>/dev/null || true)
+        if printf "%s\n" "$output" | grep -Fq "Profile${tab}${name}" &&
+            printf "%s\n" "$output" | grep -Fq "Win+/${tab}Keybindings" &&
+            printf "%s\n" "$output" | grep -Fq "Win+D${tab}Apps" &&
+            printf "%s\n" "$output" | grep -Fq "Win+M${tab}Start/stop saved audio" &&
+            printf "%s\n" "$output" | grep -Fq "XF86MonBrightnessUp${tab}Screen brightness"; then
+            printf "hypr-keys-%s: ok\n" "$name"
+        else
+            printf "hypr-keys-%s: broken\n" "$name" >&2
+            missing=1
+        fi
+    done
+
+    return "$missing"
+}
+
 status() {
     local missing=0
     local required_bins=(
@@ -204,6 +228,7 @@ status() {
     dunst_status || missing=1
     legacy_launcher_status || missing=1
     config_status || missing=1
+    keybinding_status || missing=1
     time_sync_status || missing=1
     audio_status || true
 
