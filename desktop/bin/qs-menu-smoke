@@ -4,7 +4,10 @@ set -uo pipefail
 export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
 
 sleep_time="${QS_MENU_SMOKE_SLEEP:-0.5}"
-out_dir="${QS_MENU_SMOKE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/menu-smoke/$(date +%Y%m%d-%H%M%S)}"
+base_dir="${QS_MENU_SMOKE_BASE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/menu-smoke}"
+out_dir="${QS_MENU_SMOKE_DIR:-$base_dir/$(date +%Y%m%d-%H%M%S)}"
+latest_link="${QS_MENU_SMOKE_LATEST:-$base_dir/latest}"
+summary_file="$out_dir/summary.tsv"
 min_width="${QS_MENU_SMOKE_MIN_WIDTH:-320}"
 min_height="${QS_MENU_SMOKE_MIN_HEIGHT:-180}"
 min_changed_pixels="${QS_MENU_SMOKE_MIN_CHANGED_PIXELS:-5000}"
@@ -14,6 +17,10 @@ status=0
 usage() {
   printf 'use: qs-menu-smoke [panel ...]\n' >&2
   printf 'captures: %s\n' "${panels[*]}" >&2
+}
+
+record_result() {
+  printf '%s\t%s\t%s\t%s\t%s\n' "$1" "$2" "${3:--}" "${4:--}" "${5:--}" >>"$summary_file"
 }
 
 need() {
@@ -29,12 +36,14 @@ assert_capture() {
 
   if ! read -r width height stddev < <(identify -format "%w %h %[standard-deviation]\n" "$file" 2>/dev/null); then
     printf "fail %s image metadata\n" "$panel" >&2
+    record_result "$panel" fail metadata "$file" "$baseline"
     status=1
     return 1
   fi
 
   if (( width < min_width || height < min_height )); then
     printf "fail %s image too small: %sx%s\n" "$panel" "$width" "$height" >&2
+    record_result "$panel" fail "small:${width}x${height}" "$file" "$baseline"
     status=1
     return 1
   fi
@@ -42,6 +51,7 @@ assert_capture() {
   case "$stddev" in
     ""|0|0.0*)
       printf "fail %s image blank: stddev=%s\n" "$panel" "$stddev" >&2
+      record_result "$panel" fail "blank:$stddev" "$file" "$baseline"
       status=1
       return 1
       ;;
@@ -51,6 +61,7 @@ assert_capture() {
   changed=${changed%% *}
   if ! awk -v value="$changed" -v min="$min_changed_pixels" 'BEGIN { exit !(value + 0 >= min) }'; then
     printf "fail %s no visible panel change: changed=%s min=%s\n" "$panel" "$changed" "$min_changed_pixels" >&2
+    record_result "$panel" fail "changed:$changed" "$file" "$baseline"
     status=1
     return 1
   fi
@@ -79,6 +90,10 @@ capture_panel() {
   fi
   sleep "$sleep_time"
   if grim "$file" && [ -s "$file" ] && assert_capture "$panel" "$file" "$baseline"; then
+    read -r width height _ < <(identify -format "%w %h %[standard-deviation]\n" "$file" 2>/dev/null || printf -- '- - -\n')
+    changed=$(compare -metric AE "$baseline" "$file" null: 2>&1 >/dev/null || true)
+    changed=${changed%% *}
+    record_result "$panel" ok "${width}x${height}:changed=$changed" "$file" "$baseline"
     printf 'ok   %s %s\n' "$panel" "$file"
   else
     printf 'fail %s capture\n' "$panel" >&2
@@ -101,6 +116,8 @@ need compare
 [ "$status" -eq 0 ] || exit "$status"
 
 mkdir -p "$out_dir"
+printf 'panel\tstatus\tdetail\tfile\tbaseline\n' >"$summary_file"
+ln -sfn "$out_dir" "$latest_link" 2>/dev/null || true
 trap 'qs-bar close-panels >/dev/null 2>&1 || true' EXIT
 
 if [ "$#" -gt 0 ]; then
@@ -112,4 +129,6 @@ for panel in "${panels[@]}"; do
 done
 
 printf 'dir  %s\n' "$out_dir"
+printf 'latest %s\n' "$latest_link"
+printf 'summary %s\n' "$summary_file"
 exit "$status"
