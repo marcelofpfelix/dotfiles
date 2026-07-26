@@ -125,6 +125,63 @@ check_electron_wrapper() {
   check_wayland_wrapper_common "$wrapper" "$path"
 }
 
+check_user_service_active() {
+  local service=$1 state
+  state=$(systemctl --user is-active "$service" 2>/dev/null || true)
+  if [ "$state" = active ]; then
+    ok "$service" active
+  else
+    fail "$service" "${state:-missing}"
+  fi
+}
+
+check_screen_share() {
+  local portal_file portal_env wrapper path
+
+  if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    ok wayland-display "$WAYLAND_DISPLAY"
+  else
+    fail wayland-display missing
+  fi
+
+  if [ "${XDG_CURRENT_DESKTOP:-}" = Hyprland ]; then
+    ok current-desktop Hyprland
+  else
+    fail current-desktop "${XDG_CURRENT_DESKTOP:-missing}"
+  fi
+
+  if hyprctl monitors -j >/dev/null 2>&1; then
+    ok hyprctl-monitors ok
+  else
+    fail hyprctl-monitors failed
+  fi
+
+  check_user_service_active xdg-desktop-portal-hyprland.service
+  check_user_service_active xdg-desktop-portal.service
+
+  portal_file="$HOME/.local/share/xdg-desktop-portal/portals/hyprland.portal"
+  if [ -r "$portal_file" ] && grep -Fq ScreenCast "$portal_file"; then
+    ok hyprland-portal ScreenCast
+  else
+    fail hyprland-portal "missing ScreenCast in $portal_file"
+  fi
+
+  portal_env=$(systemctl --user show xdg-desktop-portal.service -p Environment --value 2>/dev/null || true)
+  case "$portal_env" in
+    *"$HOME/.local/share"*) ok portal-xdg-data "$HOME/.local/share" ;;
+    *) fail portal-xdg-data "missing $HOME/.local/share" ;;
+  esac
+
+  for wrapper in chrome-wayland brave-wayland; do
+    path=$(command -v "$wrapper" 2>/dev/null || true)
+    if [ -n "$path" ] && grep -Fq WebRTCPipeWireCapturer "$path"; then
+      ok "$wrapper" WebRTCPipeWireCapturer
+    else
+      fail "$wrapper" "missing WebRTCPipeWireCapturer"
+    fi
+  done
+}
+
 section "required commands"
 for cmd in hypr-session hypr-keys qs-bar qs-menu-smoke identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch; do
   check_cmd "$cmd" yes
@@ -170,6 +227,9 @@ run_required wallpaper-wayland wallpaper-wayland status
 
 section "screen record"
 run_required screen-record-wayland screen-record-wayland status
+
+section "screen share"
+check_screen_share
 
 section "browser wrappers"
 check_browser_wrapper chrome chrome-wayland google-chrome-stable
