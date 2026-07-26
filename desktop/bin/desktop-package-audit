@@ -15,6 +15,7 @@ required_packages=(
   grim
   slurp
   swappy
+  imagemagick-6.q16
   tesseract-ocr
   wf-recorder
   brightnessctl

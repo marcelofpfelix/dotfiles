@@ -5,6 +5,9 @@ export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/
 
 sleep_time="${QS_MENU_SMOKE_SLEEP:-0.5}"
 out_dir="${QS_MENU_SMOKE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/menu-smoke/$(date +%Y%m%d-%H%M%S)}"
+min_width="${QS_MENU_SMOKE_MIN_WIDTH:-320}"
+min_height="${QS_MENU_SMOKE_MIN_HEIGHT:-180}"
+min_changed_pixels="${QS_MENU_SMOKE_MIN_CHANGED_PIXELS:-5000}"
 panels=(launcher controls media notifications calendar wallpaper screen keybindings clipboard websearch network tray power)
 status=0
 
@@ -21,9 +24,42 @@ need() {
   fi
 }
 
+assert_capture() {
+  local panel=$1 file=$2 baseline=$3 width height stddev changed
+
+  if ! read -r width height stddev < <(identify -format "%w %h %[standard-deviation]\n" "$file" 2>/dev/null); then
+    printf "fail %s image metadata\n" "$panel" >&2
+    status=1
+    return 1
+  fi
+
+  if (( width < min_width || height < min_height )); then
+    printf "fail %s image too small: %sx%s\n" "$panel" "$width" "$height" >&2
+    status=1
+    return 1
+  fi
+
+  case "$stddev" in
+    ""|0|0.0*)
+      printf "fail %s image blank: stddev=%s\n" "$panel" "$stddev" >&2
+      status=1
+      return 1
+      ;;
+  esac
+
+  changed=$(compare -metric AE "$baseline" "$file" null: 2>&1 >/dev/null || true)
+  changed=${changed%% *}
+  if ! awk -v value="$changed" -v min="$min_changed_pixels" 'BEGIN { exit !(value + 0 >= min) }'; then
+    printf "fail %s no visible panel change: changed=%s min=%s\n" "$panel" "$changed" "$min_changed_pixels" >&2
+    status=1
+    return 1
+  fi
+}
+
 capture_panel() {
-  local panel=$1 file
+  local panel=$1 file baseline
   file="$out_dir/$panel.png"
+  baseline="$out_dir/$panel.before.png"
 
   qs-bar close-panels >/dev/null 2>&1 || {
     printf "fail close-panels before %s\n" "$panel" >&2
@@ -31,13 +67,18 @@ capture_panel() {
     return
   }
   sleep "$sleep_time"
+  if ! grim "$baseline" || [ ! -s "$baseline" ]; then
+    printf "fail %s baseline capture\n" "$panel" >&2
+    status=1
+    return
+  fi
   if ! qs-bar "$panel" >/dev/null 2>&1; then
     printf 'fail %s open\n' "$panel" >&2
     status=1
     return
   fi
   sleep "$sleep_time"
-  if grim "$file" && [ -s "$file" ]; then
+  if grim "$file" && [ -s "$file" ] && assert_capture "$panel" "$file" "$baseline"; then
     printf 'ok   %s %s\n' "$panel" "$file"
   else
     printf 'fail %s capture\n' "$panel" >&2
@@ -55,6 +96,8 @@ esac
 
 need qs-bar
 need grim
+need identify
+need compare
 [ "$status" -eq 0 ] || exit "$status"
 
 mkdir -p "$out_dir"

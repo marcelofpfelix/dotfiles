@@ -14,7 +14,7 @@ For the short switch procedure, see
 - `desktop/bin/hypr-session`: status, smoke, test, reload, rollback helper.
 - `desktop/bin/desktop-doctor`: read-only desktop health wrapper around smoke, profile, shell, picker, audio, recording, and browser wrapper checks.
 - `desktop/bin/desktop-package-audit`: checks the active Wayland package intent against the sibling homelab install list.
-- `desktop/bin/qs-menu-smoke`: visual smoke helper that opens, captures, and closes Quickshell menu screenshots under local state.
+- `desktop/bin/qs-menu-smoke`: visual smoke helper that opens, captures, closes, and checks Quickshell menu screenshots under local state.
 - `desktop/bin/hypr-gdm`: installs the generated `/usr/share/wayland-sessions/hyprland.desktop` login-manager entry and GDM account defaults.
 - `desktop/bin/hypr-scratch`: helper-backed special workspace scratchpad.
 - `desktop/bin/hyprdrop`: parked Wayland dropdown experiment for the old archived `ddspawn` behavior; it is not bound by default.
@@ -54,7 +54,7 @@ Stale live X11 files removed from `$HOME` during migration are preserved under
 
 ## Package notes
 
-Track package intent in `/home/marcelof/gwt/marcelofpfelix/homelab/main/vars/install/desktop.yml`. The minimum Wayland set is Hyprland, hyprctl, Quickshell, and the backend tools used by the selected profile. Both profiles use the local Marcelof Quickshell shell; the `omarchy` profile changes Hyprland behavior, not the shell runtime. Keep only backend tools here: screenshot and recording helpers (`grim`, `slurp`, `swappy`, `wf-recorder`, `tesseract`), `brightnessctl`, `wl-clipboard`, `cliphist`, `playerctl`, `pavucontrol`, `mpv`, `ffmpeg`, `hyprlock`, `swaylock`, `hyprpicker`, `jq`, `libnotify-bin`, `network-manager`, `network-manager-gnome`, `pulseaudio-utils`, `lm-sensors`, `upower`, `power-profiles-daemon`, `bluez`, `wireplumber`, `xdg-utils`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk`, `nixGL` for Nix Hyprland on Ubuntu, and the existing autostart backend (`dex`). `hypr-session status` checks these runtime commands directly, with `hyprpicker` reported as optional and locking accepted through `hyprlock`, `swaylock`, or `loginctl`.
+Track package intent in `/home/marcelof/gwt/marcelofpfelix/homelab/main/vars/install/desktop.yml`. The minimum Wayland set is Hyprland, hyprctl, Quickshell, and the backend tools used by the selected profile. Both profiles use the local Marcelof Quickshell shell; the `omarchy` profile changes Hyprland behavior, not the shell runtime. Keep only backend tools here: screenshot and recording helpers (`grim`, `slurp`, `swappy`, `imagemagick-6.q16`, `wf-recorder`, `tesseract`), `brightnessctl`, `wl-clipboard`, `cliphist`, `playerctl`, `pavucontrol`, `mpv`, `ffmpeg`, `hyprlock`, `swaylock`, `hyprpicker`, `jq`, `libnotify-bin`, `network-manager`, `network-manager-gnome`, `pulseaudio-utils`, `lm-sensors`, `upower`, `power-profiles-daemon`, `bluez`, `wireplumber`, `xdg-utils`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk`, `nixGL` for Nix Hyprland on Ubuntu, and the existing autostart backend (`dex`). `hypr-session status` checks these runtime commands directly, with `hyprpicker` reported as optional and locking accepted through `hyprlock`, `swaylock`, or `loginctl`.
 
 ## i3 parity notes
 
