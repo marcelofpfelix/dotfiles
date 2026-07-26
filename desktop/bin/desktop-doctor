@@ -53,8 +53,34 @@ current_profile() {
   esac
 }
 
+check_wayland_wrapper_common() {
+  local wrapper=$1 path=$2 flag var
+
+  for var in __EGL_VENDOR_LIBRARY_FILENAMES LD_LIBRARY_PATH LIBGL_DRIVERS_PATH LIBVA_DRIVERS_PATH GBM_BACKENDS_PATH VDPAU_DRIVER_PATH VK_ICD_FILENAMES VK_LAYER_PATH __GLX_VENDOR_LIBRARY_NAME QT_QUICK_BACKEND; do
+    if grep -Fq -- "unset $var" "$path" 2>/dev/null; then
+      ok "$wrapper" "unsets $var"
+    else
+      fail "$wrapper" "missing unset $var"
+    fi
+  done
+
+  for flag in '--ozone-platform=wayland' 'WebRTCPipeWireCapturer'; do
+    if grep -Fq -- "$flag" "$path" 2>/dev/null; then
+      ok "$wrapper" "$flag"
+    else
+      fail "$wrapper" "missing $flag"
+    fi
+  done
+
+  if grep -Eq -- '--use-gl=egl|--use-angle=opengl|--use-gl=angle|--in-process-gpu|--disable-gpu' "$path" 2>/dev/null; then
+    fail "$wrapper" "contains GL flags known to break WebGL here"
+  else
+    ok "$wrapper" "no broken GL override flags"
+  fi
+}
+
 check_browser_wrapper() {
-  local name=$1 wrapper=$2 browser=$3 path browser_path
+  local name=$1 wrapper=$2 browser=$3 path browser_path flag
   path=$(command -v "$wrapper" 2>/dev/null || true)
   if [ -z "$path" ]; then
     fail "$wrapper" missing
@@ -69,19 +95,34 @@ check_browser_wrapper() {
     warn "$name-bin" "missing $browser"
   fi
 
-  for flag in '--ozone-platform=wayland' '--enable-native-notifications' 'WebRTCPipeWireCapturer' '--disable-vulkan'; do
+  check_wayland_wrapper_common "$wrapper" "$path"
+
+  for flag in '--enable-native-notifications' '--disable-vulkan'; do
     if grep -Fq -- "$flag" "$path" 2>/dev/null; then
       ok "$wrapper" "$flag"
     else
       fail "$wrapper" "missing $flag"
     fi
   done
+}
 
-  if grep -Eq -- '--use-gl=egl|--use-angle=opengl|--use-gl=angle' "$path" 2>/dev/null; then
-    fail "$wrapper" "contains GL flags known to break WebGL here"
-  else
-    ok "$wrapper" "no broken GL override flags"
+check_electron_wrapper() {
+  local name=$1 wrapper=$2 app=$3 path app_path
+  path=$(command -v "$wrapper" 2>/dev/null || true)
+  if [ -z "$path" ]; then
+    fail "$wrapper" missing
+    return
   fi
+  ok "$wrapper" "$path"
+
+  app_path=$(command -v "$app" 2>/dev/null || true)
+  if [ -n "$app_path" ]; then
+    ok "$name-bin" "$app_path"
+  else
+    warn "$name-bin" "missing $app"
+  fi
+
+  check_wayland_wrapper_common "$wrapper" "$path"
 }
 
 section "required commands"
@@ -133,5 +174,9 @@ run_required screen-record-wayland screen-record-wayland status
 section "browser wrappers"
 check_browser_wrapper chrome chrome-wayland google-chrome-stable
 check_browser_wrapper brave brave-wayland brave-browser-stable
+check_electron_wrapper slack slack-wayland slack
+check_electron_wrapper discord discord-wayland discord
+check_electron_wrapper obsidian obsidian-wayland obsidian
+check_electron_wrapper 1password 1password-wayland 1password
 
 exit "$status"
