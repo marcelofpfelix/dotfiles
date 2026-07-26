@@ -1,0 +1,2 @@
+# Sourced when LC_USER identifies this as Marcelo on a remote SSH login.
+# Keep only remote-user extras here; base/default/desktop rc files are sourced by ~/.zshrc.
