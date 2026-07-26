@@ -17,7 +17,25 @@ need() {
     fi
 }
 
+status() {
+    local missing=0 cmd count
+    for cmd in cliphist wl-copy wl-paste qs-bar fzf notify-send; do
+        if command -v "$cmd" >/dev/null 2>&1; then
+            printf 'ok   %s\n' "$cmd"
+        else
+            printf 'missing %s\n' "$cmd" >&2
+            missing=1
+        fi
+    done
+    count="$(cliphist list 2>/dev/null | wc -l | tr -d ' ')"
+    printf 'entries %s\n' "${count:-0}"
+    return "$missing"
+}
+
 case "${1:-menu}" in
+    status)
+        status
+        ;;
     watch)
         need wl-paste
         need cliphist
@@ -52,7 +70,7 @@ case "${1:-menu}" in
         printf '%s' "$selection" | cliphist decode | wl-copy
         ;;
     *)
-        printf 'usage: %s [menu|watch]\n' "${0##*/}" >&2
+        printf 'usage: %s [menu|watch|status]\n' "${0##*/}" >&2
         exit 2
         ;;
 esac
