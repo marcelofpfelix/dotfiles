@@ -106,6 +106,7 @@ run_required qs-bar qs-bar status
 
 section "audio"
 run_required audioctl audioctl status
+run_required audioctl-self-test audioctl self-test
 if command -v check-audio-streams >/dev/null 2>&1; then
   check-audio-streams || true
 fi
