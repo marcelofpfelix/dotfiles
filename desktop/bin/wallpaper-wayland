@@ -48,6 +48,36 @@ set_wallpaper() {
   printf '%s\n' "$path"
 }
 
+status() {
+  missing=0
+  for cmd in find sort xdg-open; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      printf 'ok   %s\n' "$cmd"
+    else
+      printf 'missing %s\n' "$cmd" >&2
+      missing=1
+    fi
+  done
+
+  path="$(current)"
+  if [ -f "$path" ] && is_image "$path"; then
+    printf 'current %s\n' "$path"
+  else
+    printf 'missing current wallpaper: %s\n' "$path" >&2
+    missing=1
+  fi
+
+  count="$(list_wallpapers | wc -l | tr -d ' ')"
+  if [ "${count:-0}" -gt 0 ]; then
+    printf 'wallpapers %s\n' "$count"
+  else
+    printf 'missing wallpaper images\n' >&2
+    missing=1
+  fi
+
+  return "$missing"
+}
+
 case "${1:-current}" in
   current)
     current
@@ -70,8 +100,11 @@ case "${1:-current}" in
     path="$(current)"
     [ -f "$path" ] && exec xdg-open "$path"
     ;;
+  status)
+    status
+    ;;
   *)
-    printf 'use: wallpaper-wayland [current|list|set PATH|open-dir|open-current]\n' >&2
+    printf 'use: wallpaper-wayland [current|list|set PATH|open-dir|open-current|status]\n' >&2
     exit 2
     ;;
 esac

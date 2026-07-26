@@ -85,7 +85,7 @@ check_browser_wrapper() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys qs-bar qs-menu-smoke identify compare audioctl check-audio-streams screenshot-wayland screen-record-wayland chrome-wayland brave-wayland desktop-package-audit script-picker walker-websearch; do
+for cmd in hypr-session hypr-keys qs-bar qs-menu-smoke identify compare audioctl check-audio-streams screenshot-wayland wallpaper-wayland screen-record-wayland chrome-wayland brave-wayland desktop-package-audit script-picker walker-websearch; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes
@@ -113,6 +113,9 @@ fi
 
 section "screenshots"
 run_required screenshot-wayland screenshot-wayland status
+
+section "wallpaper"
+run_required wallpaper-wayland wallpaper-wayland status
 
 section "screen record"
 run_required screen-record-wayland screen-record-wayland status
