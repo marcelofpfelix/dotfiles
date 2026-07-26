@@ -1,5 +1,10 @@
 # this file will be included to zshrc
 
+if [[ -n "${__DOTFILES_ZSHRC_DESKTOP_LOADED:-}" ]]; then
+    return
+fi
+typeset -g __DOTFILES_ZSHRC_DESKTOP_LOADED=1
+
 # history
 bindkey -v
 bindkey '^R' history-incremental-search-backward
@@ -130,13 +135,17 @@ eval "$(direnv hook zsh)"
 eval "$(uvx --generate-shell-completion zsh)"
 
 # zoxide
-eval "$(zoxide init zsh)"
+if command -v zoxide >/dev/null 2>&1; then
+    eval "$(zoxide init zsh)"
+fi
 
 # starship
 eval "$(starship init zsh)"
 
 # television (ctrl+t autocomplete, ctrl+r left for atuin)
-eval "$(tv init zsh | grep -v "bindkey '\\\\^R'")"
+if command -v tv >/dev/null 2>&1; then
+    eval "$(tv init zsh | grep -v 'bindkey.*\^R')"
+fi
 
 # bun completions
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
