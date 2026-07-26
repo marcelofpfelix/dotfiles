@@ -74,4 +74,6 @@ Script-friendly Walker/terminal alternatives are available in parallel:
 - `websearch -p terminal [-s site]` uses terminal input/fuzzy tools and opens in `chrome-wayland`.
 - `script-picker` reads newline-separated items from stdin through `lib_picker.sh` for reusable script menus.
 
+Old X11 launchers such as i3, Rofi, Feh, Nitrogen, Compton, Kazam, Xwayland, and X11 VNC tools are masked with local `Hidden=true` desktop entries under `desktop/.local/share/applications`. They stay installed if another script still needs them, but they do not clutter the Quickshell launcher.
+
 Use `PICKER_BACKEND=walker|terminal|auto` in scripts that source `~/lib/lib_picker.sh`.
