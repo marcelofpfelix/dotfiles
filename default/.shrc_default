@@ -63,8 +63,15 @@ export BAT_THEME="Catppuccin Mocha"
 LINK=$(ip r | awk '/^default/ {print $5}' | head -n1)
 export LINK
 
-# add ~/bin to path
-export PATH="$PATH:$HOME/bin"
+# user tool paths
+for dir in "$HOME/.local/bin" "$HOME/.nix-profile/bin" "$HOME/bin"; do
+    [ -d "$dir" ] || continue
+    case ":$PATH:" in
+        *":$dir:"*) ;;
+        *) PATH="$dir:$PATH" ;;
+    esac
+done
+export PATH
 
 ### utils
 
