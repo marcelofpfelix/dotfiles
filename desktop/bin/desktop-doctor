@@ -4,6 +4,17 @@ set -uo pipefail
 export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
 
 status=0
+FIXABLE=false
+
+case "${1:-}" in
+  --fixable) FIXABLE=true; shift ;;
+  -h|--help) printf 'use: desktop-doctor [--fixable]\n'; exit 0 ;;
+esac
+
+if [ "$#" -gt 0 ]; then
+  printf 'use: desktop-doctor [--fixable]\n' >&2
+  exit 2
+fi
 
 section() {
   printf '\n%s\n' "$1"
@@ -17,9 +28,47 @@ warn() {
   printf 'warn %-22s %s\n' "$1" "$2"
 }
 
+fix_hint() {
+  local command=${3:-}
+  if [ -n "$command" ]; then
+    printf 'fix  %-22s %s\n' "$1" "$command"
+    return
+  fi
+
+  case "$1" in
+    hypr-session|hypr-keys|qs-bar|qs-menu-smoke|audioctl|check-audio-streams|cliphist-menu|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland)
+      printf 'fix  %-22s home -y\n' "$1"
+      ;;
+    walker|gum|fzf|identify|compare)
+      printf 'fix  %-22s track/install the missing package in homelab, then run home -y\n' "$1"
+      ;;
+    current-profile)
+      printf 'fix  %-22s hypr-session reload\n' "$1"
+      ;;
+    quickshell)
+      printf 'fix  %-22s hypr-session reload\n' "$1"
+      ;;
+    wayland-display|current-desktop|hyprctl-monitors)
+      printf 'fix  %-22s log into the Hyprland Wayland session\n' "$1"
+      ;;
+    xdg-desktop-portal-hyprland.service|xdg-desktop-portal.service)
+      printf 'fix  %-22s systemctl --user restart xdg-desktop-portal-hyprland.service xdg-desktop-portal.service xdg-desktop-portal-gtk.service\n' "$1"
+      ;;
+    hyprland-portal)
+      printf 'fix  %-22s home -y && sudo /home/marcelof/bin/xdph-install-system\n' "$1"
+      ;;
+    portal-xdg-data)
+      printf 'fix  %-22s systemctl --user daemon-reload && systemctl --user restart xdg-desktop-portal.service\n' "$1"
+      ;;
+  esac
+}
+
 fail() {
   printf 'fail %-22s %s\n' "$1" "$2"
   status=1
+  if [ "$FIXABLE" = true ]; then
+    fix_hint "$1" "$2" "${3:-}"
+  fi
 }
 
 check_cmd() {
@@ -35,12 +84,17 @@ check_cmd() {
 }
 
 run_required() {
-  local label=$1
+  local label=$1 command
   shift
+  command=$1
+  if ! command -v "$command" >/dev/null 2>&1; then
+    fail "$label" "missing command: $command" "$*"
+    return 1
+  fi
   if "$@"; then
     return 0
   fi
-  fail "$label" "command failed: $*"
+  fail "$label" "command failed: $*" "$*"
 }
 
 current_profile() {
