@@ -198,16 +198,6 @@ END { first=1; for (label in seen) { if (!first) printf " + "; printf "%s", labe
         printf ' %s\n' "$labels"
         return 0
     fi
-    if [ -s "$desired_noise" ] || [ -s "$desired_music" ]; then
-        labels=""
-        [ -s "$desired_noise" ] && labels="Brown-noise"
-        if [ -s "$desired_music" ]; then
-            label=$(basename "$(cat "$desired_music")")
-            [ -n "$labels" ] && labels="$labels + $label" || labels="$label"
-        fi
-        printf '󰓛 %s\n' "$labels"
-        return 0
-    fi
     printf ''
 }
 
@@ -283,8 +273,12 @@ case "${1:-status}" in
         else
             printf 'music: stopped\n'
         fi
-        printf 'helper: playing-or-stopped\n'
-        stream_display | sed 's/^/display: /'
+        if helper_running; then
+            printf "helper: running\n"
+            stream_display | sed "s/^/display: /"
+        else
+            printf "helper: stopped\n"
+        fi
         ;;
     *)
         printf 'use: audioctl [pause-all|resume-all|play-pause-all|restore|stop-all|noise|noise-stop|music [file]|last-music|save-current|display|icon|status]\n' >&2
