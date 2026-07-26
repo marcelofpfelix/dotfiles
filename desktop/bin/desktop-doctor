@@ -236,6 +236,26 @@ check_screen_share() {
   done
 }
 
+check_qs_menu_smoke_latest() {
+  local base latest summary failed
+
+  base="${QS_MENU_SMOKE_BASE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/menu-smoke}"
+  latest="${QS_MENU_SMOKE_LATEST:-$base/latest}"
+  summary="$latest/summary.tsv"
+
+  if [ ! -r "$summary" ]; then
+    warn qs-menu-smoke-latest "not run yet"
+    return
+  fi
+
+  failed=$(awk -F "\t" 'NR > 1 && $2 != "ok" { count++ } END { print count + 0 }' "$summary")
+  if [ "$failed" -gt 0 ]; then
+    fail qs-menu-smoke-latest "$failed failed panel(s)" "qs-menu-smoke"
+  else
+    ok qs-menu-smoke-latest "$summary"
+  fi
+}
+
 section "required commands"
 for cmd in hypr-session hypr-keys qs-bar qs-menu-smoke identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland monitor chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch; do
   check_cmd "$cmd" yes
@@ -262,6 +282,7 @@ current_profile
 
 section "quickshell"
 run_required qs-bar qs-bar status
+check_qs_menu_smoke_latest
 
 section "audio"
 run_required audioctl audioctl status
