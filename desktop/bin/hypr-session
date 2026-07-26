@@ -128,6 +128,44 @@ legacy_launcher_status() {
     return "$missing"
 }
 
+config_status() {
+    local missing=0
+    local hypr_dir="${HYPR_CONFIG_DIR:-$HOME/.config/hypr}"
+    local quickshell_file="${QUICKSHELL_FILE:-$HOME/.config/quickshell/$shell_config/shell.qml}"
+
+    if command -v luac >/dev/null 2>&1; then
+        if luac -p "$hypr_dir/init.lua" "$hypr_dir/profiles/default.lua" "$hypr_dir/profiles/omarchy.lua"; then
+            printf "hypr-lua: ok\n"
+        else
+            missing=1
+        fi
+    else
+        printf "hypr-lua: unchecked missing luac\n"
+    fi
+
+    if command -v qmllint >/dev/null 2>&1; then
+        if qmllint "$quickshell_file" >/dev/null; then
+            printf "quickshell-qml: ok\n"
+        else
+            missing=1
+        fi
+    else
+        printf "quickshell-qml: unchecked missing qmllint\n"
+    fi
+
+    if command -v Hyprland >/dev/null 2>&1; then
+        if Hyprland --config "$config" --verify-config >/dev/null; then
+            printf "hypr-verify: ok\n"
+        else
+            missing=1
+        fi
+    else
+        printf "hypr-verify: unchecked missing Hyprland\n"
+    fi
+
+    return "$missing"
+}
+
 status() {
     local missing=0
     local required_bins=(
@@ -165,6 +203,7 @@ status() {
     notification_owner_status || missing=1
     dunst_status || missing=1
     legacy_launcher_status || missing=1
+    config_status || missing=1
     time_sync_status || missing=1
     audio_status || true
 
