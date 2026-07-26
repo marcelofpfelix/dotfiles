@@ -13,6 +13,7 @@ For the short switch procedure, see
 - `desktop/.config/quickshell/marcelof/shell.qml`: Quickshell wallpaper, bar, tray/status, launcher, password picker, clipboard picker, web-search popup, keybindings popup, screen tools popup, and session menu.
 - `desktop/bin/hypr-session`: status, smoke, test, reload, rollback helper.
 - `desktop/bin/desktop-doctor`: read-only desktop health wrapper around smoke, profile, shell, audio, recording, and browser wrapper checks.
+- `desktop/bin/desktop-package-audit`: checks the active Wayland package intent against the sibling homelab install list.
 - `desktop/bin/qs-menu-smoke`: visual smoke helper that captures Quickshell menu screenshots under local state.
 - `desktop/bin/hypr-gdm`: installs the generated `/usr/share/wayland-sessions/hyprland.desktop` login-manager entry and GDM account defaults.
 - `desktop/bin/hypr-scratch`: helper-backed special workspace scratchpad.

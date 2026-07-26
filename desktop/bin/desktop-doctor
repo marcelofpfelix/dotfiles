@@ -85,12 +85,15 @@ check_browser_wrapper() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys qs-bar audioctl check-audio-streams screen-record-wayland chrome-wayland brave-wayland; do
+for cmd in hypr-session hypr-keys qs-bar audioctl check-audio-streams screen-record-wayland chrome-wayland brave-wayland desktop-package-audit; do
   check_cmd "$cmd" yes
 done
 
 section "session smoke"
 run_required hypr-session hypr-session smoke
+
+section "package intent"
+run_required desktop-package-audit desktop-package-audit
 
 section "profile"
 current_profile

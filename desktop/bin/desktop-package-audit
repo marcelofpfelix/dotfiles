@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+package_file="${HOMELAB_DESKTOP_PACKAGES:-$HOME/gwt/marcelofpfelix/homelab/main/vars/install/desktop.yml}"
+status=0
+
+required_packages=(
+  hyprland
+  hyprland-protocols
+  xdg-desktop-portal-hyprland
+  quickshell
+  walker
+  elephant
+  nixGL
+  grim
+  slurp
+  swappy
+  tesseract-ocr
+  wf-recorder
+  brightnessctl
+  wl-clipboard
+  wev
+  libinput-tools
+  espanso-wayland
+  cliphist
+  playerctl
+  pavucontrol
+  mpv
+  ffmpeg
+  hyprlock
+  swaylock
+  hyprpicker
+  jq
+  libnotify-bin
+  network-manager
+  network-manager-gnome
+  pulseaudio-utils
+  lm-sensors
+  upower
+  power-profiles-daemon
+  bluez
+  xdg-desktop-portal-gtk
+  wireplumber
+  xdg-utils
+  dex
+)
+
+has_package() {
+  grep -Eq "^[[:space:]]*-[[:space:]]*$1([[:space:]#]|$)" "$package_file" 2>/dev/null
+}
+
+if [ ! -r "$package_file" ]; then
+  printf 'fail package-intent missing %s\n' "$package_file" >&2
+  exit 1
+fi
+
+printf 'file %s\n' "$package_file"
+for package in "${required_packages[@]}"; do
+  if has_package "$package"; then
+    printf 'ok   %s\n' "$package"
+  else
+    printf 'miss %s\n' "$package" >&2
+    status=1
+  fi
+done
+
+exit "$status"
