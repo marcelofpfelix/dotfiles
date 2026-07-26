@@ -13,6 +13,7 @@ For the short switch procedure, see
 - `desktop/.config/quickshell/marcelof/shell.qml`: Quickshell wallpaper, bar, tray/status, launcher, password picker, clipboard picker, web-search popup, keybindings popup, screen tools popup, and session menu.
 - `desktop/bin/hypr-session`: status, smoke, test, reload, rollback helper.
 - `desktop/bin/desktop-doctor`: read-only desktop health wrapper around smoke, profile, shell, audio, recording, and browser wrapper checks.
+- `desktop/bin/qs-menu-smoke`: visual smoke helper that captures Quickshell menu screenshots under local state.
 - `desktop/bin/hypr-gdm`: installs the generated `/usr/share/wayland-sessions/hyprland.desktop` login-manager entry and GDM account defaults.
 - `desktop/bin/hypr-scratch`: helper-backed special workspace scratchpad.
 - `desktop/bin/hyprdrop`: parked Wayland dropdown experiment for the old archived `ddspawn` behavior; it is not bound by default.
@@ -24,6 +25,7 @@ Copy the dotfiles locally, then run:
 ```console
 home -y
 desktop-doctor
+qs-menu-smoke launcher controls media
 hypr-session smoke
 hypr-session test
 HYPR_PROFILE=omarchy hypr-session test

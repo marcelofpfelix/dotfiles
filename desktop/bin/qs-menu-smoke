@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+
+sleep_time="${QS_MENU_SMOKE_SLEEP:-0.5}"
+out_dir="${QS_MENU_SMOKE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/menu-smoke/$(date +%Y%m%d-%H%M%S)}"
+panels=(launcher controls media notifications calendar wallpaper screen keybindings clipboard websearch network tray power)
+status=0
+
+usage() {
+  printf 'use: qs-menu-smoke [panel ...]\n' >&2
+  printf 'captures: %s\n' "${panels[*]}" >&2
+}
+
+need() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    printf 'missing: %s\n' "$1" >&2
+    status=1
+    return 1
+  fi
+}
+
+capture_panel() {
+  local panel=$1 file
+  file="$out_dir/$panel.png"
+
+  qs-bar close-panels >/dev/null 2>&1 || true
+  sleep "$sleep_time"
+  if ! qs-bar "$panel" >/dev/null 2>&1; then
+    printf 'fail %s open\n' "$panel" >&2
+    status=1
+    return
+  fi
+  sleep "$sleep_time"
+  if grim "$file" && [ -s "$file" ]; then
+    printf 'ok   %s %s\n' "$panel" "$file"
+  else
+    printf 'fail %s capture\n' "$panel" >&2
+    status=1
+  fi
+  qs-bar close-panels >/dev/null 2>&1 || true
+}
+
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+esac
+
+need qs-bar
+need grim
+[ "$status" -eq 0 ] || exit "$status"
+
+mkdir -p "$out_dir"
+trap 'qs-bar close-panels >/dev/null 2>&1 || true' EXIT
+
+if [ "$#" -gt 0 ]; then
+  panels=("$@")
+fi
+
+for panel in "${panels[@]}"; do
+  capture_panel "$panel"
+done
+
+printf 'dir  %s\n' "$out_dir"
+exit "$status"
