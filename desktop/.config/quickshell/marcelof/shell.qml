@@ -385,6 +385,7 @@ ShellRoot {
   property string sinkDescription: "Default output"
   property string audioIconText: "󰐊"
   property string audioDisplayText: ""
+  property string audioStatusText: ""
   property string recordingStatusText: ""
   property string portalStatusText: ""
   property string wallpaperSource: "file:///home/marcelof/.local/share/backgrounds/bkg2.png"
@@ -772,6 +773,7 @@ ShellRoot {
     audioStreamsRefresh.running = true
     audioIconRefresh.running = true
     audioDisplayRefresh.running = true
+    audioStatusRefresh.running = true
   }
 
   function scheduleAudioRefresh() {
@@ -779,11 +781,11 @@ ShellRoot {
   }
 
   function audioNoiseRunning() {
-    return root.audioDisplayText.indexOf("Brown-noise") >= 0
+    return root.audioStatusText.indexOf("brown-noise: running") >= 0
   }
 
   function audioMusicRunning() {
-    return root.audioDisplayText.length > 0 && (!root.audioNoiseRunning() || root.audioDisplayText.indexOf(" + ") >= 0)
+    return root.audioStatusText.indexOf("music: running") >= 0
   }
 
   function runAudioctl(action) {
@@ -973,6 +975,13 @@ ShellRoot {
     command: ["/home/marcelof/bin/audioctl", "display"]
     running: true
     stdout: StdioCollector { onStreamFinished: root.audioDisplayText = this.text.trim() }
+  }
+
+  Process {
+    id: audioStatusRefresh
+    command: ["/home/marcelof/bin/audioctl", "status"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.audioStatusText = this.text.trim() }
   }
 
   Timer {
