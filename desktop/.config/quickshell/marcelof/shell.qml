@@ -765,6 +765,20 @@ ShellRoot {
     }
   }
 
+  function updateAudioStatus(output) {
+    const text = String(output || "").trim()
+    root.audioStatusText = text
+    const lines = text.split(/\n+/)
+    let display = ""
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].indexOf("display: ") === 0) {
+        display = lines[i].slice(9)
+        break
+      }
+    }
+    root.audioDisplayText = display
+  }
+
   function refreshAudioMixer() {
     audioStreamsRefresh.running = true
   }
@@ -772,7 +786,6 @@ ShellRoot {
   function refreshAudioState() {
     audioStreamsRefresh.running = true
     audioIconRefresh.running = true
-    audioDisplayRefresh.running = true
     audioStatusRefresh.running = true
   }
 
@@ -971,17 +984,10 @@ ShellRoot {
   }
 
   Process {
-    id: audioDisplayRefresh
-    command: ["/home/marcelof/bin/audioctl", "display"]
-    running: true
-    stdout: StdioCollector { onStreamFinished: root.audioDisplayText = this.text.trim() }
-  }
-
-  Process {
     id: audioStatusRefresh
     command: ["/home/marcelof/bin/audioctl", "status"]
     running: true
-    stdout: StdioCollector { onStreamFinished: root.audioStatusText = this.text.trim() }
+    stdout: StdioCollector { onStreamFinished: root.updateAudioStatus(this.text) }
   }
 
   Timer {
