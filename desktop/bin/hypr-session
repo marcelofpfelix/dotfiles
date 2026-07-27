@@ -270,6 +270,8 @@ status() {
         start-hyprland
         hyprctl
         quickshell
+        hypr-term
+        hypr-popup-tmux
         qs-bar
         grim
         slurp

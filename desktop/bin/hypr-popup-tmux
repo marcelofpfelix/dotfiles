@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec /home/marcelof/bin/hypr-term --floating tmux new-session -A -s popup

@@ -211,6 +211,7 @@ hl.bind(mod .. " + ALT + L", sh("/home/marcelof/bin/qs-bar lock"), { locked = tr
 
 -- open terminal
 hl.bind(mod .. " + RETURN", sh(terminal))
+hl.bind(mod .. " + U", sh("/home/marcelof/bin/hypr-popup-tmux"))
 -- open app launcher
 hl.bind(mod .. " + D", sh(launcher))
 -- search the web

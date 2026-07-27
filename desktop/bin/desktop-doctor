@@ -36,7 +36,7 @@ fix_hint() {
   fi
 
   case "$1" in
-    hypr-session|hypr-keys|qs-bar|qs-menu-smoke|audioctl|check-audio-streams|cliphist-menu|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland)
+    hypr-session|hypr-keys|hypr-term|hypr-popup-tmux|qs-bar|qs-menu-smoke|audioctl|check-audio-streams|cliphist-menu|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland)
       printf 'fix  %-22s home -y\n' "$1"
       ;;
     walker|gum|fzf|identify|compare)
@@ -268,7 +268,7 @@ check_qs_menu_smoke_latest() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys qs-bar qs-menu-smoke identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland monitor chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch; do
+for cmd in hypr-session hypr-keys hypr-term hypr-popup-tmux qs-bar qs-menu-smoke identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland monitor chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes

@@ -162,6 +162,7 @@ end)
 
 -- open terminal
 hl.bind(mod .. " + RETURN", sh(terminal))
+hl.bind(mod .. " + U", sh("/home/marcelof/bin/hypr-popup-tmux"))
 -- open tmux launcher
 hl.bind(mod .. " + ALT + RETURN", sh("tmx"))
 hl.bind(mod .. " + SHIFT + RETURN", sh("xdg-open about:blank"))
