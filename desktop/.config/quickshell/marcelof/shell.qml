@@ -786,8 +786,9 @@ ShellRoot {
   }
 
   function refreshAudioState() {
-    audioStreamsRefresh.running = true
     audioStatusRefresh.running = true
+    if (root.mediaPanelOpen)
+      audioStreamsRefresh.running = true
   }
 
   function scheduleAudioRefresh() {
@@ -977,7 +978,7 @@ ShellRoot {
   Process {
     id: audioStreamsRefresh
     command: ["/home/marcelof/bin/check-audio-streams"]
-    running: true
+    running: false
     stdout: StdioCollector { onStreamFinished: root.updateAudioStreams(this.text) }
   }
 
