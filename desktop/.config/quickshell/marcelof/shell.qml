@@ -770,13 +770,15 @@ ShellRoot {
     root.audioStatusText = text
     const lines = text.split(/\n+/)
     let display = ""
+    let icon = "󰐊"
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].indexOf("display: ") === 0) {
+      if (lines[i].indexOf("display: ") === 0)
         display = lines[i].slice(9)
-        break
-      }
+      else if (lines[i].indexOf("icon: ") === 0)
+        icon = lines[i].slice(6)
     }
     root.audioDisplayText = display
+    root.audioIconText = icon
   }
 
   function refreshAudioMixer() {
@@ -785,7 +787,6 @@ ShellRoot {
 
   function refreshAudioState() {
     audioStreamsRefresh.running = true
-    audioIconRefresh.running = true
     audioStatusRefresh.running = true
   }
 
@@ -978,13 +979,6 @@ ShellRoot {
     command: ["/home/marcelof/bin/check-audio-streams"]
     running: true
     stdout: StdioCollector { onStreamFinished: root.updateAudioStreams(this.text) }
-  }
-
-  Process {
-    id: audioIconRefresh
-    command: ["/home/marcelof/bin/audioctl", "icon"]
-    running: true
-    stdout: StdioCollector { onStreamFinished: root.audioIconText = this.text.trim().length > 0 ? this.text.trim() : "󰐊" }
   }
 
   Process {

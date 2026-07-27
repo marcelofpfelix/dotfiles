@@ -346,6 +346,9 @@ self_test() {
     sleep 0.2
     [ -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise-toggle did not restore noise\n' >&2; rc=1; }
 
+    status_output=$(PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" status)
+    printf '%s\n' "$status_output" | grep -q '^icon: ' || { printf 'status did not expose icon\n' >&2; rc=1; }
+
     PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" force-stop
     sleep 0.2
     [ ! -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise pid survived force-stop\n' >&2; rc=1; }
@@ -406,6 +409,7 @@ case "${1:-status}" in
         audio_icon
         ;;
     status)
+        display_text=""
         if noise_running; then
             printf 'brown-noise: running pid=%s\n' "$(cat "$noise_pid")"
         else
@@ -418,11 +422,19 @@ case "${1:-status}" in
         fi
         if helper_running; then
             printf "helper: running\n"
-            stream_display | sed "s/^/display: /"
+            display_text=$(stream_display)
+            [ -n "$display_text" ] && printf 'display: %s\n' "$display_text"
         else
             printf "helper: stopped\n"
         fi
-        [ -e "$paused_state" ] && printf "state: paused\n"
+        if [ -e "$paused_state" ]; then
+            printf "state: paused\n"
+            printf "icon: 󰐊\n"
+        elif [ -n "$display_text" ] && ! printf '%s\n' "$display_text" | grep -q '(paused)'; then
+            printf "icon: 󰏤\n"
+        else
+            printf "icon: 󰐊\n"
+        fi
         if [ -s "$desired_noise" ]; then
             printf "saved-noise: brown\n"
         else
