@@ -118,7 +118,7 @@ hl.config({
 
 hl.workspace_rule({ workspace = "3", monitor = "DP-2" })
 
-hl.window_rule({ match = { workspace = "8" }, float = true, size = { 800, 600 }, center = true })
+hl.window_rule({ match = { title = "hypr-floating" }, float = true, size = { 800, 600 }, center = true })
 hl.window_rule({ match = { class = "floating" }, float = true, size = { 800, 600 }, center = true })
 hl.window_rule({ match = { title = "quickshell-launcher" }, float = true, size = { 720, 520 }, center = true })
 hl.window_rule({ match = { title = "quickshell-websearch" }, float = true, size = { 640, 220 }, center = true })

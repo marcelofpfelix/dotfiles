@@ -17,9 +17,6 @@ notify() {
     fi
 }
 
-if [ "$floating" -eq 1 ]; then
-    hyprctl eval 'hl.dispatch(hl.dsp.focus({ workspace = "8" }))' >/dev/null 2>&1 || true
-fi
 
 launch() {
     if command -v "$1" >/dev/null 2>&1; then
@@ -28,12 +25,26 @@ launch() {
     fi
 }
 
-if [ $# -gt 0 ]; then
-    if [ "$floating" -eq 1 ]; then
-        launch ghostty -e "$@"
-        launch /snap/bin/ghostty -e "$@"
-        launch wezterm start --always-new-process --class floating -- "$@"
+run_foreground() {
+    if command -v "$1" >/dev/null 2>&1; then
+        exec hypr-clean-env "$@"
     fi
+}
+
+if [ "$floating" -eq 1 ]; then
+    if [ $# -gt 0 ]; then
+        run_foreground ghostty --title=hypr-floating -e "$@"
+        run_foreground /snap/bin/ghostty --title=hypr-floating -e "$@"
+        run_foreground wezterm start --always-new-process --class floating -- "$@"
+    else
+        run_foreground ghostty --title=hypr-floating
+        run_foreground /snap/bin/ghostty --title=hypr-floating
+        run_foreground wezterm start --always-new-process --class floating
+    fi
+fi
+
+
+if [ $# -gt 0 ]; then
     launch ghostty -e "$@"
     launch /snap/bin/ghostty -e "$@"
     launch wezterm start -- "$@"
@@ -41,11 +52,6 @@ if [ $# -gt 0 ]; then
     launch terminator -x "$@"
     launch x-terminal-emulator -e "$@"
 else
-    if [ "$floating" -eq 1 ]; then
-        launch ghostty
-        launch /snap/bin/ghostty
-        launch wezterm start --always-new-process --class floating
-    fi
     launch ghostty
     launch /snap/bin/ghostty
     launch wezterm start
