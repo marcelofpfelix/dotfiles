@@ -1077,13 +1077,14 @@ ShellRoot {
     property string label: ""
     property string tooltip: ""
     property int minWidth: 76
+    property bool active: false
     signal triggered()
     signal secondaryTriggered()
 
     implicitHeight: 30
     implicitWidth: Math.max(minWidth, actionRow.implicitWidth + 18)
     radius: 6
-    color: actionMouse.containsMouse ? "#45475a" : "#313244"
+    color: actionMouse.containsMouse ? (active ? "#585b70" : "#45475a") : (active ? "#3b4252" : "#313244")
 
     RowLayout {
       id: actionRow
@@ -1744,15 +1745,15 @@ ShellRoot {
               Layout.fillWidth: true
               spacing: 7
               ActionButton { Layout.fillWidth: true; icon: "󰒮"; label: "Prev"; tooltip: "Previous track"; onTriggered: root.runPlayerctl("previous") }
-              ActionButton { Layout.fillWidth: true; icon: root.audioIconText; label: root.audioDisplayText.length > 0 ? "Pause" : "Play"; tooltip: root.audioDisplayText.length > 0 ? "Pause saved music and noise" : "Start saved music and noise"; onTriggered: root.runAudioctl("play-pause-all") }
+              ActionButton { Layout.fillWidth: true; active: root.audioDisplayText.length > 0; icon: root.audioIconText; label: root.audioDisplayText.length > 0 ? "Pause" : "Play"; tooltip: root.audioDisplayText.length > 0 ? "Pause saved music and noise" : "Start saved music and noise"; onTriggered: root.runAudioctl("play-pause-all") }
               ActionButton { Layout.fillWidth: true; icon: "󰒭"; label: "Next"; tooltip: "Next track"; onTriggered: root.runPlayerctl("next") }
             }
 
             RowLayout {
               Layout.fillWidth: true
               spacing: 7
-              ActionButton { Layout.fillWidth: true; icon: "󰜗"; label: root.audioNoiseRunning() ? "Noise Off" : "Noise On"; tooltip: root.audioNoiseRunning() ? "Stop brown noise" : "Start brown noise"; onTriggered: root.runAudioctl("noise-toggle") }
-              ActionButton { Layout.fillWidth: true; icon: ""; label: root.audioMusicRunning() ? "Music Off" : "Music On"; tooltip: root.audioMusicRunning() ? "Stop saved music" : "Start saved music"; onTriggered: root.runAudioctl("music-toggle") }
+              ActionButton { Layout.fillWidth: true; active: root.audioNoiseRunning(); icon: "󰜗"; label: root.audioNoiseRunning() ? "Noise Off" : "Noise On"; tooltip: root.audioNoiseRunning() ? "Stop brown noise" : "Start brown noise"; onTriggered: root.runAudioctl("noise-toggle") }
+              ActionButton { Layout.fillWidth: true; active: root.audioMusicRunning(); icon: ""; label: root.audioMusicRunning() ? "Music Off" : "Music On"; tooltip: root.audioMusicRunning() ? "Stop saved music" : "Start saved music"; onTriggered: root.runAudioctl("music-toggle") }
               ActionButton { Layout.fillWidth: true; icon: "󰓛"; label: "Stop"; tooltip: "Stop saved music and noise. Right-click: force kill"; onTriggered: root.runAudioctl("stop-all"); onSecondaryTriggered: root.runAudioctl("force-stop") }
             }
 
