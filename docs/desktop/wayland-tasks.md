@@ -16,7 +16,7 @@
 - [x] `Win+A` has an explicit i3-parity notice for unsupported focus-parent behavior.
 - [x] `Win+W` closes the focused window, matching the Omarchy quattro binding accepted for this migration.
 - [x] `Win+S` uses the local `hypr-scratch` helper and `Win+Alt+S` moves the active window there.
-- [x] `Win+U` opens a floating tmux popup session through `hypr-popup-tmux`.
+- [x] `Win+U` toggles a floating tmux popup session through `hypr-term popup-tmux`.
 - [x] `Win+R` reports the resize replacement.
 - [x] `Win+Space` opens the Quickshell launcher; the old floating-focus behavior is not kept because app launch is the accepted default.
 - [x] `Win+Shift+E` uses the Quickshell exit confirmation instead of exiting immediately.
@@ -224,7 +224,7 @@ Reference review snapshot: 2026-07-26. Keep exact star counts out of this file b
   - Groupbar styling is enabled in both profiles and Quickshell shows active grouped-window count.
 - [x] Improve scratchpad/dropdown behavior.
   - `Win+S` scratchpad count is visible beside workspaces without showing special workspaces as numbered workspaces.
-  - `Win+U` now uses the proven `hypr-floating` title rule for a tmux popup session.
+  - `Win+U` now uses a stable Ghostty popup title for the tmux popup session.
 
 - [x] Verify browser WebGL through fresh wrapper-launched Chrome and Brave profiles.
   - Current behavior: `chrome-wayland` and `brave-wayland` both expose WebGL 2 through ANGLE on Intel Iris Xe under Hyprland. The wrappers still log a Vulkan compatibility warning, but WebGL works.

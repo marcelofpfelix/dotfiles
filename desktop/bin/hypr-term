@@ -4,10 +4,38 @@ set -euo pipefail
 export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
 
 floating=0
-if [ "${1:-}" = "--floating" ]; then
-    floating=1
-    shift
-fi
+floating_title=hypr-floating
+ghostty_popup=0
+
+popup_address() {
+    command -v hyprctl >/dev/null 2>&1 || return 1
+    command -v jq >/dev/null 2>&1 || return 1
+
+    hyprctl clients -j 2>/dev/null |
+        jq -r '.[] | select(.title == "hypr-popup-tmux" or .initialTitle == "hypr-popup-tmux") | .address' 2>/dev/null |
+        sed -n '1p'
+}
+
+close_popup() {
+    address=$(popup_address)
+    [ -n "$address" ] || return 1
+    hyprctl dispatch "hl.dsp.window.close({ window = 'address:$address' })" >/dev/null 2>&1
+}
+
+case "${1:-}" in
+    --floating)
+        floating=1
+        shift
+        ;;
+    popup-tmux|--popup-tmux)
+        shift
+        close_popup && exit 0
+        floating=1
+        floating_title=hypr-popup-tmux
+        ghostty_popup=1
+        set -- tmux new-session -A -s popup
+        ;;
+esac
 
 notify() {
     if command -v notify-send >/dev/null 2>&1; then
@@ -32,13 +60,18 @@ run_foreground() {
 }
 
 if [ "$floating" -eq 1 ]; then
+    ghostty_args=(--title="$floating_title")
+    if [ "$ghostty_popup" -eq 1 ]; then
+        ghostty_args+=(--confirm-close-surface=false --shell-integration-features=cursor,no-sudo,no-ssh-env,no-ssh-terminfo,path)
+    fi
+
     if [ $# -gt 0 ]; then
-        run_foreground ghostty --title=hypr-floating -e "$@"
-        run_foreground /snap/bin/ghostty --title=hypr-floating -e "$@"
+        run_foreground ghostty "${ghostty_args[@]}" -e "$@"
+        run_foreground /snap/bin/ghostty "${ghostty_args[@]}" -e "$@"
         run_foreground wezterm start --always-new-process --class floating -- "$@"
     else
-        run_foreground ghostty --title=hypr-floating
-        run_foreground /snap/bin/ghostty --title=hypr-floating
+        run_foreground ghostty "${ghostty_args[@]}"
+        run_foreground /snap/bin/ghostty "${ghostty_args[@]}"
         run_foreground wezterm start --always-new-process --class floating
     fi
 fi

@@ -110,8 +110,7 @@ pretty_action() {
         *'resize mode is mapped'*) printf 'Resize mode notice' ;;
         *'monitor'*) printf 'Display settings' ;;
         *'gnome-calculator'*) printf 'Calculator' ;;
-        *'hypr-popup-tmux'*) printf 'Tmux popup' ;;
-        *'hypr-popup-tmux'*) printf 'Tmux popup' ;;
+        *'hypr-term popup-tmux'*) printf 'Tmux popup' ;;
         *'tmux list-keys'*) printf 'Tmux keys' ;;
         *'tmx'*) printf 'Tmux launcher' ;;
         *'about:blank'*) printf 'Browser' ;;

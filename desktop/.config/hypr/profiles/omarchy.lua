@@ -138,6 +138,7 @@ hl.config({
 hl.workspace_rule({ workspace = "3", monitor = "DP-2" })
 
 hl.window_rule({ match = { title = "hypr-floating" }, float = true, size = { 800, 600 }, center = true })
+hl.window_rule({ match = { title = "hypr-popup-tmux" }, float = true, size = { 800, 600 }, center = true })
 hl.window_rule({ match = { class = "floating" }, float = true, size = { 800, 600 }, center = true })
 hl.window_rule({ match = { title = "quickshell-launcher" }, float = true, size = { 720, 520 }, center = true })
 hl.window_rule({ match = { title = "quickshell-websearch" }, float = true, size = { 640, 220 }, center = true })
@@ -162,7 +163,7 @@ end)
 
 -- open terminal
 hl.bind(mod .. " + RETURN", sh(terminal))
-hl.bind(mod .. " + U", sh("/home/marcelof/bin/hypr-popup-tmux"))
+hl.bind(mod .. " + U", sh("/home/marcelof/bin/hypr-term popup-tmux"))
 -- open tmux launcher
 hl.bind(mod .. " + ALT + RETURN", sh("tmx"))
 hl.bind(mod .. " + SHIFT + RETURN", sh("xdg-open about:blank"))
