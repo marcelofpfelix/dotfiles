@@ -1070,6 +1070,7 @@ ShellRoot {
     property string tooltip: ""
     property int minWidth: 76
     signal triggered()
+    signal secondaryTriggered()
 
     implicitHeight: 30
     implicitWidth: Math.max(minWidth, actionRow.implicitWidth + 18)
@@ -1088,11 +1089,17 @@ ShellRoot {
     MouseArea {
       id: actionMouse
       anchors.fill: parent
+      acceptedButtons: Qt.LeftButton | Qt.RightButton
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onEntered: if (parent.tooltip.length > 0) root.showTooltip(parent, parent.tooltip)
       onExited: root.hideTooltip()
-      onClicked: parent.triggered()
+      onClicked: mouse => {
+        if (mouse.button === Qt.RightButton)
+          parent.secondaryTriggered()
+        else
+          parent.triggered()
+      }
     }
   }
 
@@ -1738,7 +1745,7 @@ ShellRoot {
               spacing: 7
               ActionButton { Layout.fillWidth: true; icon: "󰜗"; label: "Noise"; tooltip: "Toggle brown noise"; onTriggered: root.runAudioctl("noise-toggle") }
               ActionButton { Layout.fillWidth: true; icon: ""; label: "Music"; tooltip: "Start saved/default music"; onTriggered: root.runAudioctl("music") }
-              ActionButton { Layout.fillWidth: true; icon: "󰓛"; label: "Stop"; tooltip: "Stop saved music and noise"; onTriggered: root.runAudioctl("stop-all") }
+              ActionButton { Layout.fillWidth: true; icon: "󰓛"; label: "Stop"; tooltip: "Stop saved music and noise. Right-click: force kill"; onTriggered: root.runAudioctl("stop-all"); onSecondaryTriggered: root.runAudioctl("force-stop") }
             }
 
             RowLayout {

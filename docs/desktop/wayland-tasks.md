@@ -209,7 +209,7 @@ Reference review snapshot: 2026-07-26. Keep exact star counts out of this file b
   - Keep clipboard selection Quickshell-owned for the active Wayland desktop profile.
 - [x] Replace the old `Win+,` rofi websearch path with direct Quickshell web-search IPC; keep `websearch` only as a CLI helper.
 - [x] Expand the Quickshell control center.
-  - [x] Audio popup has per-stream mute/volume, active stream metadata, pavucontrol launch, noise, stop, force-stop command coverage, and play/pause-all actions.
+  - [x] Audio popup has per-stream mute/volume, active stream metadata, pavucontrol launch, noise, stop, right-click force-stop, and play/pause-all actions.
   - [x] Keep the top bar audio control icon-only; put details in the popup.
   - [x] Add screen brightness controls where hardware support exists.
   - [x] Add keyboard brightness controls where hardware support exists.
