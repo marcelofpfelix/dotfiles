@@ -26,7 +26,7 @@
 
 ## Omarchy profile parity
 
-- [x] `Win+Space` opens the local Quickshell launcher through `qs ipc call launcher toggle`/`qs-launcher`.
+- [x] `Win+Space` opens the local Quickshell launcher through `qs ipc call launcher open`/`qs-launcher`.
 - [x] `Win+W` closes the focused window like Omarchy quattro.
 - [x] `Win+S` uses the local `hypr-scratch` helper and `Win+Alt+S` moves a window there.
 - [x] `Win+Escape` and `Win+Shift+E` open the local Quickshell exit confirmation.

@@ -17,8 +17,10 @@ notify() {
     fi
 }
 
-toggle_quickshell() {
-    "$qs_bin" ipc --path "$config_path" --any-display call launcher toggle >>"$log_file" 2>&1
+launcher_action="${1:-open}"
+
+open_quickshell() {
+    "$qs_bin" ipc --path "$config_path" --any-display call launcher "$launcher_action" >>"$log_file" 2>&1
 }
 
 start_quickshell() {
@@ -27,13 +29,13 @@ start_quickshell() {
 
 
 : >"$log_file"
-if toggle_quickshell; then
+if open_quickshell; then
     exit 0
 fi
 
 start_quickshell
 sleep 0.5
-if toggle_quickshell; then
+if open_quickshell; then
     exit 0
 fi
 

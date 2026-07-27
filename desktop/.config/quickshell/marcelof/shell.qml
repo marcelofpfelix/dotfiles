@@ -621,6 +621,8 @@ ShellRoot {
   }
 
   function closeTransientPanels() {
+    root.hideLauncher()
+    root.clipboardOpen = false
     root.trayManageOpen = false
     root.controlPanelOpen = false
     root.mediaPanelOpen = false
@@ -3028,7 +3030,7 @@ ShellRoot {
             height: 46
             radius: 4
             color: ListView.isCurrentItem ? "#313244" : "transparent"
-            Text { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10; verticalAlignment: Text.AlignVCenter; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: modelData.text }
+            Text { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10; verticalAlignment: Text.AlignVCenter; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: modelData.text || "" }
             MouseArea { anchors.fill: parent; hoverEnabled: true; onEntered: clipList.currentIndex = index; onClicked: { clipList.currentIndex = index; root.pasteClipboardEntry() } }
           }
         }

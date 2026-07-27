@@ -240,7 +240,7 @@ quickshell_bar_status() {
     fi
 
     local needles=(
-        "launcher) ipc_target launcher toggle"
+        "launcher) ipc_target launcher open"
         "tray|tray-manage) ipc trayManage"
         "controls) ipc controls"
         "media|audio) ipc media"

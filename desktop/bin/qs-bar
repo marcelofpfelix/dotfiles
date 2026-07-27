@@ -65,7 +65,7 @@ case "${1:-status}" in
     ;;
   status) list_instances ;;
   toggle|show|hide) ipc "$1" ;;
-  launcher) ipc_target launcher toggle ;;
+  launcher) ipc_target launcher open ;;
   tray|tray-manage) ipc trayManage ;;
   controls) ipc controls ;;
   media|audio) ipc media ;;
