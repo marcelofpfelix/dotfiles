@@ -36,7 +36,7 @@ fix_hint() {
   fi
 
   case "$1" in
-    hypr-session|hypr-keys|hypr-term|qs-bar|qs-menu-smoke|audioctl|check-audio-streams|cliphist-menu|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland)
+    hypr-session|hypr-keys|hypr-term|qs-bar|qs-menu-smoke|desktop-reload|desktop-notification-smoke|audioctl|check-audio-streams|cliphist-menu|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland)
       printf 'fix  %-22s home -y\n' "$1"
       ;;
     walker|gum|fzf|identify|compare)
@@ -237,7 +237,7 @@ check_screen_share() {
 }
 
 check_qs_menu_smoke_latest() {
-  local base latest summary failed max_age now mtime age
+  local base latest summary failed max_age now mtime age qml_file qml_mtime
 
   base="${QS_MENU_SMOKE_BASE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/menu-smoke}"
   latest="${QS_MENU_SMOKE_LATEST:-$base/latest}"
@@ -249,14 +249,21 @@ check_qs_menu_smoke_latest() {
     return
   fi
 
+  mtime=$(stat -c %Y "$summary" 2>/dev/null || printf 0)
   if [ "$max_age" -gt 0 ] 2>/dev/null; then
     now=$(date +%s)
-    mtime=$(stat -c %Y "$summary" 2>/dev/null || printf 0)
     age=$((now - mtime))
     if [ "$age" -gt "$max_age" ]; then
       fail qs-menu-smoke-latest "stale ${age}s" "qs-menu-smoke"
       return
     fi
+  fi
+
+  qml_file="${QUICKSHELL_FILE:-$HOME/.config/quickshell/marcelof/shell.qml}"
+  qml_mtime=$(stat -c %Y "$qml_file" 2>/dev/null || printf 0)
+  if [ "$qml_mtime" -gt "$mtime" ]; then
+    fail qs-menu-smoke-latest "older than $qml_file" "qs-menu-smoke"
+    return
   fi
 
   failed=$(awk -F "\t" 'NR > 1 && $2 != "ok" { count++ } END { print count + 0 }' "$summary")
@@ -267,8 +274,58 @@ check_qs_menu_smoke_latest() {
   fi
 }
 
+check_board_status() {
+  local config="${BOARD_CONFIG:-$HOME/.config/board/board.toml}"
+  if [ -r "$config" ]; then
+    ok board-config "$config"
+  else
+    fail board-config "missing $config" "home -y"
+    return
+  fi
+
+  if board --config "$config" render quickshell quickshell-bar >/dev/null 2>&1; then
+    ok board-render quickshell-bar
+  else
+    fail board-render "quickshell-bar failed" "board --config $config render quickshell quickshell-bar"
+  fi
+}
+
+check_audio_status() {
+  local output
+  if ! output=$(audioctl status 2>&1); then
+    fail audioctl "status failed"
+    printf '%s\n' "$output"
+    return
+  fi
+
+  ok audioctl status
+  if printf '%s\n' "$output" | grep -q '^icon: '; then
+    ok audioctl-icon present
+  else
+    fail audioctl-icon missing
+  fi
+
+  if printf '%s\n' "$output" | grep -q '^helper: running'; then
+    if printf '%s\n' "$output" | grep -q '^display: '; then
+      ok audioctl-display present
+    else
+      fail audioctl-display "helper running without display"
+    fi
+  else
+    ok audioctl-display "not required while stopped"
+  fi
+}
+
+check_notification_smoke_status() {
+  if desktop-notification-smoke --status; then
+    ok notification-smoke ready
+  else
+    fail notification-smoke "not ready" "desktop-notification-smoke --status"
+  fi
+}
+
 section "required commands"
-for cmd in hypr-session hypr-keys hypr-term qs-bar qs-menu-smoke identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland monitor chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch; do
+for cmd in hypr-session hypr-keys hypr-term qs-bar qs-menu-smoke desktop-reload desktop-notification-smoke board identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland monitor chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes
@@ -293,14 +350,18 @@ current_profile
 
 section "quickshell"
 run_required qs-bar qs-bar status
+check_board_status
 check_qs_menu_smoke_latest
 
 section "audio"
-run_required audioctl audioctl status
+check_audio_status
 run_required audioctl-self-test audioctl self-test
 if command -v check-audio-streams >/dev/null 2>&1; then
   check-audio-streams || true
 fi
+
+section "notifications"
+check_notification_smoke_status
 
 section "clipboard"
 run_required cliphist-menu cliphist-menu status

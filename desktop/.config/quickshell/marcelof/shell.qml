@@ -1095,7 +1095,7 @@ ShellRoot {
     signal triggered()
     signal secondaryTriggered()
 
-    implicitHeight: 30
+    implicitHeight: 32
     implicitWidth: Math.max(minWidth, actionRow.implicitWidth + 18)
     radius: 6
     color: actionMouse.containsMouse ? (active ? "#585b70" : "#45475a") : (active ? "#3b4252" : "#313244")
@@ -1357,7 +1357,7 @@ ShellRoot {
         }
       }
 
-      StatusText { command: ["env", "BAR_COLOR_FORMAT=quickshell", "board", "render", "quickshell", "quickshell-bar"]; interval: 1000; rich: true }
+      StatusText { command: ["env", "BAR_COLOR_FORMAT=quickshell", "board", "--config", "/home/marcelof/.config/board/board.toml", "render", "quickshell", "quickshell-bar"]; interval: 1000; rich: true }
 
       Text {
         Layout.alignment: Qt.AlignVCenter
@@ -1752,7 +1752,7 @@ ShellRoot {
                 Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Media" }
                 Text { Layout.fillWidth: true; color: "#7f849c"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.audioDisplayText.length > 0 ? root.audioDisplayText : "No active playback" }
               }
-              ActionButton { icon: "󰕾"; label: "Output"; tooltip: "Open volume mixer"; onTriggered: Quickshell.execDetached(["hypr-clean-env", "pavucontrol"]) }
+              ActionButton { icon: "󰕾"; label: "Output"; minWidth: 92; tooltip: "Open volume mixer"; onTriggered: Quickshell.execDetached(["hypr-clean-env", "pavucontrol"]) }
             }
 
             RowLayout {

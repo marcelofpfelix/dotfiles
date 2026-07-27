@@ -68,12 +68,12 @@
 - [x] `qmllint` passes for local Quickshell QML.
 - [x] `Hyprland --config desktop/.config/hypr/init.lua --verify-config` passes for `default`.
 - [x] `HYPR_PROFILE=omarchy Hyprland --config desktop/.config/hypr/init.lua --verify-config` passes for `omarchy`.
-- [x] Live files under `$HOME/.config/hypr`, `$HOME/.config/quickshell`, `$HOME/bin`, and `$HOME/lib` are refreshed from the repo.
+- [x] Live files under `$HOME/.config/hypr`, `$HOME/.config/quickshell`, `$HOME/.config/board`, `$HOME/bin`, and `$HOME/lib` are refreshed from the repo.
 - [x] Safe color-format sample proves Quickshell rich text and plain output modes.
-- [x] `hypr-session status` and `hypr-session smoke` check required Wayland tools, Quickshell, notification owner, portals, clock sync, audio state, inactive dunst, legacy launcher masks, Hyprland/Quickshell config validity, generated keybinding help, Quickshell IPC menu targets, `qs-bar` menu commands, and optional `hyprpicker`.
-- [x] `desktop-doctor` wraps the live Wayland smoke check with current profile, Quickshell status, picker helper status, clipboard helper status, audio state, audioctl pause/resume regression checks, screenshot helper status, wallpaper helper status, screen-record status, and static browser wrapper flag checks.
-- [x] `desktop-package-audit` verifies active Wayland helper package intent is tracked in the sibling homelab install list, and `desktop-doctor` runs it.
-- [x] `qs-menu-smoke` opens, captures, closes, and checks Quickshell launcher/control/media/notification/calendar/wallpaper/screen/keybinding/clipboard/websearch/network/tray/power menu screenshots for visual regression checks.
+- [x] `hypr-session status` and `hypr-session smoke` check required Wayland tools, Quickshell, board, notification owner, portals, clock sync, audio state, inactive dunst, legacy launcher masks, Hyprland/Quickshell config validity, generated keybinding help, Quickshell IPC menu targets, `qs-bar` menu commands, and optional `hyprpicker`.
+- [x] `desktop-doctor` wraps the live Wayland smoke check with current profile, Quickshell status, board status, picker helper status, clipboard helper status, audio state, audioctl pause/resume/status regression checks, screenshot helper status, wallpaper helper status, screen-record status, notification-smoke readiness, and static browser wrapper flag checks.
+- [x] `desktop-package-audit` verifies active Wayland helper package intent, including local `board`, is tracked in the sibling homelab install list, and `desktop-doctor` runs it.
+- [x] `qs-menu-smoke` opens, captures, closes, and checks Quickshell launcher/control/media/notification/calendar/wallpaper/screen/keybinding/clipboard/websearch/network/tray/power menu screenshots for visual regression checks; `desktop-doctor` now fails when the latest smoke run predates live Quickshell QML.
 
 ## References
 
@@ -238,7 +238,7 @@ Reference review snapshot: 2026-07-26. Keep exact star counts out of this file b
 ## Notes
 
 - `default` is the i3-compatible profile. There is intentionally no separate `i3` profile.
-- Quickshell owns bar, launcher, tray, wallpaper, controls, calendar, notification history, network panel, lock IPC, and exit confirmation; controls also acts as the all-menus hub.
+- Quickshell owns bar, launcher, tray, wallpaper, controls, calendar, notification history, network panel, lock IPC, and exit confirmation; controls also acts as the all-menus hub. `board` is the tracked local status renderer for Quickshell and tmux surfaces.
 - Both profiles use the local lightweight Quickshell shell. The `omarchy` profile does not install or call upstream runtime binaries.
 - Adapted reference patterns already landed locally: Caelestia-like session actions behind local commands, end-4-like `Super+/` keybinding help and cliphist watcher refresh, Noctalia-like compact popup/control surfaces, and cxOrz-like cliphist as backend plumbing.
 - Rust system-metrics helper is intentionally not active work. The future note lives in `wiki/main/resources/dev/desktop.md`; build it only if measured Quickshell status polling cost becomes a real problem.

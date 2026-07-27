@@ -41,8 +41,18 @@ ipc_target() {
   "$qs_bin" ipc --path "$config_path" --any-display call "$target" "$@"
 }
 
+running() {
+  list_instances | grep -q '^Instance '
+}
+
 start() {
+  running && return 0
   "$quickshell_bin" --path "$config_path" --no-duplicate --daemonize >>"$log_file" 2>&1 || true
+  sleep 0.3
+  running && return 0
+  "$quickshell_bin" --path "$config_path" --daemonize >>"$log_file" 2>&1 || true
+  sleep 0.3
+  running
 }
 
 case "${1:-status}" in
@@ -50,6 +60,7 @@ case "${1:-status}" in
   stop) kill_all ;;
   restart|reload)
     kill_all
+    sleep 0.3
     start
     ;;
   status) list_instances ;;

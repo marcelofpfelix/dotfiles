@@ -8,7 +8,7 @@ scan_file() {
   local file=$1 rel
   rel="${file#"$root"/}"
 
-  if grep -nE '(^|[^[:alnum:]_.-])(rofi|dmenu|zenity|xrandr|feh)([[:space:];|&`$()<>{}]|$)' "$file"; then
+  if grep -nE '(^|[^[:alnum:]_.-])(rofi|dmenu|zenity|xrandr|feh|polybar|picom)([[:space:];|&`$()<>{}]|$)' "$file"; then
     printf 'active Wayland file calls legacy X11 helper: %s\n' "$rel" >&2
     status=1
   fi
@@ -25,8 +25,10 @@ done < <(
   find \
     "$root/desktop/bin" \
     "$root/desktop/lib" \
+    "$root/desktop/.config/board" \
     "$root/desktop/.config/hypr" \
     "$root/desktop/.config/quickshell" \
+    "$root/desktop/.tmux.conf" \
     -type f -print0
 )
 

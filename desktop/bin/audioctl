@@ -298,7 +298,20 @@ self_test() {
     printf '#!/usr/bin/env bash\nsleep 300\n' >"$self_test_fakebin/ffmpeg"
     printf '#!/usr/bin/env bash\nsleep 300\n' >"$self_test_fakebin/pw-cat"
     printf '#!/usr/bin/env bash\nsleep 300\n' >"$self_test_fakebin/mpv"
-    chmod +x "$self_test_fakebin/ffmpeg" "$self_test_fakebin/pw-cat" "$self_test_fakebin/mpv"
+    cat >"$self_test_fakebin/pactl" <<'PACTL_AUDIOCTL_SELF_TEST'
+#!/usr/bin/env bash
+cat <<'PACTL_AUDIOCTL_OUTPUT'
+Sink Input #42
+    application.name = "audioctl"
+    media.name = "Brown-noise"
+    Mute: no
+Sink Input #43
+    application.name = "mpv"
+    media.name = "audioctl-self-test.mp3 - mpv"
+    Mute: no
+PACTL_AUDIOCTL_OUTPUT
+PACTL_AUDIOCTL_SELF_TEST
+    chmod +x "$self_test_fakebin/ffmpeg" "$self_test_fakebin/pw-cat" "$self_test_fakebin/mpv" "$self_test_fakebin/pactl"
 
     setsid sleep 300 >/dev/null 2>&1 &
     self_test_child_other=$!
@@ -347,6 +360,7 @@ self_test() {
     [ -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise-toggle did not restore noise\n' >&2; rc=1; }
 
     status_output=$(PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" status)
+    printf '%s\n' "$status_output" | grep -q '^display: ' || { printf 'status did not expose display\n' >&2; rc=1; }
     printf '%s\n' "$status_output" | grep -q '^icon: ' || { printf 'status did not expose icon\n' >&2; rc=1; }
 
     PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" force-stop

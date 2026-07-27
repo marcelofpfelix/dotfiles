@@ -12,9 +12,11 @@ For the short switch procedure, see
 - `desktop/.config/hypr/profiles/omarchy.lua`: Omarchy-like Wayland profile implemented with generic Wayland tools.
 - `desktop/.config/quickshell/marcelof/shell.qml`: Quickshell wallpaper, bar, tray/status, launcher, password picker, clipboard picker, web-search popup, keybindings popup, screen tools popup, and session menu.
 - `desktop/bin/hypr-session`: status, smoke, test, reload, rollback helper.
-- `desktop/bin/desktop-doctor`: read-only desktop health wrapper around smoke, profile, shell, picker, audio, recording, and browser wrapper checks.
+- `desktop/bin/desktop-doctor`: read-only desktop health wrapper around smoke, profile, shell, board, picker, audio, recording, and browser wrapper checks.
 - `desktop/bin/desktop-package-audit`: checks the active Wayland package intent against the sibling homelab install list.
 - `desktop/bin/qs-menu-smoke`: visual smoke helper that opens, captures, closes, and checks Quickshell menu screenshots under local state.
+- `desktop/bin/desktop-reload`: validates, copies, and reloads the live Quickshell shell and board config.
+- `desktop/bin/desktop-notification-smoke`: explicit notification toast/center smoke test.
 - `desktop/bin/hypr-gdm`: installs the generated `/usr/share/wayland-sessions/hyprland.desktop` login-manager entry and GDM account defaults.
 - `desktop/bin/hypr-scratch`: helper-backed special workspace scratchpad.
 - `desktop/bin/hyprdrop`: parked Wayland dropdown experiment for the old archived `ddspawn` behavior; it is not bound by default.
@@ -27,12 +29,13 @@ Copy the dotfiles locally, then run:
 home -y
 desktop-doctor
 qs-menu-smoke
+desktop-reload
 hypr-session smoke
 hypr-session test
 HYPR_PROFILE=omarchy hypr-session test
 ```
 
-`qs-menu-smoke` writes screenshots plus `summary.tsv` under `~/.local/state/quickshell/menu-smoke/`, with `latest` pointing at the newest run. `desktop-doctor` treats that latest run as stale after 24 hours; set `QS_MENU_SMOKE_MAX_AGE_SECONDS=0` to skip the age check.
+`qs-menu-smoke` writes screenshots plus `summary.tsv` under `~/.local/state/quickshell/menu-smoke/`, with `latest` pointing at the newest run. `desktop-doctor` treats that latest run as stale after 24 hours and after newer live Quickshell QML; set `QS_MENU_SMOKE_MAX_AGE_SECONDS=0` to skip only the age check.
 
 Use `HYPR_PROFILE=default` for the current default profile and `HYPR_PROFILE=omarchy` for the Omarchy-like Wayland profile.
 
@@ -43,6 +46,10 @@ Inside Hyprland, use:
 ```console
 hypr-session reload
 ```
+
+## Menu testing
+
+Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, and Notes. Use `qs-menu-smoke wallpaper media notifications` for targeted visual checks or `qs-menu-smoke` for the full popup set.
 
 ## X11 archive
 
@@ -56,11 +63,11 @@ Stale live X11 files removed from `$HOME` during migration are preserved under
 
 ## Package notes
 
-Track package intent in `/home/marcelof/gwt/marcelofpfelix/homelab/main/vars/install/desktop.yml`. The minimum Wayland set is Hyprland, hyprctl, Quickshell, and the backend tools used by the selected profile. Both profiles use the local Marcelof Quickshell shell; the `omarchy` profile changes Hyprland behavior, not the shell runtime. Keep only backend tools here: screenshot and recording helpers (`grim`, `slurp`, `swappy`, `imagemagick-6.q16`, `wf-recorder`, `tesseract`), `brightnessctl`, `wl-clipboard`, `cliphist`, `playerctl`, `pavucontrol`, `mpv`, `ffmpeg`, `hyprlock`, `swaylock`, `hyprpicker`, `jq`, `libnotify-bin`, `network-manager`, `network-manager-gnome`, `pulseaudio-utils`, `lm-sensors`, `upower`, `power-profiles-daemon`, `bluez`, `wireplumber`, `xdg-utils`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk`, `nixGL` for Nix Hyprland on Ubuntu, and the existing autostart backend (`dex`). `hypr-session status` checks these runtime commands directly, with `hyprpicker` reported as optional and locking accepted through `hyprlock`, `swaylock`, or `loginctl`.
+Track package intent in `/home/marcelof/gwt/marcelofpfelix/homelab/main/vars/install/desktop.yml`. The minimum Wayland set is Hyprland, hyprctl, Quickshell, and the backend tools used by the selected profile. Both profiles use the local Marcelof Quickshell shell; the `omarchy` profile changes Hyprland behavior, not the shell runtime. Keep only backend tools here. `board` is tracked as a local CLI/runtime dependency for Quickshell and tmux status rendering. Backend tools include screenshot and recording helpers (`grim`, `slurp`, `swappy`, `imagemagick-6.q16`, `wf-recorder`, `tesseract`), `brightnessctl`, `wl-clipboard`, `cliphist`, `playerctl`, `pavucontrol`, `mpv`, `ffmpeg`, `hyprlock`, `swaylock`, `hyprpicker`, `jq`, `libnotify-bin`, `network-manager`, `network-manager-gnome`, `pulseaudio-utils`, `lm-sensors`, `upower`, `power-profiles-daemon`, `bluez`, `wireplumber`, `xdg-utils`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk`, `nixGL` for Nix Hyprland on Ubuntu, and the existing autostart backend (`dex`). `hypr-session status` checks these runtime commands directly, with `hyprpicker` reported as optional and locking accepted through `hyprlock`, `swaylock`, or `loginctl`.
 
 ## i3 parity notes
 
-The default profile keeps movement, workspaces, launcher, terminal, monitor toggle, media keys, and screenshot bindings close to the X11 i3 config. Hyprland `dwindle` does not provide direct i3 stacking, tabbed containers, or focus-parent behavior, so grouped windows are only a pragmatic closest match. `Win+W` closes the focused window. `Win+U` toggles a floating Ghostty-backed tmux popup session through `hypr-term popup-tmux`. `Win+S` uses the helper-backed special workspace scratchpad and `Win+Alt+S` moves the active window there. Resize is exposed as `Win+Ctrl+h/j/k/l`.
+The default profile keeps movement, workspaces, launcher, terminal, monitor toggle, media keys, and screenshot bindings close to the X11 i3 config. Hyprland `dwindle` does not provide direct i3 stacking, tabbed containers, or focus-parent behavior, so native groups are the closest match: `Win+G` creates/toggles a group, `Win+Alt+Arrow` moves the focused window into a neighboring group direction, `Win+Alt+Tab` and `Win+Alt+Shift+Tab` switch grouped windows, and `Win+Alt+G` removes the focused window from the group. `Win+W` closes the focused window. `Win+U` toggles a floating Ghostty-backed tmux popup session through `hypr-term popup-tmux`. `Win+S` uses the helper-backed special workspace scratchpad and `Win+Alt+S` moves the active window there. Resize is exposed as `Win+Ctrl+h/j/k/l`.
 
 The local Quickshell shell has replaced the Polybar surface for workspace/status/tray coverage, the main `rofi` app launcher, `passmenu`, calendar, clipboard history, web search, keybinding help, notifications, and the power/session menu. `passmenu` is Quickshell-only in the active Wayland desktop profile. Secure locking is delegated to a real locker through Quickshell IPC, using `hyprlock`, `swaylock`, or `loginctl lock-session` when available. `dunst.service` is masked in the tracked user systemd config so Quickshell can own desktop notifications; `hypr-session smoke` also verifies the active D-Bus notification owner.
 

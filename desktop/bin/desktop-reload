@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+
+repo="${DOTFILES_REPO:-$HOME/gwt/marcelofpfelix/dotfiles/main}"
+qml_src="$repo/desktop/.config/quickshell/marcelof/shell.qml"
+qml_dst="$HOME/.config/quickshell/marcelof/shell.qml"
+board_src="$repo/desktop/.config/board/board.toml"
+board_dst="$HOME/.config/board/board.toml"
+
+if command -v qmllint >/dev/null 2>&1; then
+  qmllint "$qml_src"
+fi
+
+mkdir -p "${qml_dst%/*}"
+cp "$qml_src" "$qml_dst"
+
+if [ -r "$board_src" ]; then
+  mkdir -p "${board_dst%/*}"
+  cp "$board_src" "$board_dst"
+fi
+
+qs-bar reload
+qs-bar status

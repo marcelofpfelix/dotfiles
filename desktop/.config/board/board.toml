@@ -1,0 +1,123 @@
+[[check]]
+name = "scripts"
+kind = "command"
+command = ["env", "BAR_COLOR_FORMAT=quickshell", "check-scripts"]
+interval = "10s"
+timeout = "2s"
+fresh_for = "30s"
+
+[[check]]
+name = "alerts"
+kind = "command"
+command = ["env", "BAR_COLOR_FORMAT=quickshell", "alerts"]
+interval = "10s"
+timeout = "2s"
+fresh_for = "30s"
+
+[[check]]
+name = "time"
+kind = "native-time-offset"
+interval = "10s"
+timeout = "2s"
+fresh_for = "30s"
+
+[[check]]
+name = "resolv"
+kind = "native-resolv"
+interval = "15s"
+timeout = "2s"
+fresh_for = "45s"
+
+[[check]]
+name = "safe"
+kind = "native-safe"
+interval = "30s"
+timeout = "2s"
+fresh_for = "90s"
+
+[[check]]
+name = "agents"
+kind = "command"
+command = ["check-agents"]
+interval = "10s"
+timeout = "2s"
+fresh_for = "30s"
+
+[[check]]
+name = "gpg"
+kind = "command"
+command = ["check-gpg"]
+interval = "30s"
+timeout = "2s"
+fresh_for = "90s"
+
+[[check]]
+name = "docker"
+kind = "native-docker"
+interval = "30s"
+timeout = "2s"
+fresh_for = "90s"
+
+[[check]]
+name = "cpu"
+kind = "native-cpu"
+interval = "5s"
+fresh_for = "15s"
+
+[[check]]
+name = "mem"
+kind = "native-mem"
+interval = "10s"
+fresh_for = "30s"
+
+[[check]]
+name = "temp"
+kind = "native-temp"
+interval = "30s"
+fresh_for = "90s"
+
+
+[[check]]
+name = "weather"
+kind = "native-weather"
+enabled = false
+interval = "15m"
+timeout = "3s"
+fresh_for = "30m"
+
+[[check]]
+name = "time-panel"
+kind = "native-time-panel"
+interval = "1s"
+fresh_for = "3s"
+
+[[check]]
+name = "todo-panel"
+kind = "native-todo-panel"
+interval = "60s"
+timeout = "2s"
+fresh_for = "3m"
+
+[[surface]]
+name = "quickshell-bar"
+checks = ["scripts", "alerts", "time", "resolv", "safe", "gpg", "docker", "agents", "cpu", "mem", "temp", "weather"]
+
+[[surface]]
+name = "tmux-top"
+checks = ["agents", "gpg", "docker", "cpu", "mem"]
+
+[[surface]]
+name = "quickshell-panels"
+checks = ["time-panel", "todo-panel"]
+
+[[surface]]
+name = "quickshell-weather"
+checks = ["weather"]
+
+[[surface]]
+name = "quickshell-time-panel"
+checks = ["time-panel"]
+
+[[surface]]
+name = "quickshell-todo-panel"
+checks = ["todo-panel"]

@@ -9,6 +9,7 @@ required_packages=(
   hyprland-protocols
   xdg-desktop-portal-hyprland
   quickshell
+  board
   walker
   elephant
   nixGL

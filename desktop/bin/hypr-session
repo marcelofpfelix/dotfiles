@@ -270,6 +270,7 @@ status() {
         start-hyprland
         hyprctl
         quickshell
+        board
         hypr-term
         qs-bar
         grim
