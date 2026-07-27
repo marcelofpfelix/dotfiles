@@ -379,6 +379,7 @@ ShellRoot {
   property string networkStatusText: ""
   property string powerStatusText: ""
   property string fanStatusText: "Fan --"
+  property string inhibitStatusText: "inactive"
   property string lisbonClockText: "--"
   property string timePanelText: ""
   property string todoPanelText: ""
@@ -521,6 +522,7 @@ ShellRoot {
       networkStatusRefresh.running = true
       powerStatusRefresh.running = true
       fanStatusRefresh.running = true
+      inhibitStatusRefresh.running = true
     }
   }
 
@@ -869,6 +871,15 @@ ShellRoot {
     powerStatusRefreshLater.restart()
   }
 
+  function idleInhibitActive() {
+    return root.inhibitStatusText.indexOf("active") === 0
+  }
+
+  function toggleIdleInhibit() {
+    Quickshell.execDetached(["/home/marcelof/bin/desktop-inhibit", "toggle"])
+    inhibitStatusRefreshLater.restart()
+  }
+
   function toggleBluetooth() {
     if (root.bluetoothAdapter)
       root.bluetoothAdapter.enabled = !root.bluetoothAdapter.enabled
@@ -1180,6 +1191,7 @@ ShellRoot {
     function calendar() { root.toggleCalendar() }
     function notifications() { root.toggleNotifications() }
     function power() { exitDialog.visible = true }
+    function inhibit() { root.toggleIdleInhibit() }
     function keybindings() { root.toggleKeybindings() }
     function clipboard() { root.openClipboard() }
     function clipboardUpdate() { clipboardRefresh.running = true }
@@ -1880,6 +1892,7 @@ ShellRoot {
           RowLayout {
             Layout.fillWidth: true
             spacing: 7
+            ActionButton { icon: root.idleInhibitActive() ? "󰒳" : "󰒲"; label: "Awake"; active: root.idleInhibitActive(); tooltip: root.idleInhibitActive() ? "Allow idle and sleep" : "Prevent idle and sleep"; onTriggered: root.toggleIdleInhibit() }
             ActionButton { icon: "󰒲"; label: "Sleep"; tooltip: "Suspend system"; onTriggered: root.suspendSession() }
             ActionButton { icon: "󰜉"; label: "Reboot"; tooltip: "Reboot system"; onTriggered: Quickshell.execDetached(["systemctl", "reboot"]) }
             ActionButton { icon: "⏻"; label: "Power"; tooltip: "Power menu"; onTriggered: exitDialog.visible = true }
@@ -2417,11 +2430,25 @@ ShellRoot {
     stdout: StdioCollector { onStreamFinished: root.fanStatusText = this.text.trim().length > 0 ? this.text.trim() : "Fan --" }
   }
 
+  Process {
+    id: inhibitStatusRefresh
+    command: ["/home/marcelof/bin/desktop-inhibit", "status"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.inhibitStatusText = this.text.trim() }
+  }
+
   Timer {
     id: powerStatusRefreshLater
     interval: 500
     repeat: false
     onTriggered: powerStatusRefresh.running = true
+  }
+
+  Timer {
+    id: inhibitStatusRefreshLater
+    interval: 500
+    repeat: false
+    onTriggered: inhibitStatusRefresh.running = true
   }
 
   ListModel { id: launcherModel }

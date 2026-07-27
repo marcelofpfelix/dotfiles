@@ -213,6 +213,7 @@ Reference review snapshot: 2026-07-26. Keep exact star counts out of this file b
   - [x] Keep the top bar audio control icon-only; put details in the popup.
   - [x] Add screen brightness controls where hardware support exists.
   - [x] Add keyboard brightness controls where hardware support exists.
+  - [x] Add an Awake idle/sleep inhibitor button backed by `systemd-inhibit`.
   - [x] Add richer network and Bluetooth status/toggles using native services.
   - [x] Add power profile and battery health only if the local native service is available.
 - [x] Improve the local Quickshell notification center basics.

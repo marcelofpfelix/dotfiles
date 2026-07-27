@@ -49,7 +49,7 @@ hypr-session reload
 
 ## Menu testing
 
-Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, and Notes. Use `qs-menu-smoke wallpaper media notifications` for targeted visual checks or `qs-menu-smoke` for the full popup set.
+Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `qs-menu-smoke wallpaper media notifications` for targeted visual checks or `qs-menu-smoke` for the full popup set.
 
 ## X11 archive
 
@@ -71,7 +71,7 @@ The default profile keeps movement, workspaces, launcher, terminal, monitor togg
 
 The local Quickshell shell has replaced the Polybar surface for workspace/status/tray coverage, the main `rofi` app launcher, `passmenu`, calendar, clipboard history, web search, keybinding help, notifications, and the power/session menu. `passmenu` is Quickshell-only in the active Wayland desktop profile. Secure locking is delegated to a real locker through Quickshell IPC, using `hyprlock`, `swaylock`, or `loginctl lock-session` when available. `dunst.service` is masked in the tracked user systemd config so Quickshell can own desktop notifications; `hypr-session smoke` also verifies the active D-Bus notification owner.
 
-Reference ideas adapted locally: Omarchy quattro key behavior, Caelestia-style session panel actions, end-4-style `Super+/` keybinding discoverability and cliphist watcher updates, Noctalia-style compact popup/control surfaces, and cxOrz-style backend-only cliphist ownership. No upstream shell binaries or names are used by this repo.
+Reference ideas adapted locally: Omarchy quattro key behavior, Caelestia-style session panel actions and idle inhibitor, end-4-style `Super+/` keybinding discoverability and cliphist watcher updates, Noctalia-style compact popup/control surfaces, and cxOrz-style backend-only cliphist ownership. No upstream shell binaries or names are used by this repo.
 
 ## Switchable launchers
 

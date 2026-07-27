@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/desktop-inhibit"
+pid_file="$state_dir/pid"
+
+mkdir -p "$state_dir"
+
+usage() {
+  printf 'use: desktop-inhibit [status|on|off|toggle|self-test]\n' >&2
+}
+
+pid_alive() {
+  local pid=${1:-}
+  [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+current_pid() {
+  [ -r "$pid_file" ] || return 1
+  read -r pid <"$pid_file" || return 1
+  pid_alive "$pid" || {
+    rm -f "$pid_file"
+    return 1
+  }
+  printf '%s\n' "$pid"
+}
+
+status() {
+  local pid
+  if pid=$(current_pid); then
+    printf 'active %s\n' "$pid"
+  else
+    printf 'inactive\n'
+  fi
+}
+
+turn_on() {
+  local pid
+  if pid=$(current_pid); then
+    printf 'active %s\n' "$pid"
+    return 0
+  fi
+
+  command -v systemd-inhibit >/dev/null 2>&1 || {
+    printf 'missing systemd-inhibit\n' >&2
+    exit 1
+  }
+
+  setsid systemd-inhibit --what=idle:sleep --who=Quickshell --why="manual desktop inhibit" sleep infinity >/tmp/desktop-inhibit.log 2>&1 </dev/null &
+  pid=$!
+  printf '%s\n' "$pid" >"$pid_file"
+  printf 'active %s\n' "$pid"
+}
+
+turn_off() {
+  local pid
+  pid=$(current_pid 2>/dev/null || true)
+  if [ -n "$pid" ]; then
+    kill -TERM "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+  fi
+  rm -f "$pid_file"
+  printf 'inactive\n'
+}
+
+self_test() {
+  local tmp fake_bin old_path out
+  tmp=$(mktemp -d)
+  fake_bin="$tmp/bin"
+  mkdir -p "$fake_bin"
+  old_path=$PATH
+  cat >"$fake_bin/systemd-inhibit" <<'FAKE'
+#!/usr/bin/env bash
+while [[ "${1:-}" == --* ]]; do shift; done
+exec "$@"
+FAKE
+  chmod +x "$fake_bin/systemd-inhibit"
+  PATH="$fake_bin:$old_path" XDG_STATE_HOME="$tmp/state" "$0" on >/dev/null
+  out=$(PATH="$fake_bin:$old_path" XDG_STATE_HOME="$tmp/state" "$0" status)
+  [[ "$out" == active\ * ]] || { printf 'self-test failed: %s\n' "$out" >&2; exit 1; }
+  PATH="$fake_bin:$old_path" XDG_STATE_HOME="$tmp/state" "$0" off >/dev/null
+  out=$(PATH="$fake_bin:$old_path" XDG_STATE_HOME="$tmp/state" "$0" status)
+  [[ "$out" == inactive ]] || { printf 'self-test failed: %s\n' "$out" >&2; exit 1; }
+  rm -rf "$tmp"
+  printf 'desktop-inhibit self-test: ok\n'
+}
+
+case "${1:-status}" in
+  status) status ;;
+  on|enable|stay-awake) turn_on ;;
+  off|disable|allow-idle) turn_off ;;
+  toggle)
+    if current_pid >/dev/null; then
+      turn_off
+    else
+      turn_on
+    fi
+    ;;
+  self-test) self_test ;;
+  -h|--help) usage ;;
+  *) usage; exit 2 ;;
+esac
