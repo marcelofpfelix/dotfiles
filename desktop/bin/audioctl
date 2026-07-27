@@ -82,6 +82,7 @@ resume_audio() {
 
 cleanup_stale_helpers() {
     local signal=${1:-TERM}
+    [ "${AUDIOCTL_SKIP_STALE_CLEANUP:-0}" = "1" ] && return 0
     if [ "$signal" != KILL ]; then
         pkill -CONT -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
         pkill -CONT -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
@@ -181,6 +182,23 @@ music_play() {
     notify "Music started"
 }
 
+music_toggle() {
+    local target
+    if music_running; then
+        music_stop
+        notify "Music stopped"
+        return 0
+    fi
+    if [ -s "$desired_music" ]; then
+        target=$(cat "$desired_music")
+    elif [ -s "$last_music" ]; then
+        target=$(cat "$last_music")
+    else
+        target="$HOME/Music/panther.mp3"
+    fi
+    music_play "$target"
+}
+
 save_current() {
     if noise_running || helper_stream_rows | awk -F'|' '$3 ~ /Brown-noise/ { found=1 } END { exit found ? 0 : 1 }'; then
         printf '1\n' >"$desired_noise"
@@ -263,7 +281,7 @@ self_test() {
     cleanup_self_test() {
         [ -n "$self_test_child_other" ] && kill -CONT -- "-$self_test_child_other" 2>/dev/null || true
         [ -n "$self_test_child_other" ] && kill -- "-$self_test_child_other" 2>/dev/null || true
-        XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" force-stop >/dev/null 2>&1 || true
+        XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" force-stop >/dev/null 2>&1 || true
         rm -rf "$self_test_tmp"
     }
     trap cleanup_self_test EXIT
@@ -277,12 +295,12 @@ self_test() {
     setsid sleep 300 >/dev/null 2>&1 &
     self_test_child_other=$!
 
-    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" noise
-    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" music /tmp/audioctl-self-test.mp3
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" noise
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" music /tmp/audioctl-self-test.mp3
     self_test_noise_pid=$(cat "$self_test_tmp/audioctl/brown-noise.pid")
     self_test_music_pid=$(cat "$self_test_tmp/audioctl/music.pid")
 
-    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" pause
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" pause
     sleep 0.2
     ! pid_running "$self_test_noise_pid" || { printf 'noise was not stopped on pause\n' >&2; rc=1; }
     ! pid_running "$self_test_music_pid" || { printf 'music was not stopped on pause\n' >&2; rc=1; }
@@ -291,12 +309,24 @@ self_test() {
     [ -s "$self_test_tmp/audioctl/desired-noise" ] || { printf 'desired noise was not preserved\n' >&2; rc=1; }
     [ -s "$self_test_tmp/audioctl/desired-music" ] || { printf 'desired music was not preserved\n' >&2; rc=1; }
 
-    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" resume
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" resume
     sleep 0.2
     [ -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise was not restored\n' >&2; rc=1; }
     [ -s "$self_test_tmp/audioctl/music.pid" ] || { printf 'music was not restored\n' >&2; rc=1; }
 
-    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" force-stop
+    self_test_noise_pid=$(cat "$self_test_tmp/audioctl/brown-noise.pid")
+    self_test_music_pid=$(cat "$self_test_tmp/audioctl/music.pid")
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" music-toggle
+    sleep 0.2
+    pid_running "$self_test_noise_pid" || { printf 'music-toggle stopped noise\n' >&2; rc=1; }
+    ! pid_running "$self_test_music_pid" || { printf 'music-toggle did not stop music\n' >&2; rc=1; }
+    [ -s "$self_test_tmp/audioctl/desired-music" ] || { printf 'music-toggle removed desired music\n' >&2; rc=1; }
+
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" music-toggle
+    sleep 0.2
+    [ -s "$self_test_tmp/audioctl/music.pid" ] || { printf 'music-toggle did not restore music\n' >&2; rc=1; }
+
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" force-stop
     sleep 0.2
     [ ! -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise pid survived force-stop\n' >&2; rc=1; }
     [ ! -s "$self_test_tmp/audioctl/music.pid" ] || { printf 'music pid survived force-stop\n' >&2; rc=1; }
@@ -339,6 +369,9 @@ case "${1:-status}" in
     music|play-file)
         shift || true
         music_play "${1:-$HOME/Music/panther.mp3}"
+        ;;
+    music-toggle)
+        music_toggle
         ;;
     last|last-music)
         if [ -s "$last_music" ]; then cat "$last_music"; fi
@@ -385,7 +418,7 @@ case "${1:-status}" in
         self_test
         ;;
     *)
-        printf 'use: audioctl [pause-all|resume-all|play-pause-all|restore|stop-all|force-stop|noise|noise-stop|music [file]|last-music|save-current|display|icon|status|self-test]\n' >&2
+        printf 'use: audioctl [pause-all|resume-all|play-pause-all|restore|stop-all|force-stop|noise|noise-stop|music [file]|music-toggle|last-music|save-current|display|icon|status|self-test]\n' >&2
         exit 2
         ;;
 esac

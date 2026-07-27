@@ -1744,7 +1744,7 @@ ShellRoot {
               Layout.fillWidth: true
               spacing: 7
               ActionButton { Layout.fillWidth: true; icon: "󰜗"; label: "Noise"; tooltip: "Toggle brown noise"; onTriggered: root.runAudioctl("noise-toggle") }
-              ActionButton { Layout.fillWidth: true; icon: ""; label: "Music"; tooltip: "Start saved/default music"; onTriggered: root.runAudioctl("music") }
+              ActionButton { Layout.fillWidth: true; icon: ""; label: "Music"; tooltip: "Toggle saved/default music"; onTriggered: root.runAudioctl("music-toggle") }
               ActionButton { Layout.fillWidth: true; icon: "󰓛"; label: "Stop"; tooltip: "Stop saved music and noise. Right-click: force kill"; onTriggered: root.runAudioctl("stop-all"); onSecondaryTriggered: root.runAudioctl("force-stop") }
             }
 
