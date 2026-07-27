@@ -160,6 +160,14 @@ music_stop() {
     rm -f "$paused_state"
 }
 
+noise_toggle() {
+    if noise_running; then
+        noise_stop
+    else
+        noise_start
+    fi
+}
+
 music_play() {
     local target=${1:-$HOME/Music/panther.mp3}
     music_stop
@@ -326,6 +334,18 @@ self_test() {
     sleep 0.2
     [ -s "$self_test_tmp/audioctl/music.pid" ] || { printf 'music-toggle did not restore music\n' >&2; rc=1; }
 
+    self_test_noise_pid=$(cat "$self_test_tmp/audioctl/brown-noise.pid")
+    self_test_music_pid=$(cat "$self_test_tmp/audioctl/music.pid")
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" noise-toggle
+    sleep 0.2
+    ! pid_running "$self_test_noise_pid" || { printf 'noise-toggle did not stop noise\n' >&2; rc=1; }
+    pid_running "$self_test_music_pid" || { printf 'noise-toggle stopped music\n' >&2; rc=1; }
+    [ -s "$self_test_tmp/audioctl/desired-noise" ] || { printf 'noise-toggle removed desired noise\n' >&2; rc=1; }
+
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" noise-toggle
+    sleep 0.2
+    [ -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise-toggle did not restore noise\n' >&2; rc=1; }
+
     PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" force-stop
     sleep 0.2
     [ ! -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise pid survived force-stop\n' >&2; rc=1; }
@@ -361,7 +381,7 @@ case "${1:-status}" in
         noise_start
         ;;
     noise-toggle)
-        if noise_running; then noise_stop; else noise_start; fi
+        noise_toggle
         ;;
     noise-stop)
         noise_stop
