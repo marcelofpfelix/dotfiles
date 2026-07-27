@@ -32,19 +32,6 @@ helper_running() {
     noise_running || music_running
 }
 
-process_state() {
-    ps -o stat= -p "$1" 2>/dev/null | awk '{ print substr($1, 1, 1) }'
-}
-
-pid_file_stopped() {
-    [ -s "$1" ] || return 1
-    [ "$(process_state "$(cat "$1")")" = T ]
-}
-
-helper_paused() {
-    pid_file_stopped "$noise_pid" || pid_file_stopped "$music_pid"
-}
-
 desired_audio_missing() {
     { [ -s "$desired_noise" ] && ! noise_running; } || { [ -s "$desired_music" ] && ! music_running; }
 }
@@ -70,79 +57,74 @@ END { emit() }
 }
 
 kill_pid_group() {
-    local pid_file=$1 pid
+    local pid_file=$1 signal=${2:-TERM} pid
     [ -s "$pid_file" ] || return 0
     pid=$(cat "$pid_file")
     pid_running "$pid" || return 0
-    kill -CONT -- "-$pid" 2>/dev/null || kill -CONT "$pid" 2>/dev/null || true
-    kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
-}
-
-signal_pid_group() {
-    local signal=$1 pid_file=$2 pid
-    [ -s "$pid_file" ] || return 1
-    pid=$(cat "$pid_file")
-    pid_running "$pid" || return 1
+    [ "$signal" = KILL ] || kill -CONT -- "-$pid" 2>/dev/null || kill -CONT "$pid" 2>/dev/null || true
     kill "-$signal" -- "-$pid" 2>/dev/null || kill "-$signal" "$pid" 2>/dev/null || true
 }
 
 pause_audio() {
-    local paused=0
-    if noise_running; then
-        signal_pid_group STOP "$noise_pid"
-        paused=1
-    fi
-    if music_running; then
-        signal_pid_group STOP "$music_pid"
-        paused=1
-    fi
-    [ "$paused" -eq 1 ] || return 1
+    helper_running || [ -n "$(helper_stream_rows || true)" ] || return 1
+    save_current
+    stop_music_processes
+    stop_noise_processes
     touch "$paused_state"
     notify "Audio paused"
 }
 
 resume_audio() {
-    local resumed=0
-    if noise_running; then
-        signal_pid_group CONT "$noise_pid"
-        resumed=1
-    fi
-    if music_running; then
-        signal_pid_group CONT "$music_pid"
-        resumed=1
-    fi
     rm -f "$paused_state"
-    if [ "$resumed" -eq 1 ]; then
-        restore_audio || true
-        notify "Audio resumed"
-        return 0
-    fi
     restore_audio
+    notify "Audio resumed"
 }
 
 cleanup_stale_helpers() {
-    pkill -CONT -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
-    pkill -CONT -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
-    pkill -CONT -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
-    pkill -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
-    pkill -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
-    pkill -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
+    local signal=${1:-TERM}
+    if [ "$signal" != KILL ]; then
+        pkill -CONT -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
+        pkill -CONT -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
+        pkill -CONT -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
+    fi
+    pkill "-$signal" -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
+    pkill "-$signal" -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
+    pkill "-$signal" -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
 }
 
 cleanup_stale_music() {
-    local target current pid
-    [ -s "$desired_music" ] || return 0
-    target=$(cat "$desired_music")
-    [ -n "$target" ] || return 0
-    current=""
-    [ -s "$music_pid" ] && current=$(cat "$music_pid")
-    ps -eo pid=,args= | awk -v target="$target" -v current="$current" '
-$1 != current && /mpv --no-video --force-window=no --loop-file=inf/ && index($0, target) > 0 { print $1 }
+    local signal=${1:-TERM} target pid
+    target=""
+    [ -s "$desired_music" ] && target=$(cat "$desired_music")
+    [ -n "$target" ] || [ "$signal" = KILL ] || return 0
+    ps -eo pid=,args= | awk -v target="$target" '
+/mpv --no-video --force-window=no --loop-file=inf/ && (target == "" || index($0, target) > 0) { print $1 }
 ' | while read -r pid; do
         [ -n "$pid" ] || continue
-        kill -CONT "$pid" 2>/dev/null || true
-        kill "$pid" 2>/dev/null || true
+        [ "$signal" = KILL ] || kill -CONT "$pid" 2>/dev/null || true
+        kill "-$signal" "$pid" 2>/dev/null || true
     done
+}
+
+stop_noise_processes() {
+    kill_pid_group "$noise_pid"
+    cleanup_stale_helpers
+    rm -f "$noise_pid"
+}
+
+stop_music_processes() {
+    kill_pid_group "$music_pid"
+    cleanup_stale_music
+    rm -f "$music_pid"
+}
+
+force_kill_audio() {
+    kill_pid_group "$noise_pid" KILL
+    kill_pid_group "$music_pid" KILL
+    cleanup_stale_helpers KILL
+    cleanup_stale_music KILL
+    rm -f "$noise_pid" "$music_pid" "$paused_state"
+    notify "Audio force killed"
 }
 
 noise_start() {
@@ -151,6 +133,7 @@ noise_start() {
         notify "Brown noise is already playing"
         return 0
     fi
+    cleanup_stale_helpers
     if command -v ffmpeg >/dev/null 2>&1 && command -v pw-cat >/dev/null 2>&1; then
         nohup setsid sh -c 'ffmpeg -nostdin -hide_banner -loglevel error -f lavfi -i "anoisesrc=color=brown:amplitude=$1" -f s16le -ar 48000 -ac 2 - | pw-cat --playback --rate 48000 --channels 2 --format s16 --properties "application.name=audioctl" --properties "media.name=Brown-noise" -' audioctl-noise "${AUDIOCTL_NOISE_VOLUME:-0.15}" >/tmp/audioctl-brown-noise.log 2>&1 </dev/null &
     elif command -v play >/dev/null 2>&1; then
@@ -166,16 +149,14 @@ noise_start() {
 }
 
 noise_stop() {
-    kill_pid_group "$noise_pid"
-    cleanup_stale_helpers
-    rm -f "$noise_pid" "$paused_state"
+    stop_noise_processes
+    rm -f "$paused_state"
     notify "Brown noise stopped"
 }
 
 music_stop() {
-    kill_pid_group "$music_pid"
-    cleanup_stale_music
-    rm -f "$music_pid" "$paused_state"
+    stop_music_processes
+    rm -f "$paused_state"
 }
 
 music_play() {
@@ -226,7 +207,7 @@ restore_audio() {
 }
 
 play_pause_all() {
-    if [ -e "$paused_state" ] || helper_paused; then
+    if [ -e "$paused_state" ]; then
         resume_audio || notify "No saved audio. Right-click the bar button for mixer controls."
     elif desired_audio_missing && restore_audio; then
         notify "Restored saved audio"
@@ -258,7 +239,7 @@ END { first=1; for (label in seen) { if (!first) printf " + "; printf "%s", labe
 
 audio_icon() {
     local rows
-    if [ -e "$paused_state" ] || helper_paused; then
+    if [ -e "$paused_state" ]; then
         printf "󰐊\n"
         return 0
     fi
@@ -275,49 +256,52 @@ audio_icon() {
 }
 
 self_test() {
-    local rc=0
+    rc=0
     self_test_tmp=$(mktemp -d)
-    self_test_child_noise=""
-    self_test_child_music=""
+    self_test_fakebin="$self_test_tmp/bin"
     self_test_child_other=""
     cleanup_self_test() {
-        [ -n "$self_test_child_noise" ] && kill -CONT -- "-$self_test_child_noise" 2>/dev/null || true
-        [ -n "$self_test_child_music" ] && kill -CONT -- "-$self_test_child_music" 2>/dev/null || true
         [ -n "$self_test_child_other" ] && kill -CONT -- "-$self_test_child_other" 2>/dev/null || true
-        [ -n "$self_test_child_noise" ] && kill -- "-$self_test_child_noise" 2>/dev/null || true
-        [ -n "$self_test_child_music" ] && kill -- "-$self_test_child_music" 2>/dev/null || true
         [ -n "$self_test_child_other" ] && kill -- "-$self_test_child_other" 2>/dev/null || true
+        XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" force-stop >/dev/null 2>&1 || true
         rm -rf "$self_test_tmp"
     }
     trap cleanup_self_test EXIT
 
-    setsid sleep 300 >/dev/null 2>&1 &
-    self_test_child_noise=$!
-    setsid sleep 300 >/dev/null 2>&1 &
-    self_test_child_music=$!
+    mkdir -p "$self_test_fakebin" "$self_test_tmp/audioctl"
+    printf '#!/usr/bin/env bash\nsleep 300\n' >"$self_test_fakebin/ffmpeg"
+    printf '#!/usr/bin/env bash\nsleep 300\n' >"$self_test_fakebin/pw-cat"
+    printf '#!/usr/bin/env bash\nsleep 300\n' >"$self_test_fakebin/mpv"
+    chmod +x "$self_test_fakebin/ffmpeg" "$self_test_fakebin/pw-cat" "$self_test_fakebin/mpv"
+
     setsid sleep 300 >/dev/null 2>&1 &
     self_test_child_other=$!
 
-    mkdir -p "$self_test_tmp/audioctl"
-    printf '%s\n' "$self_test_child_noise" >"$self_test_tmp/audioctl/brown-noise.pid"
-    printf '%s\n' "$self_test_child_music" >"$self_test_tmp/audioctl/music.pid"
-    printf '1\n' >"$self_test_tmp/audioctl/desired-noise"
-    printf '/tmp/audioctl-self-test.mp3\n' >"$self_test_tmp/audioctl/desired-music"
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" noise
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" music /tmp/audioctl-self-test.mp3
+    self_test_noise_pid=$(cat "$self_test_tmp/audioctl/brown-noise.pid")
+    self_test_music_pid=$(cat "$self_test_tmp/audioctl/music.pid")
 
-    XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" pause
-    [ "$(process_state "$self_test_child_noise")" = T ] || { printf 'noise was not paused\n' >&2; rc=1; }
-    [ "$(process_state "$self_test_child_music")" = T ] || { printf 'music was not paused\n' >&2; rc=1; }
-    [ "$(process_state "$self_test_child_other")" != T ] || { printf 'unmanaged process was paused\n' >&2; rc=1; }
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" pause
+    sleep 0.2
+    ! pid_running "$self_test_noise_pid" || { printf 'noise was not stopped on pause\n' >&2; rc=1; }
+    ! pid_running "$self_test_music_pid" || { printf 'music was not stopped on pause\n' >&2; rc=1; }
+    pid_running "$self_test_child_other" || { printf 'unmanaged process was stopped\n' >&2; rc=1; }
+    [ -e "$self_test_tmp/audioctl/paused" ] || { printf 'paused marker was not written\n' >&2; rc=1; }
+    [ -s "$self_test_tmp/audioctl/desired-noise" ] || { printf 'desired noise was not preserved\n' >&2; rc=1; }
+    [ -s "$self_test_tmp/audioctl/desired-music" ] || { printf 'desired music was not preserved\n' >&2; rc=1; }
 
-    XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" resume
-    [ "$(process_state "$self_test_child_noise")" != T ] || { printf 'noise was not resumed\n' >&2; rc=1; }
-    [ "$(process_state "$self_test_child_music")" != T ] || { printf 'music was not resumed\n' >&2; rc=1; }
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" resume
+    sleep 0.2
+    [ -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise was not restored\n' >&2; rc=1; }
+    [ -s "$self_test_tmp/audioctl/music.pid" ] || { printf 'music was not restored\n' >&2; rc=1; }
 
-    XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" pause
-    rm -f "$self_test_tmp/audioctl/paused"
-    XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" play-pause-all
-    [ "$(process_state "$self_test_child_noise")" != T ] || { printf 'stale-paused noise was not resumed\n' >&2; rc=1; }
-    [ "$(process_state "$self_test_child_music")" != T ] || { printf 'stale-paused music was not resumed\n' >&2; rc=1; }
+    PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 "$0" force-stop
+    sleep 0.2
+    [ ! -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise pid survived force-stop\n' >&2; rc=1; }
+    [ ! -s "$self_test_tmp/audioctl/music.pid" ] || { printf 'music pid survived force-stop\n' >&2; rc=1; }
+    [ -s "$self_test_tmp/audioctl/desired-noise" ] || { printf 'desired noise was removed by force-stop\n' >&2; rc=1; }
+    [ -s "$self_test_tmp/audioctl/desired-music" ] || { printf 'desired music was removed by force-stop\n' >&2; rc=1; }
 
     [ "$rc" -eq 0 ] && printf 'audioctl self-test: ok\n'
     return "$rc"
@@ -339,6 +323,9 @@ case "${1:-status}" in
     stop-all|stop)
         music_stop
         noise_stop
+        ;;
+    force-stop|force-kill|kill)
+        force_kill_audio
         ;;
     noise|brown|brown-noise|noise-start)
         noise_start
@@ -378,11 +365,11 @@ case "${1:-status}" in
         fi
         if helper_running; then
             printf "helper: running\n"
-            { [ -e "$paused_state" ] || helper_paused; } && printf "state: paused\n"
             stream_display | sed "s/^/display: /"
         else
             printf "helper: stopped\n"
         fi
+        [ -e "$paused_state" ] && printf "state: paused\n"
         if [ -s "$desired_noise" ]; then
             printf "saved-noise: brown\n"
         else
@@ -398,7 +385,7 @@ case "${1:-status}" in
         self_test
         ;;
     *)
-        printf 'use: audioctl [pause-all|resume-all|play-pause-all|restore|stop-all|noise|noise-stop|music [file]|last-music|save-current|display|icon|status|self-test]\n' >&2
+        printf 'use: audioctl [pause-all|resume-all|play-pause-all|restore|stop-all|force-stop|noise|noise-stop|music [file]|last-music|save-current|display|icon|status|self-test]\n' >&2
         exit 2
         ;;
 esac
