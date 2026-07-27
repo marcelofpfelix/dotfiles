@@ -1736,7 +1736,7 @@ ShellRoot {
               Layout.fillWidth: true
               spacing: 7
               ActionButton { Layout.fillWidth: true; icon: "󰒮"; label: "Prev"; tooltip: "Previous track"; onTriggered: root.runPlayerctl("previous") }
-              ActionButton { Layout.fillWidth: true; icon: root.audioIconText; label: "Play"; tooltip: "Start/stop saved music and noise"; onTriggered: root.runAudioctl("play-pause-all") }
+              ActionButton { Layout.fillWidth: true; icon: root.audioIconText; label: root.audioDisplayText.length > 0 ? "Pause" : "Play"; tooltip: root.audioDisplayText.length > 0 ? "Pause saved music and noise" : "Start saved music and noise"; onTriggered: root.runAudioctl("play-pause-all") }
               ActionButton { Layout.fillWidth: true; icon: "󰒭"; label: "Next"; tooltip: "Next track"; onTriggered: root.runPlayerctl("next") }
             }
 
