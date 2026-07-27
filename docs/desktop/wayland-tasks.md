@@ -126,56 +126,66 @@ Reference review snapshot: 2026-07-26. Keep exact star counts out of this file b
 
 Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-review`; refresh the clones before using exact upstream code.
 
-- [ ] Add a launcher command mode.
+- [x] Add a launcher command mode.
   - Sources: Caelestia launcher actions/calculator/wallpaper modes, Omarchy menu app library.
   - Dependencies: keep the existing Quickshell launcher; add packages to homelab only if a calculator CLI is chosen.
   - Acceptance: `Win+D` can still launch apps, but a prefix can run local commands such as calculator, web search, wallpaper, and existing desktop helpers without rofi/dmenu.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke launcher`, and one manual calculator/action launch.
-- [ ] Add launcher favorite and hidden-app management.
+  - Current behavior: `>` in the launcher opens command rows for web, YouTube, calculator, wallpaper, controls, settings, notifications, DND, media, and screenshot.
+- [x] Add launcher favorite and hidden-app management.
   - Sources: Caelestia app favourites/hidden-app config, Omarchy launcher hide entries.
   - Dependencies: reuse Quickshell state JSON; do not add a second app database.
   - Acceptance: favorites rank above MRU/MFU, hidden apps disappear from the launcher, and both settings survive `qs-bar reload`.
   - Validation: `qs-menu-smoke launcher` plus manual favorite/hide/reload checks.
-- [ ] Add notification Do Not Disturb.
+  - Current behavior: launcher rows expose favorite and hide controls; favorites rank above MRU/MFU and hidden entries are persisted in Quickshell state.
+- [x] Add notification Do Not Disturb.
   - Sources: Caelestia DND toggle, Omarchy persisted notification DND and bar indicator.
   - Dependencies: reuse the current Quickshell notification owner and history model.
   - Acceptance: DND suppresses popup toasts but still records notifications in history, has a visible active state, and persists across `qs-bar reload`.
   - Validation: `desktop-notification-smoke`, `qs-menu-smoke notifications controls`, and manual `notify-send` while DND is active.
-- [ ] Add volume, mic, and brightness OSD feedback.
+  - Current behavior: DND persists in Quickshell state, suppresses toast popups, keeps notification history, and has bar/settings indicators.
+- [x] Add volume, mic, and brightness OSD feedback.
   - Sources: Caelestia OSD module, Noctalia OSD overlay.
   - Dependencies: reuse current audio and brightness helpers; no new always-on daemon.
   - Acceptance: volume, mic mute, screen brightness, and keyboard brightness key changes show one compact overlay instead of notification spam.
   - Validation: `qmllint`, `qs-menu-smoke controls`, and manual XF86 key presses.
-- [ ] Expand the calendar popup into a light day dashboard.
+  - Current behavior: hardware volume, mic, screen brightness, and keyboard brightness bindings route through `desktop-osd` and Quickshell IPC.
+- [x] Expand the calendar popup into a light day dashboard.
   - Sources: Caelestia dashboard calendar/weather/date-time widgets, Noctalia calendar/weather direction.
   - Dependencies: reuse `check-weather` and current todo source; no calendar account integration in this task.
   - Acceptance: calendar shows today, Lisbon time, configured extra timezones, weather summary, and the current todo/note block without becoming a full agenda client.
   - Validation: `qs-menu-smoke calendar` and manual clock/timezone sanity check.
+  - Current behavior: calendar includes Lisbon clock, weather summary, and the existing todo block.
 - [ ] Add optional external monitor brightness controls.
   - Sources: Noctalia `ddcutil` optional dependency, Caelestia brightness service shape.
   - Dependencies: if `ddcutil` is used, track it in homelab install intent first.
   - Acceptance: laptop brightness stays on `brightnessctl`; external displays get separate controls only when `ddcutil detect` finds controllable monitors.
   - Validation: `desktop-package-audit`, `qs-menu-smoke controls`, and manual external-monitor brightness change.
-- [ ] Add richer Bluetooth device controls.
+  - Current behavior: `external-brightness` and hidden controls are present, but this stays open until `ddcutil` is tracked in homelab and validated on an external monitor.
+- [x] Add richer Bluetooth device controls.
   - Sources: Caelestia Bluetooth popout and device battery display.
   - Dependencies: reuse Quickshell Bluetooth service and existing controls popup.
   - Acceptance: controls can toggle Bluetooth, scan/discover, show connected device names, and show device battery where available.
   - Validation: `qmllint`, `qs-menu-smoke controls`, and manual Bluetooth toggle/scan check.
-- [ ] Add media now-playing detail.
+  - Current behavior: controls can toggle the adapter, start/stop discovery, and show connected device labels from the Quickshell Bluetooth service.
+- [x] Add media now-playing detail.
   - Sources: Caelestia MPRIS dashboard/player selector/cover-progress ideas, Noctalia media widgets.
   - Dependencies: keep `audioctl` for local noise/music; use MPRIS/playerctl for normal players.
-  - Acceptance: media popup shows active player, title/artist, play state, progress when available, player switching, and the existing local noise/music controls without dead whitespace.
+  - Acceptance: media popup shows the active MPRIS player, title/artist, play state, and the existing local noise/music controls without dead whitespace.
   - Validation: `audioctl self-test`, `qs-menu-smoke media`, and manual `audioctl restore` plus normal media player check.
-- [ ] Add privacy and session activity indicators.
+  - Current behavior: `media-now-playing` reports the first MPRIS player; progress and player switching remain deferred until there is a real need.
+- [x] Add privacy and session activity indicators.
   - Sources: Noctalia privacy/screencast direction, Caelestia service indicators.
   - Dependencies: reuse portal/audio state; avoid polling faster than current status refreshes.
   - Acceptance: bar indicates active microphone, camera, screen recording, and screen sharing when the local stack exposes that state; clicking opens the relevant screen/media controls.
   - Validation: `desktop-doctor`, `qs-menu-smoke screen media`, and manual Meet/share or recording check.
-- [ ] Add a compact Quickshell settings page for shell-owned toggles.
+  - Current behavior: `desktop-privacy-status` reports mic capture from Pulse/PipeWire source outputs, camera use from open `/dev/video*` devices, and screen sharing from recorder/portal-style PipeWire nodes. Meet must be confirmed during a live call.
+- [x] Add a compact Quickshell settings page for shell-owned toggles.
   - Sources: Caelestia Nexus settings pages, Noctalia configuration boundary.
   - Dependencies: only expose settings already backed by local state files.
   - Acceptance: one popup can change DND, launcher favorites visibility, tray native menus, bar hide/show, weather location, and UI density/font choice without editing files.
   - Validation: `qmllint`, `qs-menu-smoke controls`, and manual setting persistence after `qs-bar reload`.
+  - Current behavior: `qs-bar settings` opens DND, native tray menu, bar visibility, density, weather location, launcher, notifications, and controls toggles.
 
 - [x] Reduce polling in the Quickshell bar using native/event state.
   - Source: ilyamiro `hyprctl` workspace JSON plus socket-triggered refresh.

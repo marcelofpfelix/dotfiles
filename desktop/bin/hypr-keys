@@ -125,6 +125,16 @@ pretty_action() {
         *'lazydocker'*) printf 'Lazydocker' ;;
         *'obsidian'*) printf 'Obsidian' ;;
         *'typora'*) printf 'Typora' ;;
+        *'desktop-osd volume'*) printf 'Volume' ;;
+        *'desktop-osd mute'*) printf 'Mute volume' ;;
+        *'desktop-osd mic-mute'*) printf 'Mute mic' ;;
+        *'desktop-osd kbd'*) printf 'Keyboard brightness' ;;
+        *'desktop-osd brightness-fine-up'*) printf 'Screen brightness fine up' ;;
+        *'desktop-osd brightness-fine-down'*) printf 'Screen brightness fine down' ;;
+        *'desktop-osd brightness-up'*) printf 'Screen brightness up' ;;
+        *'desktop-osd brightness-down'*) printf 'Screen brightness down' ;;
+        *'desktop-osd brightness-max'*) printf 'Max brightness' ;;
+        *'desktop-osd brightness-min'*) printf 'Min brightness' ;;
         *'pactl set-sink-volume'*) printf 'Volume' ;;
         *'set-sink-mute'*) printf 'Mute volume' ;;
         *'set-source-mute'*) printf 'Mute mic' ;;

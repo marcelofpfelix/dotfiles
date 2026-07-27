@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+mic_active() {
+  pactl list source-outputs short 2>/dev/null | awk 'NF { found=1 } END { exit found ? 0 : 1 }'
+}
+
+mic_apps() {
+  pactl list source-outputs 2>/dev/null | awk '
+    /^[[:space:]]*application.name = / { app=$0; sub(/^[[:space:]]*application.name = "/, "", app); sub(/"$/, "", app); if (app != "") seen[app]=1 }
+    END { first=1; for (app in seen) { if (!first) printf ", "; printf "%s", app; first=0 } }
+  '
+}
+
+recording_status() {
+  if command -v screen-record-wayland >/dev/null 2>&1; then
+    screen-record-wayland status 2>/dev/null || printf 'idle\n'
+  else
+    printf 'idle\n'
+  fi
+}
+
+camera_active() {
+  command -v fuser >/dev/null 2>&1 || return 1
+  compgen -G '/dev/video*' >/dev/null || return 1
+  fuser /dev/video* >/dev/null 2>&1
+}
+
+pipewire_flag() {
+  local pattern=$1
+  command -v pw-dump >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  pw-dump 2>/dev/null | jq -e --arg pattern "$pattern" '
+    [.[]
+      | select(.type == "PipeWire:Interface:Node")
+      | (.info.props // {}) as $p
+      | (($p["media.class"] // "") + " " + ($p["node.name"] // "") + " " + ($p["node.description"] // "") + " " + ($p["application.name"] // ""))
+      | test($pattern; "i")
+    ] | any
+  ' >/dev/null 2>&1
+}
+
+status_lines() {
+  local mic='inactive' apps rec='idle' camera='inactive' share='inactive'
+  if mic_active; then
+    apps=$(mic_apps)
+    mic="active${apps:+: $apps}"
+  fi
+  rec=$(recording_status | tr '\n' ' ' | sed 's/[[:space:]]\+$//')
+  camera_active && camera='active'
+  if [[ $rec == recording* ]] || pipewire_flag 'screencast|screen ?cast|desktop capture|portal'; then
+    share='active'
+  fi
+  printf 'mic %s\n' "$mic"
+  printf 'camera %s\n' "$camera"
+  printf 'share %s\n' "$share"
+  printf 'record %s\n' "$rec"
+}
+
+bar() {
+  local lines mic camera share record out=''
+  lines=$(status_lines)
+  mic=$(printf '%s\n' "$lines" | awk '/^mic / {gsub("\:", "", $2); print $2; exit}')
+  camera=$(printf '%s\n' "$lines" | awk '/^camera / {print $2; exit}')
+  share=$(printf '%s\n' "$lines" | awk '/^share / {print $2; exit}')
+  record=$(printf '%s\n' "$lines" | awk '/^record / {print $2; exit}')
+  [ "$mic" = active ] && out="${out}󰍬"
+  [ "$camera" = active ] && out="${out}${out:+ }󰄀"
+  { [ "$share" = active ] || [ "$record" = recording ]; } && out="${out}${out:+ }󰍹"
+  printf '%s\n' "$out"
+}
+
+self_test() {
+  local tmp fakebin old_path out
+  tmp=$(mktemp -d)
+  fakebin="$tmp/bin"
+  mkdir -p "$fakebin"
+  old_path=$PATH
+  cat >"$fakebin/pactl" <<'FAKE'
+#!/usr/bin/env bash
+case "$*" in
+list\ source-outputs)
+  printf 'Source Output #1\n\tapplication.name = "Google Chrome"\n'
+  ;;
+list\ source-outputs\ short)
+  printf '1\t1\t1\n'
+  ;;
+esac
+FAKE
+  cat >"$fakebin/screen-record-wayland" <<'FAKE'
+#!/usr/bin/env bash
+printf 'recording /tmp/test.mp4\n'
+FAKE
+  cat >"$fakebin/pw-dump" <<'FAKE'
+#!/usr/bin/env bash
+printf '[]\n'
+FAKE
+  chmod +x "$fakebin"/*
+  out=$(PATH="$fakebin:$old_path" "$0" status)
+  grep -Fq 'mic active: Google Chrome' <<<"$out" || { printf 'self-test mic failed\n%s\n' "$out" >&2; exit 1; }
+  grep -Fq 'share active' <<<"$out" || { printf 'self-test share failed\n%s\n' "$out" >&2; exit 1; }
+  rm -rf "$tmp"
+  printf 'desktop-privacy-status self-test: ok\n'
+}
+
+case "${1:-status}" in
+  status) status_lines ;;
+  bar) bar ;;
+  self-test) self_test ;;
+  *) printf 'use: desktop-privacy-status [status|bar|self-test]\n' >&2; exit 2 ;;
+esac

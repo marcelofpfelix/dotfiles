@@ -14,7 +14,7 @@ list_instances() {
 }
 
 usage() {
-  printf 'use: qs-bar [start|stop|restart|reload|status|toggle|show|hide|tray|controls|calendar|notifications|power|inhibit|keybindings|clipboard|clipboard-update|websearch|media|screen|wallpaper|launcher|close-panels]\n' >&2
+  printf 'use: qs-bar [start|stop|restart|reload|status|toggle|show|hide|tray|controls|calendar|notifications|power|inhibit|keybindings|clipboard|clipboard-update|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
 }
 
 kill_all() {
@@ -72,6 +72,12 @@ case "${1:-status}" in
   screen|screenshot|record) ipc screen ;;
   wallpaper) ipc wallpaper ;;
   calendar) ipc calendar ;;
+  settings) ipc settings ;;
+  dnd) ipc dnd ;;
+  osd-volume) ipc osdVolume ;;
+  osd-brightness) ipc osdBrightness ;;
+  osd-kbd) ipc osdKbd ;;
+  osd-mic) ipc osdMic ;;
   notifications) ipc notifications ;;
   network) ipc_target network toggle ;;
   websearch) ipc_target websearch toggle ;;

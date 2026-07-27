@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v playerctl >/dev/null 2>&1; then
+  printf 'No MPRIS player\n'
+  exit 0
+fi
+
+player=$(playerctl -l 2>/dev/null | head -n1 || true)
+[ -n "$player" ] || { printf 'No MPRIS player\n'; exit 0; }
+status=$(playerctl -p "$player" status 2>/dev/null || true)
+title=$(playerctl -p "$player" metadata xesam:title 2>/dev/null || true)
+artist=$(playerctl -p "$player" metadata xesam:artist 2>/dev/null || true)
+line="$player ${status:-unknown}"
+if [ -n "$title" ]; then
+  line="$line - $title"
+  [ -n "$artist" ] && line="$line / $artist"
+fi
+printf '%s\n' "$line"

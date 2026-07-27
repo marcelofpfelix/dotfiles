@@ -57,6 +57,39 @@ ShellRoot {
     root.openWebSearch(site)
   }
 
+  function showOsd(icon, text) {
+    root.osdIconText = icon
+    root.osdBodyText = text
+    root.osdOpen = true
+    osdTimer.restart()
+  }
+
+  function showVolumeOsd() {
+    const audio = root.defaultSinkAudio()
+    if (!audio) {
+      root.showOsd("", "Audio unavailable")
+      return
+    }
+    root.showOsd(audio.muted ? "󰝟" : "", (audio.muted ? "Muted " : "Volume ") + Math.round(audio.volume * 100) + "%")
+  }
+
+  function showBrightnessOsd() {
+    brightnessRefresh.running = true
+    root.osdPendingKind = "brightness"
+    osdRefreshLater.restart()
+  }
+
+  function showKbdOsd() {
+    kbdBrightnessRefresh.running = true
+    root.osdPendingKind = "kbd"
+    osdRefreshLater.restart()
+  }
+
+  function showMicOsd() {
+    privacyStatusRefresh.running = true
+    root.showOsd("󰍬", "Microphone toggled")
+  }
+
   function runWebSearch() {
     const query = webSearchInput.text.trim()
     if (query.length === 0)
@@ -164,6 +197,7 @@ ShellRoot {
 
   property var launcherEntries: []
   property var launcherMru: []
+  property string launcherModeText: "Apps"
   property var launcherCounts: ({})
   property var clipboardEntries: []
   property bool clipboardOpen: false
@@ -178,6 +212,68 @@ ShellRoot {
     { key: "guru", label: "Guru", url: "https://app.getguru.com/search?q=" },
     { key: "call", label: "Call", url: "http://search-tools.internal.telnyx.com/#!/session-lookup?sip_call_id=" }
   ]
+
+  function launcherEntryId(entry) {
+    return String(entry && entry.id || "")
+  }
+
+  function listContains(list, value) {
+    return list && list.indexOf && list.indexOf(value) !== -1
+  }
+
+  function toggleListValue(list, value) {
+    const next = list && list.slice ? list.slice() : []
+    const index = next.indexOf(value)
+    if (index === -1)
+      next.push(value)
+    else
+      next.splice(index, 1)
+    return next
+  }
+
+  function isLauncherFavorite(entry) {
+    return root.listContains(shellSettings.favoriteAppIds, root.launcherEntryId(entry))
+  }
+
+  function isLauncherHidden(entry) {
+    return root.listContains(shellSettings.hiddenAppIds, root.launcherEntryId(entry))
+  }
+
+  function toggleLauncherFavoriteById(id) {
+    if (!id)
+      return
+    shellSettings.favoriteAppIds = root.toggleListValue(shellSettings.favoriteAppIds, id)
+    root.rebuildLauncher()
+  }
+
+  function hideLauncherById(id) {
+    if (!id)
+      return
+    shellSettings.hiddenAppIds = root.toggleListValue(shellSettings.hiddenAppIds, id)
+    root.rebuildLauncher()
+  }
+
+  function launcherCommandEntries(query) {
+    const raw = String(query || "").trim()
+    if (raw.indexOf(">") !== 0)
+      return []
+    const arg = raw.slice(1).trim()
+    const encoded = encodeURIComponent(arg.replace(/^web\s+/, "").replace(/^yt\s+/, "").replace(/^youtube\s+/, ""))
+    const rows = []
+    rows.push({ name: "Web search", subtext: arg.length > 0 ? arg : "Open web search", icon: "󰖟", command: arg.length > 0 ? ["sh", "-c", "chrome-wayland " + root.shellQuote(root.webSearchSiteUrl("google") + encoded)] : ["/home/marcelof/bin/qs-bar", "websearch"] })
+    rows.push({ name: "YouTube search", subtext: arg.length > 0 ? arg : "Search YouTube", icon: "", command: arg.length > 0 ? ["sh", "-c", "chrome-wayland " + root.shellQuote(root.webSearchSiteUrl("youtube") + encoded)] : ["/home/marcelof/bin/qs-bar", "websearch"] })
+    rows.push({ name: "Calculator", subtext: "Open calculator", icon: "󰪚", command: ["sh", "-c", "command -v gnome-calculator >/dev/null 2>&1 && exec gnome-calculator || notify-send Quickshell 'gnome-calculator missing'"] })
+    rows.push({ name: "Wallpaper", subtext: "Open wallpaper picker", icon: "󰸉", command: ["/home/marcelof/bin/qs-bar", "wallpaper"] })
+    rows.push({ name: "Controls", subtext: "Open desktop controls", icon: "󰒓", command: ["/home/marcelof/bin/qs-bar", "controls"] })
+    rows.push({ name: "Settings", subtext: "Open shell settings", icon: "󰒓", command: ["/home/marcelof/bin/qs-bar", "settings"] })
+    rows.push({ name: "Notifications", subtext: "Open notification history", icon: "󰂚", command: ["/home/marcelof/bin/qs-bar", "notifications"] })
+    rows.push({ name: "Toggle DND", subtext: "Silence or allow notification popups", icon: "󰂛", command: ["/home/marcelof/bin/qs-bar", "dnd"] })
+    rows.push({ name: "Media", subtext: "Open media controls", icon: "󰕾", command: ["/home/marcelof/bin/qs-bar", "media"] })
+    rows.push({ name: "Screenshot", subtext: "Select area and edit", icon: "󰹑", command: ["screenshot-wayland", "edit"] })
+    if (arg.length === 0)
+      return rows
+    return rows.filter(row => (row.name + " " + row.subtext).toLowerCase().indexOf(arg.toLowerCase()) >= 0 || raw.indexOf(">web ") === 0 || raw.indexOf(">yt ") === 0 || raw.indexOf(">youtube ") === 0)
+  }
 
   function launcherEntryText(entry) {
     const keywords = entry && entry.keywords && entry.keywords.join ? entry.keywords.join(" ") : ""
@@ -294,16 +390,29 @@ ShellRoot {
   function rebuildLauncher() {
     const values = DesktopEntries.applications.values || []
     const query = search ? search.text : ""
+    const commandRows = root.launcherCommandEntries(query)
+    if (query.trim().indexOf(">") === 0) {
+      root.launcherModeText = "Commands"
+      launcherModel.clear()
+      launcherEntries = commandRows
+      for (let i = 0; i < commandRows.length; i++)
+        launcherModel.append({ name: commandRows[i].name, subtext: commandRows[i].subtext, icon: commandRows[i].icon, id: "", favorite: false })
+      if (appList)
+        appList.currentIndex = launcherModel.count > 0 ? 0 : -1
+      return
+    }
+    root.launcherModeText = "Apps"
     const rows = []
     for (let i = 0; i < values.length; i++) {
       const entry = values[i]
-      if (!entry || entry.noDisplay || !entry.name)
+      if (!entry || entry.noDisplay || !entry.name || root.isLauncherHidden(entry))
         continue
       const score = root.launcherScore(entry, query)
       if (score < 0)
         continue
-      const boost = root.launcherMruBoost(entry) + root.launcherMfuBoost(entry)
-      rows.push({ entry: entry, score: score + boost, key: String(entry.name).toLowerCase(), mru: root.launcherMruIndex(entry), boost: boost })
+      const favorite = root.isLauncherFavorite(entry)
+      const boost = root.launcherMruBoost(entry) + root.launcherMfuBoost(entry) + (favorite ? 20000 : 0)
+      rows.push({ entry: entry, score: score + boost, key: String(entry.name).toLowerCase(), mru: root.launcherMruIndex(entry), boost: boost, favorite: favorite })
     }
 
     rows.sort((a, b) => {
@@ -325,7 +434,9 @@ ShellRoot {
       launcherModel.append({
         name: String(entry.name || entry.id || "Application"),
         subtext: String(entry.genericName || entry.comment || entry.id || ""),
-        icon: String(entry.icon || "application-x-executable")
+        icon: String(entry.icon || "application-x-executable"),
+        id: root.launcherEntryId(entry),
+        favorite: rows[i].favorite
       })
     }
 
@@ -341,6 +452,10 @@ ShellRoot {
     const entry = launcherEntries[appList.currentIndex]
     launcher.visible = false
     search.text = ""
+    if (entry && entry.command) {
+      Quickshell.execDetached(entry.command)
+      return
+    }
     root.recordLauncherUse(entry)
     if (entry && entry.id)
       Quickshell.execDetached(["gtk-launch", String(entry.id).replace(/\.desktop$/, "")])
@@ -365,6 +480,8 @@ ShellRoot {
   property bool screenPanelOpen: false
   property bool wallpaperPanelOpen: false
   property bool calendarOpen: false
+  property bool settingsOpen: false
+  property bool osdOpen: false
   property bool notificationCenterOpen: false
   property bool notificationToastOpen: false
   property int selectedNotificationIndex: -1
@@ -379,6 +496,13 @@ ShellRoot {
   property string networkStatusText: ""
   property string powerStatusText: ""
   property string fanStatusText: "Fan --"
+  property string privacyStatusText: ""
+  property string mediaNowText: ""
+  property string weatherPanelText: ""
+  property string externalBrightnessText: ""
+  property string osdIconText: ""
+  property string osdBodyText: ""
+  property string osdPendingKind: ""
   property string inhibitStatusText: "inactive"
   property string lisbonClockText: "--"
   property string timePanelText: ""
@@ -503,6 +627,7 @@ ShellRoot {
     root.screenPanelOpen = false
     root.wallpaperPanelOpen = false
     root.calendarOpen = false
+    root.settingsOpen = false
     root.notificationCenterOpen = false
     root.keybindingsOpen = false
     root.webSearchOpen = false
@@ -523,6 +648,8 @@ ShellRoot {
       powerStatusRefresh.running = true
       fanStatusRefresh.running = true
       inhibitStatusRefresh.running = true
+      privacyStatusRefresh.running = true
+      externalBrightnessRefresh.running = true
     }
   }
 
@@ -545,6 +672,7 @@ ShellRoot {
   function refreshScreenState() {
     screenRecordStatus.running = true
     portalStatusRefresh.running = true
+    privacyStatusRefresh.running = true
   }
 
   function toggleScreenPanel() {
@@ -596,7 +724,20 @@ ShellRoot {
     if (next) {
       timePanelRefresh.running = true
       todoPanelRefresh.running = true
+      weatherPanelRefresh.running = true
     }
+  }
+
+  function toggleSettings() {
+    const next = !root.settingsOpen
+    root.closeTransientPanels()
+    root.settingsOpen = next
+  }
+
+  function toggleDnd() {
+    shellSettings.doNotDisturb = !shellSettings.doNotDisturb
+    if (shellSettings.doNotDisturb)
+      root.notificationToastOpen = false
   }
 
   function toggleNotifications() {
@@ -705,11 +846,13 @@ ShellRoot {
     root.notificationToastSummary = summary.length > 0 ? summary : app
     root.notificationToastBody = body
     root.notificationToastSerial += 1
-    root.notificationToastOpen = false
-    Qt.callLater(() => {
-      root.notificationToastOpen = true
-      notificationToastTimer.restart()
-    })
+    if (!shellSettings.doNotDisturb) {
+      root.notificationToastOpen = false
+      Qt.callLater(() => {
+        root.notificationToastOpen = true
+        notificationToastTimer.restart()
+      })
+    }
     while (notificationHistory.count > 50) {
       notificationHistory.remove(notificationHistory.count - 1)
       root.notificationObjects.pop()
@@ -789,8 +932,10 @@ ShellRoot {
 
   function refreshAudioState() {
     audioStatusRefresh.running = true
-    if (root.mediaPanelOpen)
+    if (root.mediaPanelOpen) {
       audioStreamsRefresh.running = true
+      mediaNowRefresh.running = true
+    }
   }
 
   function scheduleAudioRefresh() {
@@ -846,6 +991,18 @@ ShellRoot {
     root.scheduleAudioRefresh()
   }
 
+  function toggleBluetoothScan() {
+    if (root.bluetoothAdapter && root.bluetoothAdapter.enabled)
+      root.bluetoothAdapter.discovering = !root.bluetoothAdapter.discovering
+  }
+
+  function bluetoothDeviceLabel(device) {
+    const name = device.name || "Bluetooth device"
+    if (device.batteryAvailable)
+      return name + " " + Math.round(device.battery * 100) + "%"
+    return name
+  }
+
   function bluetoothStatusText() {
     if (!root.bluetoothAdapter)
       return "No adapter"
@@ -856,7 +1013,7 @@ ShellRoot {
     for (let i = 0; i < root.bluetoothDevices.length; i++) {
       const device = root.bluetoothDevices[i]
       if (device && device.state === BluetoothDeviceState.Connected)
-        names.push(device.name || "Connected device")
+        names.push(root.bluetoothDeviceLabel(device))
     }
     return names.length > 0 ? names.join(", ") : "No devices connected"
   }
@@ -913,6 +1070,11 @@ ShellRoot {
       property var pinnedTrayIds: ["nm-applet"]
       property var hiddenTrayIds: []
       property bool nativeTrayMenus: false
+      property bool doNotDisturb: false
+      property bool denseUi: false
+      property string weatherLocation: "Lisbon"
+      property var favoriteAppIds: []
+      property var hiddenAppIds: []
     }
   }
 
@@ -972,6 +1134,13 @@ ShellRoot {
     stdout: StdioCollector { onStreamFinished: root.todoPanelText = this.text.trim() }
   }
 
+  Process {
+    id: weatherPanelRefresh
+    command: ["sh", "-c", "WEATHER_LOCATION=" + root.shellQuote(shellSettings.weatherLocation) + " /home/marcelof/bin/check-weather"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.weatherPanelText = this.text.trim() }
+  }
+
   Timer {
     interval: 1000
     running: true
@@ -1024,6 +1193,7 @@ ShellRoot {
       return
 
     audio.volume = Math.max(0, Math.min(1.5, audio.volume + delta))
+    root.showVolumeOsd()
   }
 
   function toggleMute() {
@@ -1031,6 +1201,7 @@ ShellRoot {
     if (audio) {
       audio.muted = !audio.muted
       root.scheduleAudioRefresh()
+      root.showVolumeOsd()
     }
   }
 
@@ -1043,11 +1214,13 @@ ShellRoot {
     root.brightnessValue = Math.max(0, Math.min(100, Math.round(value)))
     root.brightnessText = root.brightnessValue + "%"
     root.runBrightness(String(root.brightnessValue))
+    root.showOsd("󰃠", "Brightness " + root.brightnessText)
   }
 
   function runKbdBrightness(action) {
     Quickshell.execDetached(["/home/marcelof/bin/kbd-brightness", action])
     kbdBrightnessRefreshLater.restart()
+    root.showKbdOsd()
   }
 
   function lockSession() {
@@ -1192,6 +1365,12 @@ ShellRoot {
     function notifications() { root.toggleNotifications() }
     function power() { exitDialog.visible = true }
     function inhibit() { root.toggleIdleInhibit() }
+    function dnd() { root.toggleDnd() }
+    function settings() { root.toggleSettings() }
+    function osdVolume() { root.showVolumeOsd() }
+    function osdBrightness() { root.showBrightnessOsd() }
+    function osdKbd() { root.showKbdOsd() }
+    function osdMic() { root.showMicOsd() }
     function keybindings() { root.toggleKeybindings() }
     function clipboard() { root.openClipboard() }
     function clipboardUpdate() { clipboardRefresh.running = true }
@@ -1370,6 +1549,17 @@ ShellRoot {
       }
 
       StatusText { command: ["env", "BAR_COLOR_FORMAT=quickshell", "board", "--config", "/home/marcelof/.config/board/board.toml", "render", "quickshell", "quickshell-bar"]; interval: 1000; rich: true }
+      StatusText { command: ["/home/marcelof/bin/desktop-privacy-status", "bar"]; interval: 5000; leftClickCommand: ["/home/marcelof/bin/qs-bar", "screen"]; rightClickCommand: ["/home/marcelof/bin/qs-bar", "media"] }
+
+      Text {
+        Layout.alignment: Qt.AlignVCenter
+        visible: shellSettings.doNotDisturb
+        color: "#f9e2af"
+        font.family: "FiraCode Nerd Font"
+        font.pixelSize: 12
+        text: "󰂛"
+        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleDnd() }
+      }
 
       Text {
         Layout.alignment: Qt.AlignVCenter
@@ -1437,7 +1627,7 @@ ShellRoot {
       }
 
 
-      StatusText { command: ["/home/marcelof/bin/check-weather"]; interval: 900000 }
+      StatusText { command: ["sh", "-c", "WEATHER_LOCATION=" + root.shellQuote(shellSettings.weatherLocation) + " /home/marcelof/bin/check-weather"]; interval: 900000 }
       StatusText { command: ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print \"󰃠 \" $4}' || printf '󰃠 --'"]; interval: 5000; leftClickCommand: ["/home/marcelof/bin/qs-bar", "controls"]; rightClickCommand: ["/home/marcelof/bin/qs-bar", "controls"]; wheelUpCommand: ["brightnessctl", "set", "+5%"]; wheelDownCommand: ["brightnessctl", "set", "5%-"] }
       StatusText { command: ["sh", "-c", "nmcli -t -f active dev wifi 2>/dev/null | awk -F: '$1 == \"yes\" {found=1} END {if (found) print \"󰖩\"; else print \"󰖪\"}'"]; interval: 10000; leftClickCommand: ["hypr-clean-env", "nm-connection-editor"]; rightClickCommand: ["hypr-clean-env", "nm-connection-editor"] }
 
@@ -1724,6 +1914,7 @@ ShellRoot {
           }
 
           Text { Layout.fillWidth: true; color: "#7f849c"; wrapMode: Text.Wrap; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.portalStatusText.length > 0 ? "Portal: " + root.portalStatusText : "Portal: --" }
+          Text { Layout.fillWidth: true; color: "#f9e2af"; wrapMode: Text.Wrap; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.privacyStatusText.length > 0 ? root.privacyStatusText : "mic inactive\ncamera inactive\nshare inactive" }
         }
       }
     }
@@ -1762,7 +1953,7 @@ ShellRoot {
                 Layout.fillWidth: true
                 spacing: 1
                 Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Media" }
-                Text { Layout.fillWidth: true; color: "#7f849c"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.audioDisplayText.length > 0 ? root.audioDisplayText : "No active playback" }
+                Text { Layout.fillWidth: true; color: "#7f849c"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.mediaNowText.length > 0 ? root.mediaNowText : (root.audioDisplayText.length > 0 ? root.audioDisplayText : "No active playback") }
               }
               ActionButton { icon: "󰕾"; label: "Output"; minWidth: 92; tooltip: "Open volume mixer"; onTriggered: Quickshell.execDetached(["hypr-clean-env", "pavucontrol"]) }
             }
@@ -1887,6 +2078,7 @@ ShellRoot {
             ActionButton { icon: "󰹑"; label: "Screen"; tooltip: "Screen tools"; onTriggered: root.toggleScreenPanel() }
             ActionButton { icon: "󰅇"; label: "Copy"; tooltip: "Copy screenshot area"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "copy"]) }
             ActionButton { icon: "󰌾"; label: "Lock"; tooltip: "Lock session"; onTriggered: root.lockSession() }
+            ActionButton { icon: shellSettings.doNotDisturb ? "󰂛" : "󰂚"; label: "DND"; active: shellSettings.doNotDisturb; tooltip: shellSettings.doNotDisturb ? "Allow notification popups" : "Silence notification popups"; onTriggered: root.toggleDnd() }
           }
 
           RowLayout {
@@ -1923,6 +2115,7 @@ ShellRoot {
             spacing: 7
             ActionButton { icon: "󰥔"; label: "Time"; minWidth: 68; tooltip: "Calendar and time"; onTriggered: root.toggleCalendar() }
             ActionButton { icon: "󰂚"; label: "Notes"; minWidth: 68; tooltip: "Notifications"; onTriggered: root.toggleNotifications() }
+            ActionButton { icon: "󰒓"; label: "Set"; minWidth: 68; tooltip: "Shell settings"; onTriggered: root.toggleSettings() }
           }
 
           RowLayout {
@@ -1931,6 +2124,16 @@ ShellRoot {
             Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰃠" }
             Slider { Layout.fillWidth: true; from: 1; to: 100; value: root.brightnessValue; onMoved: root.setBrightness(value) }
             Text { width: 42; color: "#bac2de"; horizontalAlignment: Text.AlignRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.brightnessText }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            visible: root.externalBrightnessText.length > 0
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰍹" }
+            Text { Layout.fillWidth: true; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.externalBrightnessText }
+            ActionButton { icon: "-"; label: ""; minWidth: 34; tooltip: "External brightness down"; onTriggered: Quickshell.execDetached(["external-brightness", "down"]) }
+            ActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "External brightness up"; onTriggered: Quickshell.execDetached(["external-brightness", "up"]) }
           }
 
           RowLayout {
@@ -1949,6 +2152,7 @@ ShellRoot {
             Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "󰂯" : "󰂲" }
             Text { Layout.fillWidth: true; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.bluetoothStatusText() }
             ActionButton { icon: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "󰂲" : "󰂯"; label: root.bluetoothAdapter && root.bluetoothAdapter.enabled ? "Off" : "On"; tooltip: "Toggle Bluetooth"; onTriggered: root.toggleBluetooth() }
+            ActionButton { icon: root.bluetoothAdapter && root.bluetoothAdapter.discovering ? "󰑓" : "󰐊"; label: "Scan"; tooltip: "Toggle Bluetooth discovery"; onTriggered: root.toggleBluetoothScan() }
           }
 
           RowLayout {
@@ -1981,6 +2185,49 @@ ShellRoot {
         }
       }
     }
+
+    PopupWindow {
+      id: settingsWindow
+      visible: root.settingsOpen
+      color: "transparent"
+      implicitWidth: 430
+      implicitHeight: 360
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+
+        ColumnLayout {
+          anchors.fill: parent
+          anchors.margins: 12
+          spacing: 10
+          Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 15; text: "Shell settings" }
+          RowLayout { Layout.fillWidth: true; spacing: 7
+            ActionButton { Layout.fillWidth: true; icon: shellSettings.doNotDisturb ? "󰂛" : "󰂚"; label: "DND"; active: shellSettings.doNotDisturb; tooltip: "Toggle notification popups"; onTriggered: root.toggleDnd() }
+            ActionButton { Layout.fillWidth: true; icon: shellSettings.nativeTrayMenus ? "󰍜" : "󰍛"; label: "Tray"; active: shellSettings.nativeTrayMenus; tooltip: "Toggle native tray menus"; onTriggered: shellSettings.nativeTrayMenus = !shellSettings.nativeTrayMenus }
+            ActionButton { Layout.fillWidth: true; icon: root.barHidden ? "󰖰" : "󰖯"; label: "Bar"; active: !root.barHidden; tooltip: "Show or hide bar"; onTriggered: root.barHidden = !root.barHidden }
+          }
+          RowLayout { Layout.fillWidth: true; spacing: 7
+            ActionButton { Layout.fillWidth: true; icon: "󰈙"; label: "Dense"; active: shellSettings.denseUi; tooltip: "Toggle compact shell spacing"; onTriggered: shellSettings.denseUi = !shellSettings.denseUi }
+            ActionButton { Layout.fillWidth: true; icon: "󰖐"; label: "Lisbon"; active: shellSettings.weatherLocation === "Lisbon"; tooltip: "Weather: Lisbon"; onTriggered: { shellSettings.weatherLocation = "Lisbon"; weatherPanelRefresh.running = true } }
+            ActionButton { Layout.fillWidth: true; icon: "󰖐"; label: "Porto"; active: shellSettings.weatherLocation === "Porto"; tooltip: "Weather: Porto"; onTriggered: { shellSettings.weatherLocation = "Porto"; weatherPanelRefresh.running = true } }
+          }
+          RowLayout { Layout.fillWidth: true; spacing: 7
+            ActionButton { Layout.fillWidth: true; icon: "󰀻"; label: "Apps"; tooltip: "Open app launcher"; onTriggered: { root.closeTransientPanels(); root.toggleLauncher() } }
+            ActionButton { Layout.fillWidth: true; icon: "󰂚"; label: "Notes"; tooltip: "Open notifications"; onTriggered: root.toggleNotifications() }
+            ActionButton { Layout.fillWidth: true; icon: "󰒓"; label: "Controls"; tooltip: "Open controls"; onTriggered: root.toggleControlPanel() }
+          }
+          Text { Layout.fillWidth: true; color: "#7f849c"; wrapMode: Text.Wrap; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Favorites: " + shellSettings.favoriteAppIds.length + "  Hidden apps: " + shellSettings.hiddenAppIds.length + "  Weather: " + shellSettings.weatherLocation }
+        }
+      }
+    }
+
 
     PopupWindow {
       id: calendarWindow
@@ -2021,6 +2268,15 @@ ShellRoot {
             font.pixelSize: 22
             horizontalAlignment: Text.AlignHCenter
             text: Qt.formatDateTime(clock.date, "dd MMMM yyyy")
+          }
+
+          Text {
+            Layout.fillWidth: true
+            color: "#f9e2af"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 13
+            horizontalAlignment: Text.AlignHCenter
+            text: root.weatherPanelText.length > 0 ? root.weatherPanelText : "Weather --"
           }
 
           ScrollView {
@@ -2104,6 +2360,7 @@ ShellRoot {
               tooltip: "Clear all notifications"
               onTriggered: root.clearNotifications()
             }
+            ActionButton { icon: shellSettings.doNotDisturb ? "󰂛" : "󰂚"; label: "DND"; minWidth: 58; active: shellSettings.doNotDisturb; tooltip: shellSettings.doNotDisturb ? "Allow popups" : "Silence popups"; onTriggered: root.toggleDnd() }
           }
 
           Text {
@@ -2263,7 +2520,33 @@ ShellRoot {
     }
 
     PopupWindow {
-      visible: root.notificationToastOpen && !root.notificationCenterOpen
+      id: osdWindow
+      visible: root.osdOpen
+      color: "transparent"
+      implicitWidth: 280
+      implicitHeight: 68
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, Math.round((bar.width - implicitWidth) / 2))
+      anchor.rect.y: bar.height + 18
+      Rectangle {
+        anchors.fill: parent
+        radius: 6
+        color: "#1e1e2e"
+        border.color: "#b4befe"
+        border.width: 1
+        RowLayout {
+          anchors.fill: parent
+          anchors.margins: 12
+          spacing: 10
+          Text { color: "#f9e2af"; font.family: "FiraCode Nerd Font"; font.pixelSize: 18; text: root.osdIconText }
+          Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 14; text: root.osdBodyText }
+        }
+      }
+    }
+
+
+    PopupWindow {
+      visible: root.notificationToastOpen && !root.notificationCenterOpen && !shellSettings.doNotDisturb
       color: "transparent"
       implicitWidth: 380
       implicitHeight: toastCard.implicitHeight
@@ -2451,6 +2734,47 @@ ShellRoot {
     onTriggered: inhibitStatusRefresh.running = true
   }
 
+  Process {
+    id: privacyStatusRefresh
+    command: ["/home/marcelof/bin/desktop-privacy-status", "status"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.privacyStatusText = this.text.trim() }
+  }
+
+  Process {
+    id: externalBrightnessRefresh
+    command: ["/home/marcelof/bin/external-brightness", "status"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.externalBrightnessText = this.text.trim() }
+  }
+
+  Process {
+    id: mediaNowRefresh
+    command: ["/home/marcelof/bin/media-now-playing"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.mediaNowText = this.text.trim() }
+  }
+
+  Timer {
+    id: osdTimer
+    interval: 1300
+    repeat: false
+    onTriggered: root.osdOpen = false
+  }
+
+  Timer {
+    id: osdRefreshLater
+    interval: 180
+    repeat: false
+    onTriggered: {
+      if (root.osdPendingKind === "brightness")
+        root.showOsd("󰃠", "Brightness " + root.brightnessText)
+      else if (root.osdPendingKind === "kbd")
+        root.showOsd("󰌌", root.kbdBrightnessText.length > 0 ? root.kbdBrightnessText : "Keyboard brightness")
+      root.osdPendingKind = ""
+    }
+  }
+
   ListModel { id: launcherModel }
 
   Process {
@@ -2486,7 +2810,7 @@ ShellRoot {
     screen: root.laptopScreen
     visible: false
     implicitWidth: 720
-    implicitHeight: 520
+    implicitHeight: shellSettings.denseUi ? 480 : 520
     color: "transparent"
 
     HyprlandFocusGrab {
@@ -2578,7 +2902,7 @@ ShellRoot {
             Text {
               anchors.fill: parent
               anchors.leftMargin: 44
-              anchors.rightMargin: 10
+              anchors.rightMargin: 82
               verticalAlignment: Text.AlignVCenter
               color: "#cdd6f4"
               elide: Text.ElideRight
@@ -2597,13 +2921,29 @@ ShellRoot {
               source: Quickshell.iconPath(modelData.icon, true)
             }
 
+            Row {
+              anchors.right: parent.right
+              anchors.rightMargin: 8
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 6
+              visible: modelData.id.length > 0
+              Text { color: modelData.favorite ? "#f9e2af" : "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: modelData.favorite ? "" : ""; MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { mouse.accepted = true; root.toggleLauncherFavoriteById(modelData.id) } } }
+              Text { color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: "󰈉"; MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { mouse.accepted = true; root.hideLauncherById(modelData.id) } } }
+            }
+
             MouseArea {
               anchors.fill: parent
+              acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
               hoverEnabled: true
               onEntered: appList.currentIndex = index
-              onClicked: {
+              onClicked: mouse => {
                 appList.currentIndex = index
-                root.launchCurrentApp()
+                if (mouse.button === Qt.RightButton && modelData.id.length > 0)
+                  root.toggleLauncherFavoriteById(modelData.id)
+                else if (mouse.button === Qt.MiddleButton && modelData.id.length > 0)
+                  root.hideLauncherById(modelData.id)
+                else
+                  root.launchCurrentApp()
               }
             }
           }
