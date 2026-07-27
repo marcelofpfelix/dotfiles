@@ -801,6 +801,10 @@ ShellRoot {
     return root.audioStatusText.indexOf("music: running") >= 0
   }
 
+  function audioPlaybackActive() {
+    return root.audioDisplayText.length > 0 && root.audioDisplayText.indexOf("(paused)") < 0
+  }
+
   function runAudioctl(action) {
     Quickshell.execDetached(["/home/marcelof/bin/audioctl", action])
     root.scheduleAudioRefresh()
@@ -1760,7 +1764,7 @@ ShellRoot {
               Layout.fillWidth: true
               spacing: 7
               ActionButton { Layout.fillWidth: true; icon: "󰒮"; label: "Prev"; tooltip: "Previous track"; onTriggered: root.runPlayerctl("previous") }
-              ActionButton { Layout.fillWidth: true; active: root.audioDisplayText.length > 0; icon: root.audioIconText; label: root.audioDisplayText.length > 0 ? "Pause" : "Play"; tooltip: root.audioDisplayText.length > 0 ? "Pause saved music and noise" : "Start saved music and noise"; onTriggered: root.runAudioctl("play-pause-all") }
+              ActionButton { Layout.fillWidth: true; active: root.audioPlaybackActive(); icon: root.audioIconText; label: root.audioPlaybackActive() ? "Pause" : "Play"; tooltip: root.audioPlaybackActive() ? "Pause saved music and noise" : "Start saved music and noise"; onTriggered: root.runAudioctl("play-pause-all") }
               ActionButton { Layout.fillWidth: true; icon: "󰒭"; label: "Next"; tooltip: "Next track"; onTriggered: root.runPlayerctl("next") }
             }
 
