@@ -1723,70 +1723,76 @@ ShellRoot {
       visible: root.trayManageOpen
       color: "transparent"
       implicitWidth: 460
-      implicitHeight: trayManageFrame.implicitHeight
+      implicitHeight: 420
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
 
       Rectangle {
-        id: trayManageFrame
         anchors.fill: parent
         radius: 6
         color: "#11111b"
         border.color: "#45475a"
         border.width: 1
-        implicitHeight: trayManageColumn.implicitHeight + 18
 
-        Column {
-          id: trayManageColumn
+        ColumnLayout {
           anchors.fill: parent
-          anchors.margins: 10
-          spacing: 7
+          anchors.margins: 12
+          spacing: 10
 
-          Text {
-            color: "#cdd6f4"
-            font.family: "FiraCode Nerd Font"
-            font.styleName: "Retina"
-            font.pixelSize: 13
-            text: "Tray items"
+          RowLayout {
+            Layout.fillWidth: true
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 15; text: "Tray items" }
+            Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.allTrayItems.length + "" }
           }
 
-          Repeater {
+          Text {
+            Layout.fillWidth: true
+            visible: root.allTrayItems.length === 0
+            color: "#7f849c"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 12
+            horizontalAlignment: Text.AlignHCenter
+            text: "No tray items"
+          }
+
+          ListView {
+            id: trayManageList
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            spacing: 8
             model: root.allTrayItems
 
-            RowLayout {
+            delegate: Rectangle {
               required property var modelData
-              width: trayManageColumn.width
-              spacing: 8
+              width: trayManageList.width
+              height: 44
+              radius: 6
+              color: root.isTrayHidden(modelData) ? "#181825" : "#1e1e2e"
+              border.color: "#313244"
+              border.width: 1
 
-              Image { source: modelData.icon; width: 18; height: 18 }
+              RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 9
+                anchors.rightMargin: 9
+                spacing: 8
 
-              Text {
-                Layout.fillWidth: true
-                color: root.isTrayHidden(modelData) ? "#6c7086" : "#bac2de"
-                elide: Text.ElideRight
-                font.family: "FiraCode Nerd Font"
-                font.styleName: "Retina"
-                font.pixelSize: 12
-                text: root.trayItemText(modelData)
-              }
+                Image { source: modelData.icon; Layout.preferredWidth: 18; Layout.preferredHeight: 18 }
 
-              Rectangle {
-                width: 54
-                height: 24
-                radius: 4
-                color: root.isTrayPinned(modelData) ? "#b4befe" : "#313244"
-                Text { anchors.centerIn: parent; color: root.isTrayPinned(modelData) ? "#11111b" : "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.isTrayPinned(modelData) ? "Pinned" : "Pin" }
-                MouseArea { anchors.fill: parent; onClicked: root.toggleTrayPin(modelData) }
-              }
+                Text {
+                  Layout.fillWidth: true
+                  color: root.isTrayHidden(modelData) ? "#6c7086" : "#bac2de"
+                  elide: Text.ElideRight
+                  font.family: "FiraCode Nerd Font"
+                  font.styleName: "Retina"
+                  font.pixelSize: 12
+                  text: root.trayItemText(modelData)
+                }
 
-              Rectangle {
-                width: 54
-                height: 24
-                radius: 4
-                color: root.isTrayHidden(modelData) ? "#f38ba8" : "#313244"
-                Text { anchors.centerIn: parent; color: root.isTrayHidden(modelData) ? "#11111b" : "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.isTrayHidden(modelData) ? "Hidden" : "Hide" }
-                MouseArea { anchors.fill: parent; onClicked: root.toggleTrayHide(modelData) }
+                ActionButton { active: root.isTrayPinned(modelData); icon: "󰐃"; label: root.isTrayPinned(modelData) ? "Pinned" : "Pin"; minWidth: 76; tooltip: "Pin tray item"; onTriggered: root.toggleTrayPin(modelData) }
+                ActionButton { active: root.isTrayHidden(modelData); icon: "󰖭"; label: root.isTrayHidden(modelData) ? "Hidden" : "Hide"; minWidth: 76; tooltip: "Hide tray item"; onTriggered: root.toggleTrayHide(modelData) }
               }
             }
           }
