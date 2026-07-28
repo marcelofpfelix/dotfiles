@@ -36,7 +36,7 @@ fix_hint() {
   fi
 
   case "$1" in
-    hypr-session|hypr-keys|hypr-term|qs-bar|qs-menu-smoke|desktop-reload|desktop-notification-smoke|desktop-inhibit|audioctl|check-audio-streams|cliphist-menu|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland|desktop-privacy-status|desktop-osd|external-brightness|media-now-playing)
+    hypr-session|hypr-keys|hypr-term|qs-bar|qs-menu-smoke|desktop-reload|desktop-notification-smoke|desktop-inhibit|desktop-accept|desktop-startup-report|audioctl|check-audio-streams|cliphist-menu|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland|desktop-privacy-status|desktop-osd|external-brightness|media-now-playing)
       printf 'fix  %-22s home -y\n' "$1"
       ;;
     walker|gum|fzf|identify|compare)
@@ -266,6 +266,11 @@ check_qs_menu_smoke_latest() {
     return
   fi
 
+  if ! awk -F "\t" '$1 == "launcher-script" && $2 == "ok" { found=1 } END { exit !found }' "$summary"; then
+    fail qs-menu-smoke-latest "missing launcher-script panel" "qs-menu-smoke launcher-script"
+    return
+  fi
+
   failed=$(awk -F "\t" 'NR > 1 && $2 != "ok" { count++ } END { print count + 0 }' "$summary")
   if [ "$failed" -gt 0 ]; then
     fail qs-menu-smoke-latest "$failed failed panel(s)" "qs-menu-smoke"
@@ -325,7 +330,7 @@ check_notification_smoke_status() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys hypr-term qs-bar qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland monitor chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing; do
+for cmd in hypr-session hypr-keys hypr-term qs-bar qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare audioctl check-audio-streams cliphist-menu screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes

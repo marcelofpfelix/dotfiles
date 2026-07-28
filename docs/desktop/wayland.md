@@ -28,6 +28,8 @@ Copy the dotfiles locally, then run:
 ```console
 home -y
 desktop-doctor
+desktop-accept
+desktop-startup-report
 qs-menu-smoke
 desktop-reload
 hypr-session smoke

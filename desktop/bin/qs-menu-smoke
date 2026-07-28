@@ -11,7 +11,7 @@ summary_file="$out_dir/summary.tsv"
 min_width="${QS_MENU_SMOKE_MIN_WIDTH:-320}"
 min_height="${QS_MENU_SMOKE_MIN_HEIGHT:-180}"
 min_changed_pixels="${QS_MENU_SMOKE_MIN_CHANGED_PIXELS:-5000}"
-panels=(launcher controls media notifications calendar wallpaper screen keybindings clipboard websearch network tray power)
+panels=(launcher launcher-script controls media notifications calendar wallpaper screen settings keybindings clipboard websearch network tray power)
 status=0
 
 usage() {
@@ -69,6 +69,7 @@ assert_capture() {
 
 capture_panel() {
   local panel=$1 file baseline
+  local -a open_cmd
   file="$out_dir/$panel.png"
   baseline="$out_dir/$panel.before.png"
 
@@ -83,7 +84,11 @@ capture_panel() {
     status=1
     return
   fi
-  if ! qs-bar "$panel" >/dev/null 2>&1; then
+  case "$panel" in
+    launcher-script) open_cmd=(qs-launcher open) ;;
+    *) open_cmd=(qs-bar "$panel") ;;
+  esac
+  if ! "${open_cmd[@]}" >/dev/null 2>&1; then
     printf 'fail %s open\n' "$panel" >&2
     status=1
     return

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+repo=${DOTFILES_REPO:-$HOME/gwt/marcelofpfelix/dotfiles/main}
+profile=${HYPR_PROFILE:-default}
+profile_file="$repo/desktop/.config/hypr/profiles/$profile.lua"
+
+echo "profile $profile"
+echo
+
+echo "hyprland startup"
+if [ -r "$profile_file" ]; then
+  sed -n "/hl.on(\"hyprland.start\"/,/end)/p" "$profile_file" | sed -n "s/.*hl.exec_cmd(\"\(.*\)\").*/- \1/p"
+else
+  echo "- missing $profile_file"
+fi
+
+echo
+
+echo "autostart desktop files"
+for dir in "$HOME/.config/autostart" /etc/xdg/autostart; do
+  [ -d "$dir" ] || continue
+  find "$dir" -maxdepth 1 -name "*.desktop" -print 2>/dev/null | sort | while IFS= read -r file; do
+    name=$(sed -n "s/^Name=//p" "$file" | head -n 1)
+    hidden=$(sed -n "s/^Hidden=//p" "$file" | head -n 1)
+    echo "- ${name:-$(basename "$file")} ${hidden:+Hidden=$hidden} ($file)"
+  done
+done
+
+echo
+
+echo "running user services"
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl --user list-units --type=service --state=running --no-legend 2>/dev/null | awk "{print \"- \" \$1}"
+else
+  echo "- systemctl missing"
+fi
+
+echo
+
+echo "quickshell"
+if command -v qs-bar >/dev/null 2>&1; then
+  qs-bar status 2>/dev/null | sed "s/^/- /"
+else
+  echo "- qs-bar missing"
+fi

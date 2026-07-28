@@ -20,6 +20,7 @@ required_packages=(
   tesseract-ocr
   wf-recorder
   brightnessctl
+  ddcutil
   wl-clipboard
   wev
   libinput-tools

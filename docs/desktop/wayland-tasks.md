@@ -156,12 +156,12 @@ Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-re
   - Acceptance: calendar shows today, Lisbon time, configured extra timezones, weather summary, and the current todo/note block without becoming a full agenda client.
   - Validation: `qs-menu-smoke calendar` and manual clock/timezone sanity check.
   - Current behavior: calendar includes Lisbon clock, weather summary, and the existing todo block.
-- [ ] Add optional external monitor brightness controls.
+- [x] Add optional external monitor brightness controls.
   - Sources: Noctalia `ddcutil` optional dependency, Caelestia brightness service shape.
   - Dependencies: if `ddcutil` is used, track it in homelab install intent first.
   - Acceptance: laptop brightness stays on `brightnessctl`; external displays get separate controls only when `ddcutil detect` finds controllable monitors.
   - Validation: `desktop-package-audit`, `qs-menu-smoke controls`, and manual external-monitor brightness change.
-  - Current behavior: `external-brightness` and hidden controls are present, but this stays open until `ddcutil` is tracked in homelab and validated on an external monitor.
+  - Current behavior: `ddcutil` is installed and tracked in homelab; `external-brightness status` detects one external display, and VCP 10 write access was validated by setting the current value back to itself.
 - [x] Add richer Bluetooth device controls.
   - Sources: Caelestia Bluetooth popout and device battery display.
   - Dependencies: reuse Quickshell Bluetooth service and existing controls popup.
@@ -300,6 +300,11 @@ Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-re
 - [x] Review Electron apps for Wayland/PipeWire wrappers: Slack first, then 1Password, Obsidian, Zed-like editors, Discord/Zoom if installed.
   - Current behavior: Slack, 1Password, Discord, and Obsidian launch through local Wayland wrappers that unset inherited Nix/Mesa loader state and pass `--ozone-platform=wayland` plus `UseOzonePlatform,WebRTCPipeWireCapturer`.
   - Decision: Zed is already a native local app, and Zoom uses its own `/opt/zoom/ZoomLauncher`; no Electron flags are forced into either.
+
+## Automation helpers
+
+- `desktop-accept` applies dotfiles, reloads Quickshell, runs Hyprland smoke, runs focused Quickshell menu smoke including `launcher-script`, and finishes with `desktop-doctor`.
+- `desktop-startup-report` prints Hyprland startup commands, autostart desktop files, running user services, and the current Quickshell instance.
 
 ## Notes
 
