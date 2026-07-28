@@ -16,7 +16,7 @@ panels=(launcher launcher-script controls media notifications calendar wallpaper
 status=0
 
 usage() {
-  printf 'use: qs-menu-smoke [panel ...]\n' >&2
+  printf 'use: qs-menu-smoke [--list|panel ...]\n' >&2
   printf 'captures: %s\n' "${panels[*]}" >&2
 }
 
@@ -124,6 +124,7 @@ write_contact_sheet() {
 }
 
 case "${1:-}" in
+  --list) printf '%s\n' "${panels[@]}"; exit 0 ;;
   -h|--help) usage; exit 0 ;;
 esac
 

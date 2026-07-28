@@ -303,7 +303,7 @@ Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-re
 
 ## Automation helpers
 
-- `desktop-accept` applies dotfiles, reloads Quickshell, runs Hyprland smoke, runs focused Quickshell menu smoke including `launcher-script`, and finishes with `desktop-doctor`.
+- `desktop-accept` applies dotfiles, reloads Quickshell, runs Hyprland smoke, runs full Quickshell menu smoke, and finishes with `desktop-doctor`.
 - `desktop-startup-report` prints Hyprland startup commands, autostart desktop files, running user services, and the current Quickshell instance.
 
 ## Notes
