@@ -525,6 +525,15 @@ ShellRoot {
     return day >= 1 && day <= daysInMonth ? day : 0
   }
 
+  function calendarCellCount() {
+    const date = clock.date
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    return firstWeekday + daysInMonth > 35 ? 42 : 35
+  }
+
   function isCalendarToday(day) {
     const date = clock.date
     return day === date.getDate()
@@ -2334,7 +2343,7 @@ ShellRoot {
       visible: root.calendarOpen
       color: "transparent"
       implicitWidth: 430
-      implicitHeight: 560
+      implicitHeight: 660
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 72)
       anchor.rect.y: bar.height + 6
@@ -2382,7 +2391,7 @@ ShellRoot {
           GridLayout {
             Layout.fillWidth: true
             columns: 7
-            rowSpacing: 4
+            rowSpacing: 2
             columnSpacing: 4
 
             Repeater {
@@ -2399,12 +2408,12 @@ ShellRoot {
             }
 
             Repeater {
-              model: 42
+              model: root.calendarCellCount()
               Rectangle {
                 required property int index
                 readonly property int day: root.calendarDayAt(index)
                 Layout.fillWidth: true
-                implicitHeight: 24
+                implicitHeight: 22
                 radius: 4
                 color: day > 0 && root.isCalendarToday(day) ? shellSettings.primaryColor : "transparent"
 
@@ -2421,7 +2430,7 @@ ShellRoot {
 
           ScrollView {
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            Layout.preferredHeight: 160
             clip: true
 
             Text {
@@ -2455,7 +2464,7 @@ ShellRoot {
             color: "#bac2de"
             font.family: "FiraCode Nerd Font"
             font.pixelSize: 12
-            maximumLineCount: 7
+            maximumLineCount: 1
             elide: Text.ElideRight
             wrapMode: Text.Wrap
             text: root.todoPanelText.length > 0 ? root.todoPanelText : "No todo data"
