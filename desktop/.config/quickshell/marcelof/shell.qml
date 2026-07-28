@@ -660,8 +660,10 @@ ShellRoot {
     const next = !networkPanel.visible
     root.closeTransientPanels()
     networkPanel.visible = next
-    if (next)
+    if (next) {
+      networkStatusRefresh.running = true
       networkRefresh.running = true
+    }
   }
 
   function toggleMediaPanel() {
@@ -3207,6 +3209,7 @@ ShellRoot {
 
     Rectangle {
       anchors.fill: parent
+      radius: 6
       color: "#11111b"
       border.color: "#45475a"
       border.width: 1
@@ -3216,25 +3219,48 @@ ShellRoot {
         anchors.margins: 16
         spacing: 10
 
-        Text {
+        RowLayout {
           Layout.fillWidth: true
-          color: "#cdd6f4"
-          font.family: "FiraCode Nerd Font"
-              font.styleName: "Retina"
-          font.pixelSize: 15
-          text: "Network"
+          spacing: 8
+          Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 15; text: "Network" }
+          ActionButton { icon: "󰑓"; label: ""; minWidth: 34; tooltip: "Refresh"; onTriggered: { networkStatusRefresh.running = true; networkRefresh.running = true } }
         }
 
-        Text {
-          id: networkText
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 10
+          Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.networkStatusText.indexOf("Wi-Fi") === 0 ? "󰖩" : "󰈀" }
+          Text { Layout.fillWidth: true; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.networkStatusText.length > 0 ? root.networkStatusText : "Network unavailable" }
+        }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 8
+          ActionButton { Layout.fillWidth: true; icon: "󰖩"; label: "Wi-Fi"; tooltip: "Toggle Wi-Fi"; onTriggered: root.runNetwork("wifi-toggle") }
+          ActionButton { Layout.fillWidth: true; icon: "󰍜"; label: "Settings"; tooltip: "Open network settings"; onTriggered: Quickshell.execDetached(["hypr-clean-env", "nm-connection-editor"]) }
+        }
+
+        Rectangle {
           Layout.fillWidth: true
           Layout.fillHeight: true
-          color: "#bac2de"
-          font.family: "FiraCode Nerd Font"
-              font.styleName: "Retina"
-          font.pixelSize: 12
-          wrapMode: Text.Wrap
-          text: ""
+          radius: 6
+          color: "#1e1e2e"
+          border.color: "#313244"
+          border.width: 1
+
+          Text {
+            id: networkText
+            anchors.fill: parent
+            anchors.margins: 10
+            color: "#bac2de"
+            elide: Text.ElideRight
+            font.family: "FiraCode Nerd Font"
+            font.styleName: "Retina"
+            font.pixelSize: 12
+            maximumLineCount: 8
+            wrapMode: Text.Wrap
+            text: ""
+          }
         }
       }
     }
