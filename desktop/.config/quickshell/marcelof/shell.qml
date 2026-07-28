@@ -1720,7 +1720,7 @@ ShellRoot {
       id: trayManageWindow
       visible: root.trayManageOpen
       color: "transparent"
-      implicitWidth: 390
+      implicitWidth: 460
       implicitHeight: trayManageFrame.implicitHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
@@ -1797,8 +1797,8 @@ ShellRoot {
       id: wallpaperPanelWindow
       visible: root.wallpaperPanelOpen
       color: "transparent"
-      implicitWidth: 430
-      implicitHeight: 360
+      implicitWidth: 460
+      implicitHeight: 420
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -1873,8 +1873,8 @@ ShellRoot {
       id: screenPanelWindow
       visible: root.screenPanelOpen
       color: "transparent"
-      implicitWidth: 430
-      implicitHeight: 360
+      implicitWidth: 460
+      implicitHeight: 420
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2206,8 +2206,8 @@ ShellRoot {
       id: settingsWindow
       visible: root.settingsOpen
       color: "transparent"
-      implicitWidth: 430
-      implicitHeight: 360
+      implicitWidth: 460
+      implicitHeight: 420
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2865,6 +2865,7 @@ ShellRoot {
 
     Rectangle {
       anchors.fill: parent
+      radius: 6
       color: "#11111b"
       border.color: "#45475a"
       border.width: 1
@@ -3191,8 +3192,8 @@ ShellRoot {
   PopupWindow {
     id: networkPanel
     visible: false
-    implicitWidth: 420
-    implicitHeight: 260
+    implicitWidth: 460
+    implicitHeight: 320
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
@@ -3250,8 +3251,8 @@ ShellRoot {
   PopupWindow {
     id: exitDialog
     visible: false
-    implicitWidth: 420
-    implicitHeight: 160
+    implicitWidth: 460
+    implicitHeight: 260
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
@@ -3267,14 +3268,15 @@ ShellRoot {
 
     Rectangle {
       anchors.fill: parent
+      radius: 6
       color: "#11111b"
-      border.color: "#f38ba8"
+      border.color: "#45475a"
       border.width: 1
 
       ColumnLayout {
         anchors.fill: parent
         anchors.margins: 16
-        spacing: 14
+        spacing: 10
 
         Text {
           Layout.fillWidth: true
@@ -3282,43 +3284,28 @@ ShellRoot {
           font.family: "FiraCode Nerd Font"
               font.styleName: "Retina"
           font.pixelSize: 15
-          text: "Exit Hyprland session?"
+          text: "Session"
+        }
+
+        Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Choose a session action" }
+
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: 8
+          ActionButton { Layout.fillWidth: true; icon: "󰅖"; label: "Cancel"; tooltip: "Close this menu"; onTriggered: exitDialog.visible = false }
+          ActionButton { Layout.fillWidth: true; icon: "󰌾"; label: "Lock"; tooltip: "Lock session"; onTriggered: root.lockSession() }
+          ActionButton { Layout.fillWidth: true; icon: "󰒲"; label: "Suspend"; tooltip: "Suspend system"; onTriggered: root.suspendSession() }
         }
 
         RowLayout {
-          Layout.alignment: Qt.AlignRight
-          spacing: 10
-
-          Rectangle {
-            width: 92
-            height: 34
-            radius: 4
-            color: "#313244"
-
-            Text { anchors.centerIn: parent; color: "#cdd6f4"; text: "Cancel" }
-            MouseArea { anchors.fill: parent; onClicked: exitDialog.visible = false }
-          }
-
-          Rectangle {
-            width: 92
-            height: 34
-            radius: 4
-            color: "#313244"
-
-            Text { anchors.centerIn: parent; color: "#cdd6f4"; text: "Reboot" }
-            MouseArea { anchors.fill: parent; onClicked: Quickshell.execDetached(["systemctl", "reboot"]) }
-          }
-
-          Rectangle {
-            width: 92
-            height: 34
-            radius: 4
-            color: "#f38ba8"
-
-            Text { anchors.centerIn: parent; color: "#11111b"; text: "Exit" }
-            MouseArea { anchors.fill: parent; onClicked: Quickshell.execDetached(["hyprctl", "dispatch", "exit"]) }
-          }
+          Layout.fillWidth: true
+          spacing: 8
+          ActionButton { Layout.fillWidth: true; icon: "󰒓"; label: "Hibernate"; tooltip: "Hibernate system"; onTriggered: Quickshell.execDetached(["systemctl", "hibernate"]) }
+          ActionButton { Layout.fillWidth: true; icon: "󰜉"; label: "Reboot"; tooltip: "Reboot system"; onTriggered: Quickshell.execDetached(["systemctl", "reboot"]) }
+          ActionButton { Layout.fillWidth: true; icon: "⏻"; label: "Shutdown"; tooltip: "Power off system"; onTriggered: Quickshell.execDetached(["systemctl", "poweroff"]) }
         }
+
+        ActionButton { Layout.fillWidth: true; icon: "󰍃"; label: "Exit Hyprland"; tooltip: "Exit the current Hyprland session"; onTriggered: Quickshell.execDetached(["hyprctl", "dispatch", "exit"]) }
       }
     }
   }
