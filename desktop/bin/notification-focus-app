@@ -5,6 +5,22 @@ usage() {
   printf "use: notification-focus-app [--self-test] [desktop-entry] [app-name]\n" >&2
 }
 
+normalize() {
+  printf "%s" "${1:-}" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -E 's/\.desktop$//; s/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
+}
+
+canonical() {
+  case "$(normalize "${1:-}")" in
+    com-google-chrome|chrome) printf "google-chrome\n" ;;
+    com-brave-browser) printf "brave-browser\n" ;;
+    com-slack-slack) printf "slack\n" ;;
+    org-wezfurlong-wezterm) printf "wezterm\n" ;;
+    *) normalize "${1:-}" ;;
+  esac
+}
+
 find_address() {
   local clients_json=$1 desktop_entry=${2:-} app_name=${3:-}
 
@@ -38,11 +54,65 @@ find_address() {
   ' | sed -n '1p'
 }
 
+launch_command() {
+  local desktop_entry=${1:-} app_name=${2:-} entry_norm app_norm text
+  entry_norm=$(canonical "$desktop_entry")
+  app_norm=$(normalize "$app_name")
+  text="$entry_norm $app_norm"
+
+  case "$text" in
+    *linear*)
+      printf "/home/marcelof/bin/chrome-wayland\nhttps://linear.app/inbox\n"
+      return 0
+      ;;
+    *slack*)
+      printf "/home/marcelof/bin/slack-wayland\n"
+      return 0
+      ;;
+    *brave*)
+      printf "/home/marcelof/bin/brave-wayland\n"
+      return 0
+      ;;
+    *chrome*|*google-chrome*)
+      printf "/home/marcelof/bin/chrome-wayland\n"
+      return 0
+      ;;
+    *discord*)
+      printf "/home/marcelof/bin/discord-wayland\n"
+      return 0
+      ;;
+    *obsidian*)
+      printf "/home/marcelof/bin/obsidian-wayland\n"
+      return 0
+      ;;
+    *1password*|*onepassword*)
+      printf "/home/marcelof/bin/1password-wayland\n"
+      return 0
+      ;;
+  esac
+
+  if [ -n "$entry_norm" ] && command -v gtk-launch >/dev/null 2>&1; then
+    printf "gtk-launch\n%s\n" "$entry_norm"
+    return 0
+  fi
+
+  return 1
+}
+
 assert_match() {
   local clients_json=$1 desktop_entry=$2 app_name=$3 expected=$4 got
   got=$(find_address "$clients_json" "$desktop_entry" "$app_name")
   if [ "$got" != "$expected" ]; then
     printf "fail %s/%s expected %s got %s\n" "$desktop_entry" "$app_name" "$expected" "${got:-none}" >&2
+    return 1
+  fi
+}
+
+assert_launch() {
+  local desktop_entry=$1 app_name=$2 expected=$3 got
+  got=$(launch_command "$desktop_entry" "$app_name" | tr '\n' ' ' | sed 's/ $//')
+  if [ "$got" != "$expected" ]; then
+    printf "fail launch %s/%s expected %s got %s\n" "$desktop_entry" "$app_name" "$expected" "${got:-none}" >&2
     return 1
   fi
 }
@@ -58,6 +128,10 @@ self_test() {
   assert_match "$clients_json" "com.google.Chrome.desktop" "Google Chrome" "0xchrome"
   assert_match "$clients_json" "com.slack.Slack.desktop" "Slack" "0xslack"
   assert_match "$clients_json" "org.wezfurlong.wezterm.desktop" "Terminal" "0xterm"
+  assert_launch "com.slack.Slack.desktop" "Slack" "/home/marcelof/bin/slack-wayland"
+  assert_launch "com.google.Chrome.desktop" "Google Chrome" "/home/marcelof/bin/chrome-wayland"
+  assert_launch "com.brave.Browser.desktop" "Brave" "/home/marcelof/bin/brave-wayland"
+  assert_launch "" "Linear" "/home/marcelof/bin/chrome-wayland https://linear.app/inbox"
   printf "notification-focus-app self-test: ok\n"
 }
 
@@ -70,8 +144,14 @@ desktop_entry=${1:-}
 app_name=${2:-}
 
 addr=$(find_address "$(hyprctl clients -j 2>/dev/null)" "$desktop_entry" "$app_name")
-if [ -z "$addr" ] || [ "$addr" = "null" ]; then
+if [ -n "$addr" ] && [ "$addr" != "null" ]; then
+  hyprctl dispatch focuswindow "address:$addr" >/dev/null
+  exit 0
+fi
+
+mapfile -t cmd < <(launch_command "$desktop_entry" "$app_name")
+if [ "${#cmd[@]}" -eq 0 ]; then
   exit 1
 fi
 
-hyprctl dispatch focuswindow "address:$addr" >/dev/null
+"${cmd[@]}" >/dev/null 2>&1 &

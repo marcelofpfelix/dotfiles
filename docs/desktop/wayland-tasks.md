@@ -380,10 +380,10 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Current behavior: the bar uses one DND-aware privacy indicator for mic, camera, screen share/recording, and DND; left click opens Screen details and right click toggles DND. Controls includes a compact privacy state block with refresh/details actions.
   - Constraint: this detects capture state, not a guaranteed Google Meet meeting identity, because Chrome/portal state does not expose enough app-specific call metadata locally.
   - Validation: `desktop-privacy-status status`, `desktop-privacy-status self-test`, `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke controls screen`, and `desktop-doctor`.
-- [ ] Add app-open deep links for notification producers where generic focusing is not enough.
+- [x] Add app-open deep links for notification producers where generic focusing is not enough.
   - Sources: notification `desktopEntry` metadata, app-specific desktop files, Hyprland client matching.
-  - Acceptance: Slack/Chrome/Linear-style notifications can open or focus the useful app/window when a default action is absent.
-  - Validation: one notification from each supported app focuses the right window or reports unsupported.
+  - Current behavior: notification `Open` first focuses a matching Hyprland window; when none exists it launches Slack, Chrome, Brave, Linear inbox, Discord, Obsidian, 1Password, or falls back to `gtk-launch` for known desktop entries.
+  - Validation: `notification-focus-app --self-test`, one notification from each supported app focuses the right window or opens the wrapper.
 
 
 ### Execution Plan For Open Dashboard Tasks
