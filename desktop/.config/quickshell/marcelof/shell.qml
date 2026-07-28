@@ -144,7 +144,7 @@ ShellRoot {
     clipboardModel.clear()
     const count = Math.min(rows.length, 250)
     for (let i = 0; i < count; i++)
-      clipboardModel.append({ text: rows[i].entry })
+      clipboardModel.append({ text: rows[i].entry, preview: rows[i].entry.replace(/^\d+\s+/, "") })
     if (clipList) {
       clipList.currentIndex = clipboardModel.count > 0 ? 0 : -1
       Qt.callLater(() => { if (clipboardModel.count > 0) clipList.positionViewAtIndex(clipList.currentIndex, ListView.Contain) })
@@ -3045,11 +3045,12 @@ ShellRoot {
   }
   FloatingWindow {
     id: clipboardPicker
+    title: "quickshell-clipboard"
     screen: root.laptopScreen
     visible: root.clipboardOpen
-    implicitWidth: 720
-    implicitHeight: 520
-    color: "#11111b"
+    implicitWidth: 520
+    implicitHeight: 420
+    color: "transparent"
 
     HyprlandFocusGrab {
       active: clipboardPicker.visible
@@ -3072,7 +3073,7 @@ ShellRoot {
         RowLayout {
           Layout.fillWidth: true
           Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 15; text: "Clipboard" }
-          Text { color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: clipboardModel.count + " entries" }
+          Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: clipboardModel.count + " entries" }
         }
 
         Rectangle {
@@ -3082,6 +3083,17 @@ ShellRoot {
           border.color: clipSearch.activeFocus ? "#b4befe" : "#313244"
           border.width: 1
           radius: 6
+
+          Text {
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            verticalAlignment: Text.AlignVCenter
+            color: "#6c7086"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 13
+            text: "Search clipboard"
+            visible: clipSearch.text.length === 0
+          }
 
           TextInput {
             id: clipSearch
@@ -3108,20 +3120,44 @@ ShellRoot {
           id: clipList
           Layout.fillWidth: true
           Layout.fillHeight: true
+          visible: clipboardModel.count > 0
           clip: true
           spacing: 4
           model: clipboardModel
           currentIndex: -1
 
           delegate: Rectangle {
-            required property var modelData
+            id: clipboardRow
+            required property string text
+            required property string preview
             required property int index
             width: clipList.width
-            height: 46
+            height: 40
             radius: 4
             color: ListView.isCurrentItem ? "#313244" : "transparent"
-            Text { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10; verticalAlignment: Text.AlignVCenter; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: modelData.text || "" }
+            Text { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10; verticalAlignment: Text.AlignVCenter; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: clipboardRow.preview }
             MouseArea { anchors.fill: parent; hoverEnabled: true; onEntered: clipList.currentIndex = index; onClicked: { clipList.currentIndex = index; root.pasteClipboardEntry() } }
+          }
+        }
+
+        Rectangle {
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          visible: clipboardModel.count === 0
+          radius: 6
+          color: "#1e1e2e"
+          border.color: "#313244"
+          border.width: 1
+
+          Text {
+            anchors.centerIn: parent
+            width: parent.width - 28
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            color: "#7f849c"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 12
+            text: clipboardRefresh.running ? "Loading clipboard..." : (root.clipboardEntries.length > 0 ? "No clipboard matches" : "Clipboard history is empty")
           }
         }
       }
