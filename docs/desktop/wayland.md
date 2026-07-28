@@ -53,6 +53,19 @@ hypr-session reload
 
 Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `qs-menu-smoke wallpaper media notifications` for targeted visual checks, `qs-menu-smoke` for the full popup set, `qs-menu-smoke --open` to capture and open the contact sheet, or `qs-menu-smoke --inspect` to send the current contact sheet plus the previous run when present to `codex exec --image` for visual comparison.
 
+### Codex image workaround
+
+`view_image` currently fails on this host with `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`, so the agent cannot directly open local PNGs through the built-in image viewer. Use `qs-menu-smoke --inspect` instead. It captures the menu PNGs with `grim`, builds `contact.png`, and pipes a prompt into `codex exec --ephemeral --sandbox read-only --image ...`; when a previous `latest/contact.png` exists, it passes both images so the nested Codex run can compare current and previous menu states.
+
+For a single screenshot, use the same pattern manually:
+
+```console
+printf '%s\n' 'Inspect this screenshot visually. Do not run tools. List concrete UI defects only.' |
+  codex exec --ephemeral --sandbox read-only --cd "$PWD" --image /path/to/screenshot.png -
+```
+
+Only use this path for screenshots that are safe to send through Codex image input. Use `qs-menu-smoke --open` when the user only needs the contact sheet opened locally.
+
 ## X11 archive
 
 The old i3, Polybar, rofi, picom, and `ddspawn` files live under
