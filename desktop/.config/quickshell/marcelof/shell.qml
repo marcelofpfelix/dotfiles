@@ -578,6 +578,7 @@ ShellRoot {
   property bool screenPanelOpen: false
   property bool wallpaperPanelOpen: false
   property bool calendarOpen: false
+  property bool workInboxOpen: false
   property bool settingsOpen: false
   property bool osdOpen: false
   property bool notificationCenterOpen: false
@@ -605,6 +606,18 @@ ShellRoot {
   property string inhibitStatusText: "inactive"
   property string lisbonClockText: "--"
   property string timePanelText: ""
+  property string workInboxUpdatedText: ""
+  property string workInboxSourceText: ""
+  property bool workInboxSlackAvailable: false
+  property int workInboxSlackUnread: 0
+  property int workInboxSlackMentions: 0
+  property string workInboxSlackReason: "not loaded"
+  property bool workInboxGithubAvailable: false
+  property int workInboxGithubReviews: 0
+  property string workInboxGithubReason: "not loaded"
+  property bool workInboxLinearAvailable: false
+  property int workInboxLinearNotifications: 0
+  property string workInboxLinearReason: "not loaded"
   readonly property var calendarWeekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 
   function calendarDayAt(index) {
@@ -755,6 +768,7 @@ ShellRoot {
     root.screenPanelOpen = false
     root.wallpaperPanelOpen = false
     root.calendarOpen = false
+    root.workInboxOpen = false
     root.settingsOpen = false
     root.notificationCenterOpen = false
     root.keybindingsOpen = false
@@ -869,6 +883,14 @@ ShellRoot {
       todoPanelRefresh.running = true
       weatherPanelRefresh.running = true
     }
+  }
+
+  function toggleWorkInbox() {
+    const next = !root.workInboxOpen
+    root.closeTransientPanels()
+    root.workInboxOpen = next
+    if (next)
+      workInboxRefresh.running = true
   }
 
   function toggleSettings() {
@@ -1074,6 +1096,33 @@ ShellRoot {
     }
     root.audioDisplayText = display
     root.audioIconText = icon
+  }
+
+  function updateWorkInbox(output) {
+    const text = String(output || "").trim()
+    if (text.length === 0)
+      return
+
+    try {
+      const data = JSON.parse(text)
+      const slack = data.slack || {}
+      const github = data.github || {}
+      const linear = data.linear || {}
+      root.workInboxUpdatedText = data.updated_at || ""
+      root.workInboxSourceText = data.source || ""
+      root.workInboxSlackAvailable = slack.available === true
+      root.workInboxSlackUnread = Number(slack.unread || 0)
+      root.workInboxSlackMentions = Number(slack.mentions || 0)
+      root.workInboxSlackReason = slack.reason || "ok"
+      root.workInboxGithubAvailable = github.available === true
+      root.workInboxGithubReviews = Number(github.review_requests || 0)
+      root.workInboxGithubReason = github.reason || "ok"
+      root.workInboxLinearAvailable = linear.available === true
+      root.workInboxLinearNotifications = Number(linear.notifications || 0)
+      root.workInboxLinearReason = linear.reason || "ok"
+    } catch (error) {
+      root.workInboxSourceText = "parse error"
+    }
   }
 
   function refreshAudioMixer() {
@@ -1290,6 +1339,13 @@ ShellRoot {
     command: ["sh", "-c", "WEATHER_LOCATION=" + root.shellQuote(shellSettings.weatherLocation) + " /home/marcelof/bin/check-weather panel"]
     running: true
     stdout: StdioCollector { onStreamFinished: root.weatherPanelText = this.text.trim() }
+  }
+
+  Process {
+    id: workInboxRefresh
+    command: ["/home/marcelof/bin/work-inbox-status"]
+    running: false
+    stdout: StdioCollector { onStreamFinished: root.updateWorkInbox(this.text) }
   }
 
   Timer {
@@ -1556,6 +1612,7 @@ ShellRoot {
     function screen() { root.toggleScreenPanel() }
     function wallpaper() { root.toggleWallpaperPanel() }
     function calendar() { root.toggleCalendar() }
+    function workInbox() { root.toggleWorkInbox() }
     function notifications() { root.toggleNotifications() }
     function power() { root.togglePowerMenu() }
     function inhibit() { root.toggleIdleInhibit() }
@@ -2315,6 +2372,7 @@ ShellRoot {
             Layout.fillWidth: true
             spacing: 7
             ActionButton { icon: "󰥔"; label: "Time"; minWidth: 68; tooltip: "Calendar and time"; onTriggered: root.toggleCalendar() }
+            ActionButton { icon: "󰻞"; label: "Work"; minWidth: 68; tooltip: "Unread work inbox"; onTriggered: root.toggleWorkInbox() }
             ActionButton { icon: "󰂚"; label: "Notes"; minWidth: 68; tooltip: "Notifications"; onTriggered: root.toggleNotifications() }
             ActionButton { icon: "󰒓"; label: "Set"; minWidth: 68; tooltip: "Shell settings"; onTriggered: root.toggleSettings() }
             ActionButton { icon: "󱊖"; label: "Tray"; minWidth: 68; tooltip: "Tray manager"; onTriggered: root.toggleTrayManage() }
@@ -2563,6 +2621,104 @@ ShellRoot {
             wrapMode: Text.Wrap
             text: root.todoPanelText.length > 0 ? root.todoPanelText : "No todo data"
           }
+        }
+      }
+    }
+
+
+    PopupWindow {
+      id: workInboxWindow
+      visible: root.workInboxOpen
+      color: "transparent"
+      implicitWidth: 430
+      implicitHeight: 300
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+
+        ColumnLayout {
+          anchors.fill: parent
+          anchors.margins: 10
+          spacing: 9
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Work Inbox" }
+            Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.workInboxSourceText.length > 0 ? root.workInboxSourceText : "idle" }
+            ActionButton { icon: "󰑓"; label: "Refresh"; minWidth: 82; tooltip: "Refresh work inbox counts"; onTriggered: workInboxRefresh.running = true }
+          }
+
+          Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
+
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 52
+            radius: 5
+            color: "#1e1e2e"
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: 10
+              spacing: 10
+              Text { color: root.workInboxSlackAvailable ? shellSettings.primaryColor : "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 18; text: "󰒱" }
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+                Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "Slack" }
+                Text { Layout.fillWidth: true; color: "#9399b2"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.workInboxSlackAvailable ? (root.workInboxSlackUnread + " unread, " + root.workInboxSlackMentions + " mentions") : root.workInboxSlackReason }
+              }
+              ActionButton { icon: "󰍉"; label: "Open"; minWidth: 62; tooltip: "Open Slack"; onTriggered: Quickshell.execDetached(["/home/marcelof/bin/slack-wayland"]) }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 52
+            radius: 5
+            color: "#1e1e2e"
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: 10
+              spacing: 10
+              Text { color: root.workInboxGithubAvailable ? shellSettings.primaryColor : "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 18; text: "󰊤" }
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+                Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "GitHub" }
+                Text { Layout.fillWidth: true; color: "#9399b2"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.workInboxGithubAvailable ? (root.workInboxGithubReviews + " review requests") : root.workInboxGithubReason }
+              }
+              ActionButton { icon: "󰍉"; label: "Open"; minWidth: 62; tooltip: "Open GitHub review requests"; onTriggered: Quickshell.execDetached(["/home/marcelof/bin/chrome-wayland", "https://github.com/pulls/review-requested"]) }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 52
+            radius: 5
+            color: "#1e1e2e"
+            RowLayout {
+              anchors.fill: parent
+              anchors.margins: 10
+              spacing: 10
+              Text { color: root.workInboxLinearAvailable ? shellSettings.primaryColor : "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 18; text: "󰘦" }
+              ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+                Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "Linear" }
+                Text { Layout.fillWidth: true; color: "#9399b2"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.workInboxLinearAvailable ? (root.workInboxLinearNotifications + " notifications") : root.workInboxLinearReason }
+              }
+              ActionButton { icon: "󰍉"; label: "Open"; minWidth: 62; tooltip: "Open Linear inbox"; onTriggered: Quickshell.execDetached(["/home/marcelof/bin/chrome-wayland", "https://linear.app/inbox"]) }
+            }
+          }
+
+          Text { Layout.fillWidth: true; color: "#7f849c"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.workInboxUpdatedText.length > 0 ? ("Updated " + root.workInboxUpdatedText) : "Counts load when opened" }
         }
       }
     }

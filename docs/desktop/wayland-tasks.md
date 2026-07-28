@@ -353,9 +353,9 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Sources: Slack Conversations API, GitHub search through `gh api`, Linear notifications GraphQL, and existing cache patterns.
   - Current behavior: `work-inbox-status` prints cached JSON for Slack unread counts, GitHub PR review requests, and Linear notification counts. Missing credentials are quiet unavailable states; tokens and message text never enter stdout or curl argv.
   - Validation: `work-inbox-status --self-test`, `work-inbox-status --no-network`, and `desktop-doctor`.
-- [ ] Build a small unread-work Quickshell dashboard from `work-inbox-status`.
-  - Acceptance: Quickshell renders counts without blocking and leaves credential/API work inside the helper.
-  - Validation: `qs-menu-smoke work-inbox` and `desktop-doctor`.
+- [x] Build a small unread-work Quickshell dashboard from `work-inbox-status`.
+  - Current behavior: `qs-bar work-inbox` opens a right-side Quickshell popup with Slack unread/mentions, GitHub review requests, and Linear notification counts from the helper. Controls also has a Work button.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke work-inbox`, and `desktop-doctor`.
 - [ ] Add future Google Calendar agenda integration.
   - Source: Google Calendar Events `list` API supports calendar event listing and sync tokens.
   - Acceptance: calendar popup can show the next events through a helper that uses local credentials and caches sync state; no credentials enter QML.
@@ -398,7 +398,7 @@ Do these in this order; each task should leave one small validation command behi
    - Task: `work-inbox-status` returns redacted cached JSON counts for Slack unread, GitHub PR review requests, and Linear notifications.
    - Sources: Slack Conversations API, GitHub search through `gh api`, Linear notifications GraphQL, and local cache patterns.
    - Validation: `work-inbox-status --self-test`, `work-inbox-status --no-network`, and `desktop-doctor`.
-   - Next: build the Quickshell panel only after live credentials prove the counts are useful.
+   - Result: `qs-bar work-inbox` now opens a Quickshell popup fed by this helper; the Controls menu exposes it as Work. Missing credentials render quiet unavailable rows.
 6. Meeting and DND awareness.
    - Task: collapse mic/camera/screenshare into one DND-aware meeting indicator and move details into controls/privacy popup.
    - Sources: current `desktop-privacy-status`, AGS/Astal audio/video service model, Noctalia privacy indicators.
