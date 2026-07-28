@@ -2325,7 +2325,13 @@ ShellRoot {
             Layout.fillWidth: true
             spacing: 8
             Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Todo" }
-            Rectangle { width: 62; height: 24; radius: 4; color: "#313244"; Text { anchors.centerIn: parent; color: "#cdd6f4"; font.pixelSize: 11; text: "task" } MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: Quickshell.execDetached(["hypr-term", "task", "next"]) } }
+            ActionButton {
+              icon: "󰄬"
+              label: "Task"
+              minWidth: 72
+              tooltip: "Open next task"
+              onTriggered: Quickshell.execDetached(["hypr-term", "task", "next"])
+            }
           }
 
           Text {
