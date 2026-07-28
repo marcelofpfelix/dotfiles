@@ -204,6 +204,7 @@ quickshell_ipc_status() {
         "function power()"
         "function keybindings()"
         "function clipboard()"
+        "function clipboardVisible()"
         "function clipboardUpdate()"
         "function closePanels()"
         "function settings()"

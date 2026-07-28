@@ -189,6 +189,14 @@ ShellRoot {
     clipSearch.forceActiveFocus()
   }
 
+  function toggleClipboard() {
+    if (root.clipboardOpen) {
+      root.clipboardOpen = false
+      return
+    }
+    root.openClipboard()
+  }
+
   function pasteClipboardEntry() {
     if (!root.clipboardOpen || clipList.currentIndex < 0 || clipList.currentIndex >= clipboardModel.count)
       return
@@ -1473,7 +1481,8 @@ ShellRoot {
     function osdKbd() { root.showKbdOsd() }
     function osdMic() { root.showMicOsd() }
     function keybindings() { root.toggleKeybindings() }
-    function clipboard() { root.openClipboard() }
+    function clipboard() { root.toggleClipboard() }
+    function clipboardVisible(): string { return root.clipboardOpen ? "visible" : "hidden" }
     function clipboardUpdate() { clipboardRefresh.running = true }
     function closePanels() { root.closeTransientPanels() }
   }
@@ -2205,7 +2214,7 @@ ShellRoot {
             ActionButton { icon: "󰀻"; label: "Apps"; minWidth: 68; tooltip: "App launcher"; onTriggered: { root.closeTransientPanels(); root.toggleLauncher() } }
             ActionButton { icon: "󰇧"; label: "Web"; minWidth: 68; tooltip: "Web search"; onTriggered: root.toggleWebSearch("google") }
             ActionButton { icon: "󰌌"; label: "Keys"; minWidth: 68; tooltip: "Keybindings"; onTriggered: root.toggleKeybindings() }
-            ActionButton { icon: "󰅇"; label: "Clip"; minWidth: 68; tooltip: "Clipboard history"; onTriggered: root.openClipboard() }
+            ActionButton { icon: "󰅇"; label: "Clip"; minWidth: 68; tooltip: "Clipboard history"; onTriggered: root.toggleClipboard() }
           }
 
           RowLayout {
@@ -3159,8 +3168,8 @@ ShellRoot {
     title: "quickshell-clipboard"
     screen: root.laptopScreen
     visible: root.clipboardOpen
-    implicitWidth: 520
-    implicitHeight: 420
+    implicitWidth: 720
+    implicitHeight: shellSettings.denseUi ? 480 : 500
     color: "transparent"
 
     HyprlandFocusGrab {

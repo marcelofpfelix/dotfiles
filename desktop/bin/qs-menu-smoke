@@ -24,7 +24,7 @@ config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
 usage() {
   printf 'use: qs-menu-smoke [--open] [--inspect] [--list|panel ...]\n' >&2
   printf 'captures: %s\n' "${panels[*]}" >&2
-  printf 'checks: launcher-hidden\n' >&2
+  printf 'checks: launcher-hidden clipboard-toggle\n' >&2
 }
 
 record_result() {
@@ -248,6 +248,34 @@ smoke_launcher_hidden() {
   printf 'ok   launcher-hidden %s\n' "$id"
 }
 
+clipboard_visible() {
+  "$qs_bin" ipc --path "$config_path" --any-display call bar clipboardVisible 2>/dev/null | tail -n 1 | tr -d '\r'
+}
+
+smoke_clipboard_toggle() {
+  local before after_open after_close
+
+  qs-bar close-panels >/dev/null 2>&1 || true
+  sleep "$sleep_time"
+  before=$(clipboard_visible || true)
+  qs-bar clipboard >/dev/null 2>&1 || true
+  sleep "$sleep_time"
+  after_open=$(clipboard_visible || true)
+  qs-bar clipboard >/dev/null 2>&1 || true
+  sleep "$sleep_time"
+  after_close=$(clipboard_visible || true)
+
+  if [ "$before" != "hidden" ] || [ "$after_open" != "visible" ] || [ "$after_close" != "hidden" ]; then
+    printf 'fail clipboard-toggle before=%s open=%s close=%s\n' "$before" "$after_open" "$after_close" >&2
+    record_result clipboard-toggle fail "before:$before open:$after_open close:$after_close" - -
+    status=1
+    return
+  fi
+
+  record_result clipboard-toggle ok toggle - -
+  printf 'ok   clipboard-toggle\n'
+}
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --open) open_after=1; shift ;;
@@ -285,6 +313,7 @@ fi
 for panel in "${panels[@]}"; do
   case "$panel" in
     launcher-hidden) smoke_launcher_hidden ;;
+    clipboard-toggle) smoke_clipboard_toggle ;;
     *) capture_panel "$panel" ;;
   esac
 done

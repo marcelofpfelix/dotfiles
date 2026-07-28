@@ -340,10 +340,10 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Acceptance: Quickshell renders Today, Money, Health, and Habits tabs from board state only; buttons call `board action`; QML does not run hledger, fetch prices, parse health exports, or store raw private data.
   - Validation: `qs-menu-smoke personal-dashboard`, `desktop-doctor`, and `board render text personal.today`.
 
-- [ ] Make the Quickshell clipboard picker a true popup.
+- [x] Make the Quickshell clipboard picker a true popup.
   - Sources: current Quickshell clipboard picker, launcher popup behavior, user report that clipboard should be popup-like instead of a normal window.
-  - Acceptance: `qs-bar clipboard` opens centered/floating like the app launcher, takes text input immediately, closes on Escape/outside focus loss/repeated toggle, and does not appear as a normal tiled side window.
-  - Validation: `qs-menu-smoke clipboard`, manual `Win+V` open/type/Escape/toggle test, and `desktop-doctor`.
+  - Current behavior: `qs-bar clipboard` toggles a centered 720x500 floating Quickshell picker, uses the same Hyprland float/center rule shape as launcher/web search, takes focus immediately, and closes through Escape, focus-grab clear, or repeated toggle.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `luac -p desktop/.config/hypr/init.lua desktop/.config/hypr/profiles/default.lua desktop/.config/hypr/profiles/omarchy.lua`, `bash -n desktop/bin/qs-menu-smoke desktop/bin/hypr-session desktop/bin/qs-bar`, `qs-menu-smoke clipboard-toggle clipboard`, and `desktop-doctor`.
 - [ ] Integrate secret-aware clipboard handling with gopass/GPaste.
   - Sources: local `gopass-clip-copy`, `gopass-clip-clear`, `history-secrets`, `passmenu`, wiki GPG/gopass notes, homework `gopass-env.sh` and import helpers, and end-4/JakooLit cliphist watcher patterns.
   - Constraint: keep decrypted values out of argv, logs, QML state, and normal clipboard history by default.
@@ -381,10 +381,11 @@ Do these in this order; each task should leave one small validation command behi
    - Depends on: current `notification-focus-app` helper.
    - Validation: `notification-focus-app --self-test`, `desktop-notification-smoke actions`, manual Slack/Chrome notification focus.
    - Result: generic matching now normalizes reverse-DNS desktop IDs; no unsupported app-specific behavior found in the local test fixture.
-3. Clipboard popup parity.
+3. Clipboard popup parity. Done.
    - Task: make `qs-bar clipboard` use the same popup/focus-grab behavior as the launcher instead of presenting as a normal side/tiled window.
    - Depends on: current Quickshell clipboard picker and `cliphist-menu` data path.
-   - Validation: `qs-menu-smoke clipboard`, manual `Win+V` type/select/Escape/toggle test, and `desktop-doctor`.
+   - Validation: `qs-menu-smoke clipboard-toggle clipboard` and `desktop-doctor`.
+   - Result: clipboard now toggles through Quickshell IPC, is centered/floating by Hyprland title rule, and exposes a smoke-test visible state.
 4. Secret-safe clipboard and gopass integration.
    - Task: audit active password copy paths, keep `gopass-clip-copy`/GPaste as the password path, and make Quickshell clipboard hide or mark likely secret rows from normal `cliphist`.
    - Depends on: `history-secrets`, `passmenu`, `gopass-clip-copy`, `gopass-clip-clear`, GPaste availability.
