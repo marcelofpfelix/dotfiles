@@ -9,6 +9,7 @@ out_dir="${QS_MENU_SMOKE_DIR:-$base_dir/$(date +%Y%m%d-%H%M%S)}"
 latest_link="${QS_MENU_SMOKE_LATEST:-$base_dir/latest}"
 summary_file="$out_dir/summary.tsv"
 contact_sheet="$out_dir/contact.png"
+thumbnail_size="${QS_MENU_SMOKE_THUMBNAIL:-760x428}"
 previous_dir="${QS_MENU_SMOKE_PREVIOUS_DIR:-}"
 min_width="${QS_MENU_SMOKE_MIN_WIDTH:-320}"
 min_height="${QS_MENU_SMOKE_MIN_HEIGHT:-180}"
@@ -71,11 +72,24 @@ assert_capture() {
   fi
 }
 
+crop_focused_monitor() {
+  local panel=$1 file=$2 crop=$3 geometry
+
+  command -v hyprctl >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  command -v convert >/dev/null 2>&1 || return 1
+  geometry=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | "\(.width)x\(.height)+\(.x)+\(.y)"' | sed -n '1p')
+  [[ "$geometry" =~ ^[0-9]+x[0-9]+[+-][0-9]+[+-][0-9]+$ ]] || return 1
+  convert "$file" -crop "$geometry" +repage "$crop" >/dev/null 2>&1 || return 1
+  printf "crop-monitor %s %s\n" "$panel" "$crop"
+}
+
 capture_panel() {
-  local panel=$1 file baseline
+  local panel=$1 file baseline crop
   local -a open_cmd
   file="$out_dir/$panel.png"
   baseline="$out_dir/$panel.before.png"
+  crop="$out_dir/$panel.crop.png"
 
   qs-bar close-panels >/dev/null 2>&1 || {
     printf "fail close-panels before %s\n" "$panel" >&2
@@ -102,6 +116,7 @@ capture_panel() {
     read -r width height _ < <(identify -format "%w %h %[standard-deviation]\n" "$file" 2>/dev/null || printf -- '- - -\n')
     changed=$(compare -metric AE "$baseline" "$file" null: 2>&1 >/dev/null || true)
     changed=${changed%% *}
+    crop_focused_monitor "$panel" "$file" "$crop" || true
     record_result "$panel" ok "${width}x${height}:changed=$changed" "$file" "$baseline"
     printf 'ok   %s %s\n' "$panel" "$file"
   else
@@ -119,10 +134,14 @@ write_contact_sheet() {
 
   command -v montage >/dev/null 2>&1 || return 0
   for panel in "${panels[@]}"; do
-    [ -s "$out_dir/$panel.png" ] && files+=("$out_dir/$panel.png")
+    if [ -s "$out_dir/$panel.crop.png" ]; then
+      files+=("$out_dir/$panel.crop.png")
+    elif [ -s "$out_dir/$panel.png" ]; then
+      files+=("$out_dir/$panel.png")
+    fi
   done
   [ "${#files[@]}" -gt 0 ] || return 0
-  montage "${files[@]}" -thumbnail 420x260 -label "%t" -background "#202020" -fill white -geometry +12+28 "$contact_sheet" >/dev/null 2>&1 || return 0
+  montage "${files[@]}" -thumbnail "$thumbnail_size" -label "%t" -background "#202020" -fill white -geometry +12+28 "$contact_sheet" >/dev/null 2>&1 || return 0
   printf "contact %s\n" "$contact_sheet"
 }
 
