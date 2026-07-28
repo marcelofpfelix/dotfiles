@@ -321,11 +321,11 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
 - [x] Add notification source-app focusing.
   - Sources: Quickshell notification API exposes actions and `desktopEntry`; Hyprland exposes clients through `hyprctl -j`.
   - Acceptance: expanded notification rows expose `Open`; clicking an already-expanded notification attempts to focus a matching Hyprland client by desktop entry, app name, class, or title.
-  - Validation: send a desktop notification from an open app, open Notifications, expand it, then use `Open`.
-- [ ] Add a launcher hidden-app smoke test.
+  - Validation: `notification-focus-app --self-test`; send a desktop notification from an open app, open Notifications, expand it, then use `Open`.
+- [x] Add a launcher hidden-app smoke test.
   - Sources: Caelestia app info page exposes favorite/hidden launcher settings; local launcher already persists `hiddenAppIds` in Quickshell state.
-  - Acceptance: a non-destructive smoke command can inject a temporary hidden desktop entry, prove it disappears from launcher results, restore state, and report pass/fail.
-  - Validation: `qs-menu-smoke launcher-hidden` or equivalent helper output.
+  - Acceptance: `qs-menu-smoke launcher-hidden` asks Quickshell to hide one visible desktop entry in memory, proves it disappears, restores the override, and reports pass/fail without editing persisted launcher settings.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `bash -n desktop/bin/qs-menu-smoke`, `home -y`, `qs-bar reload`, `qs-menu-smoke launcher-hidden`, and `qs-menu-smoke launcher`.
 - [ ] Integrate secret-aware clipboard handling with gopass/GPaste.
   - Sources: local `gopass-clip-copy`, `gopass-clip-clear`, `history-secrets`, `passmenu`, wiki GPG/gopass notes, homework `gopass-env.sh` and import helpers, and end-4/JakooLit cliphist watcher patterns.
   - Constraint: keep decrypted values out of argv, logs, QML state, and normal clipboard history by default.
@@ -347,6 +347,49 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Sources: notification `desktopEntry` metadata, app-specific desktop files, Hyprland client matching.
   - Acceptance: Slack/Chrome/Linear-style notifications can open or focus the useful app/window when a default action is absent.
   - Validation: one notification from each supported app focuses the right window or reports unsupported.
+
+
+### Execution Plan For Open Dashboard Tasks
+
+Do these in this order; each task should leave one small validation command behind. Keep all secrets in helpers, never in QML state.
+
+1. Launcher hidden-app proof. Done.
+   - Task: `qs-menu-smoke launcher-hidden` calls Quickshell IPC to hide one visible desktop entry with an in-memory override, verifies it is absent from launcher results, then clears the override.
+   - Depends on: existing `hiddenAppIds` filter path and launcher rebuild.
+   - Validation: `qs-menu-smoke launcher-hidden` plus normal `qs-menu-smoke launcher`.
+   - Result: passed with desktop entry `1password`; persisted `hiddenAppIds` is not edited.
+2. Notification open/focus hardening. Done.
+   - Task: `notification-focus-app --self-test` now exercises fake `hyprctl clients -j` input and verifies Chrome, Slack, and WezTerm desktop-entry/app-name matching.
+   - Depends on: current `notification-focus-app` helper.
+   - Validation: `notification-focus-app --self-test`, `desktop-notification-smoke actions`, manual Slack/Chrome notification focus.
+   - Result: generic matching now normalizes reverse-DNS desktop IDs; no unsupported app-specific behavior found in the local test fixture.
+3. Secret-safe clipboard and gopass integration.
+   - Task: audit active password copy paths, keep `gopass-clip-copy`/GPaste as the password path, and make Quickshell clipboard hide or mark likely secret rows from normal `cliphist`.
+   - Depends on: `history-secrets`, `passmenu`, `gopass-clip-copy`, `gopass-clip-clear`, GPaste availability.
+   - Validation: `history-secrets --dry-run`, `passmenu --name`, `passmenu --user`, safe fake-secret copy/clear.
+   - Stop if: decrypted secret content would be stored in QML state, logs, argv, screenshots, or normal clipboard history.
+4. Work inbox helper first, dashboard second.
+   - Task: create one CLI helper that returns redacted JSON counts for Slack unread/mentions, GitHub PR review requests, and Linear notifications; build the Quickshell panel only after the helper is useful.
+   - Sources: Slack Conversations API, `gh pr list --search`, Linear notification/inbox APIs.
+   - Depends on: local token/env/gopass lookup strategy and a short cache TTL.
+   - Validation: helper prints redacted JSON with missing-credential states; Quickshell renders counts without blocking.
+   - Stop if: API tokens are not available through existing gopass/env patterns.
+5. Meeting and DND awareness.
+   - Task: collapse mic/camera/screenshare into one DND-aware meeting indicator and move details into controls/privacy popup.
+   - Sources: current `desktop-privacy-status`, AGS/Astal audio/video service model, Noctalia privacy indicators.
+   - Depends on: PipeWire source outputs, `/dev/video*` holders, portal screen-share state, DND state.
+   - Validation: `desktop-privacy-status status`, `qs-menu-smoke controls screen`, manual Google Meet mic/camera/share check.
+   - Stop if: Chrome/Meet does not expose enough metadata to distinguish call state from generic media capture; show capture state only.
+6. Calendar agenda integration.
+   - Task: add a helper for cached Google Calendar event summaries, then feed the existing calendar popup.
+   - Depends on: local credential storage decision and no-secret QML boundary.
+   - Validation: helper prints redacted next-event metadata; calendar popup handles offline/auth failure.
+   - Stop if: credentials are not configured; keep current local `khal`/time dashboard.
+7. Visual consistency pass.
+   - Task: normalize panel spacing, action row size, and empty states across launcher, clipboard, network, notifications, calendar, media, and controls using current local components.
+   - Sources: Noctalia compact control-center layout, Caelestia settings/actions, cxOrz quick settings, end-4 smoke/utility polish.
+   - Depends on: screenshot smoke visibility.
+   - Validation: full `qs-menu-smoke`, inspect contact sheet, `desktop-doctor`.
 
 ## Automation helpers
 

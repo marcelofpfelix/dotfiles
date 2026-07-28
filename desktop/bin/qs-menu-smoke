@@ -18,10 +18,13 @@ panels=(launcher launcher-script controls media notifications calendar wallpaper
 status=0
 open_after=0
 inspect_after=0
+qs_bin="${QS_BIN:-$HOME/.nix-profile/bin/qs}"
+config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
 
 usage() {
   printf 'use: qs-menu-smoke [--open] [--inspect] [--list|panel ...]\n' >&2
   printf 'captures: %s\n' "${panels[*]}" >&2
+  printf 'checks: launcher-hidden\n' >&2
 }
 
 record_result() {
@@ -185,6 +188,66 @@ inspect_contact_sheet() {
   printf '%s\n' "$prompt" | codex exec --ephemeral --sandbox read-only --cd "$PWD" "${images[@]}" -
 }
 
+
+launcher_visible_by_id() {
+  "$qs_bin" ipc --path "$config_path" --any-display call launcher visibleById "$1" 2>/dev/null | tail -n 1 | tr -d '\r'
+}
+
+launcher_candidate_ids() {
+  local dir file base
+  for dir in "$HOME/.local/share/applications" /usr/local/share/applications /usr/share/applications; do
+    [ -d "$dir" ] || continue
+    for file in "$dir"/*.desktop; do
+      [ -e "$file" ] || continue
+      base=${file##*/}
+      printf '%s\n%s\n' "$base" "${base%.desktop}"
+    done
+  done | sort -u
+}
+
+select_launcher_smoke_id() {
+  local id state
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    state=$(launcher_visible_by_id "$id" || true)
+    if [ "$state" = "visible" ]; then
+      printf '%s\n' "$id"
+      return 0
+    fi
+  done < <(launcher_candidate_ids)
+  return 1
+}
+
+launcher_hidden_round_trip() {
+  "$qs_bin" ipc --path "$config_path" --any-display call launcher hiddenRoundTrip "$1" 2>/dev/null | tail -n 1 | tr -d '\r'
+}
+
+smoke_launcher_hidden() {
+  local id state
+
+  command -v "$qs_bin" >/dev/null 2>&1 || need qs
+  [ "$status" -eq 0 ] || return 1
+
+  mkdir -p "$out_dir"
+  id=$(select_launcher_smoke_id) || {
+    printf 'fail launcher-hidden no visible desktop entry found\n' >&2
+    record_result launcher-hidden fail no-visible-entry - -
+    status=1
+    return 1
+  }
+
+  state=$(launcher_hidden_round_trip "$id" || true)
+  if [ "$state" != "visible|hidden|visible" ]; then
+    printf 'fail launcher-hidden round trip: %s state=%s\n' "$id" "$state" >&2
+    record_result launcher-hidden fail "round-trip:$id:$state" - -
+    status=1
+    return 1
+  fi
+
+  record_result launcher-hidden ok "id:$id" - -
+  printf 'ok   launcher-hidden %s\n' "$id"
+}
+
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --open) open_after=1; shift ;;
@@ -220,7 +283,10 @@ if [ "$#" -gt 0 ]; then
 fi
 
 for panel in "${panels[@]}"; do
-  capture_panel "$panel"
+  case "$panel" in
+    launcher-hidden) smoke_launcher_hidden ;;
+    *) capture_panel "$panel" ;;
+  esac
 done
 
 printf 'dir  %s\n' "$out_dir"

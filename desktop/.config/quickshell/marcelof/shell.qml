@@ -15,6 +15,8 @@ import QtQuick.Controls
 ShellRoot {
   id: root
 
+  property string launcherSmokeHiddenId: ""
+
   function toggleLauncher() {
     launcher.visible = !launcher.visible
     if (launcher.visible) {
@@ -236,7 +238,8 @@ ShellRoot {
   }
 
   function isLauncherHidden(entry) {
-    return root.listContains(shellSettings.hiddenAppIds, root.launcherEntryId(entry))
+    const id = root.launcherEntryId(entry)
+    return id === root.launcherSmokeHiddenId || root.listContains(shellSettings.hiddenAppIds, id)
   }
 
   function toggleLauncherFavoriteById(id) {
@@ -2933,6 +2936,37 @@ ShellRoot {
       }
       function show() { open() }
       function hide() { root.hideLauncher() }
+      function visibleById(entryId: string): string {
+        const previousSearch = search.text
+        search.text = ""
+        root.rebuildLauncher()
+        let visible = false
+        for (let i = 0; i < launcherModel.count; i++) {
+          if (String(launcherModel.get(i).id || "") === String(entryId || "")) {
+            visible = true
+            break
+          }
+        }
+        search.text = previousSearch
+        if (launcher.visible)
+          root.rebuildLauncher()
+        return visible ? "visible" : "hidden"
+      }
+      function hiddenRoundTrip(entryId: string): string {
+        const previousSmokeHiddenId = root.launcherSmokeHiddenId
+        let before = "unknown"
+        let hidden = "unknown"
+        let after = "unknown"
+        try {
+          before = visibleById(entryId)
+          root.launcherSmokeHiddenId = entryId
+          hidden = visibleById(entryId)
+        } finally {
+          root.launcherSmokeHiddenId = previousSmokeHiddenId
+          after = visibleById(entryId)
+        }
+        return before + "|" + hidden + "|" + after
+      }
     }
 
 
