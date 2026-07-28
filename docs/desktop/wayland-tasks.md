@@ -360,10 +360,10 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Source: Google Calendar Events `list` API supports calendar event listing and sync tokens.
   - Acceptance: calendar popup can show the next events through a helper that uses local credentials and caches sync state; no credentials enter QML.
   - Validation: helper lists redacted upcoming event metadata and calendar popup handles offline/auth-failure states.
-- [ ] Redesign meeting/privacy awareness around DND.
-  - Sources: AGS/Astal audio/video service model, Noctalia privacy/recording indicators, current `desktop-privacy-status`.
-  - Acceptance: mic/camera/screenshare indicators become a single DND-aware meeting state with clear active/inactive/muted colors, quieter bar output, and detailed state only in the controls/privacy popup.
-  - Validation: `desktop-privacy-status status`, Meet mic/camera/share manual test, and `qs-menu-smoke controls screen`.
+- [x] Redesign meeting/privacy awareness around DND.
+  - Current behavior: the bar uses one DND-aware privacy indicator for mic, camera, screen share/recording, and DND; left click opens Screen details and right click toggles DND. Controls includes a compact privacy state block with refresh/details actions.
+  - Constraint: this detects capture state, not a guaranteed Google Meet meeting identity, because Chrome/portal state does not expose enough app-specific call metadata locally.
+  - Validation: `desktop-privacy-status status`, `desktop-privacy-status self-test`, `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke controls screen`, and `desktop-doctor`.
 - [ ] Add app-open deep links for notification producers where generic focusing is not enough.
   - Sources: notification `desktopEntry` metadata, app-specific desktop files, Hyprland client matching.
   - Acceptance: Slack/Chrome/Linear-style notifications can open or focus the useful app/window when a default action is absent.
@@ -399,12 +399,10 @@ Do these in this order; each task should leave one small validation command behi
    - Sources: Slack Conversations API, GitHub search through `gh api`, Linear notifications GraphQL, and local cache patterns.
    - Validation: `work-inbox-status --self-test`, `work-inbox-status --no-network`, and `desktop-doctor`.
    - Result: `qs-bar work-inbox` now opens a Quickshell popup fed by this helper; the Controls menu exposes it as Work. Missing credentials render quiet unavailable rows.
-6. Meeting and DND awareness.
+6. Meeting and DND awareness. Done.
    - Task: collapse mic/camera/screenshare into one DND-aware meeting indicator and move details into controls/privacy popup.
-   - Sources: current `desktop-privacy-status`, AGS/Astal audio/video service model, Noctalia privacy indicators.
-   - Depends on: PipeWire source outputs, `/dev/video*` holders, portal screen-share state, DND state.
-   - Validation: `desktop-privacy-status status`, `qs-menu-smoke controls screen`, manual Google Meet mic/camera/share check.
-   - Stop if: Chrome/Meet does not expose enough metadata to distinguish call state from generic media capture; show capture state only.
+   - Result: capture indicators and DND are shown as one bar item; Controls and Screen show the detailed helper output. This intentionally reports capture state only, not confirmed Meet identity.
+   - Validation: `desktop-privacy-status self-test`, `qmllint`, `qs-menu-smoke controls screen`, and `desktop-doctor`.
 7. Pomodoro plus timewarrior design.
    - Task: write the minimal design for a time-menu Pomodoro timer with optional Taskwarrior/timewarrior links before implementation.
    - Depends on: current calendar popup and local `task`/`timew` availability.

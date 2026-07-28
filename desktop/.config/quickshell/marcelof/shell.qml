@@ -1098,6 +1098,48 @@ ShellRoot {
     root.audioIconText = icon
   }
 
+  function privacyMicActive() {
+    return root.privacyStatusText.indexOf("mic active") >= 0
+  }
+
+  function privacyCameraActive() {
+    return root.privacyStatusText.indexOf("camera active") >= 0
+  }
+
+  function privacyShareActive() {
+    return root.privacyStatusText.indexOf("share active") >= 0 || root.privacyStatusText.indexOf("record recording") >= 0
+  }
+
+  function privacyCaptureActive() {
+    return root.privacyMicActive() || root.privacyCameraActive() || root.privacyShareActive()
+  }
+
+  function privacyBarText() {
+    const parts = []
+    if (root.privacyMicActive())
+      parts.push("󰍬")
+    if (root.privacyCameraActive())
+      parts.push("󰄀")
+    if (root.privacyShareActive())
+      parts.push("󰍹")
+    if (shellSettings.doNotDisturb)
+      parts.push("󰂛")
+    return parts.join(" ")
+  }
+
+  function privacyBarColor() {
+    if (root.privacyCaptureActive())
+      return "#f9e2af"
+    if (shellSettings.doNotDisturb)
+      return shellSettings.primaryColor
+    return "#7f849c"
+  }
+
+  function privacySummaryText() {
+    const capture = root.privacyCaptureActive() ? "Capture active" : "No capture"
+    return capture + " / " + (shellSettings.doNotDisturb ? "DND on" : "DND off")
+  }
+
   function updateWorkInbox(output) {
     const text = String(output || "").trim()
     if (text.length === 0)
@@ -1801,16 +1843,15 @@ ShellRoot {
       }
 
       StatusText { command: ["env", "BAR_COLOR_FORMAT=quickshell", "board", "--config", "/home/marcelof/.config/board/board.toml", "render", "quickshell", "quickshell-bar"]; interval: 1000; rich: true }
-      StatusText { command: ["/home/marcelof/bin/desktop-privacy-status", "bar"]; interval: 5000; leftClickCommand: ["/home/marcelof/bin/qs-bar", "screen"]; rightClickCommand: ["/home/marcelof/bin/qs-bar", "media"] }
-
-      Text {
+      Rectangle {
         Layout.alignment: Qt.AlignVCenter
-        visible: shellSettings.doNotDisturb
-        color: shellSettings.primaryColor
-        font.family: "FiraCode Nerd Font"
-        font.pixelSize: 12
-        text: "󰂛"
-        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.toggleDnd() }
+        visible: root.privacyBarText().length > 0
+        width: privacyBarLabel.implicitWidth + 10
+        height: 22
+        radius: 4
+        color: privacyMouse.containsMouse ? "#313244" : "transparent"
+        Text { id: privacyBarLabel; anchors.centerIn: parent; color: root.privacyBarColor(); font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.privacyBarText() }
+        MouseArea { id: privacyMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.LeftButton | Qt.RightButton; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { if (mouse.button === Qt.RightButton) root.toggleDnd(); else root.toggleScreenPanel() } }
       }
 
       Text {
@@ -2337,6 +2378,33 @@ ShellRoot {
             ActionButton { icon: "󰅇"; label: "Copy"; tooltip: "Copy screenshot area"; onTriggered: Quickshell.execDetached(["screenshot-wayland", "copy"]) }
             ActionButton { icon: "󰌾"; label: "Lock"; tooltip: "Lock session"; onTriggered: root.lockSession() }
             ActionButton { icon: shellSettings.doNotDisturb ? "󰂛" : "󰂚"; label: "DND"; active: shellSettings.doNotDisturb; tooltip: shellSettings.doNotDisturb ? "Allow notification popups" : "Silence notification popups"; onTriggered: root.toggleDnd() }
+          }
+
+
+          Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Privacy" }
+
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: privacyControlsColumn.implicitHeight + 16
+            radius: 5
+            color: "#1e1e2e"
+            ColumnLayout {
+              id: privacyControlsColumn
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.top: parent.top
+              anchors.margins: 8
+              spacing: 5
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Text { color: root.privacyBarColor(); font.family: "FiraCode Nerd Font"; font.pixelSize: 16; text: root.privacyBarText().length > 0 ? root.privacyBarText() : "󰍬" }
+                Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.privacySummaryText() }
+                ActionButton { icon: "󰑓"; label: "Refresh"; minWidth: 78; tooltip: "Refresh privacy state"; onTriggered: privacyStatusRefresh.running = true }
+                ActionButton { icon: "󰍹"; label: "Details"; minWidth: 74; tooltip: "Open screen and capture details"; onTriggered: root.toggleScreenPanel() }
+              }
+              Text { Layout.fillWidth: true; color: "#9399b2"; wrapMode: Text.Wrap; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; maximumLineCount: 4; text: root.privacyStatusText.length > 0 ? root.privacyStatusText : "mic inactive\ncamera inactive\nshare inactive" }
+            }
           }
 
           RowLayout {
@@ -3147,6 +3215,14 @@ ShellRoot {
     command: ["/home/marcelof/bin/desktop-privacy-status", "status"]
     running: true
     stdout: StdioCollector { onStreamFinished: root.privacyStatusText = this.text.trim() }
+  }
+
+
+  Timer {
+    interval: 5000
+    running: true
+    repeat: true
+    onTriggered: privacyStatusRefresh.running = true
   }
 
   Process {
