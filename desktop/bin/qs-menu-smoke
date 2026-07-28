@@ -8,6 +8,7 @@ base_dir="${QS_MENU_SMOKE_BASE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quicks
 out_dir="${QS_MENU_SMOKE_DIR:-$base_dir/$(date +%Y%m%d-%H%M%S)}"
 latest_link="${QS_MENU_SMOKE_LATEST:-$base_dir/latest}"
 summary_file="$out_dir/summary.tsv"
+contact_sheet="$out_dir/contact.png"
 min_width="${QS_MENU_SMOKE_MIN_WIDTH:-320}"
 min_height="${QS_MENU_SMOKE_MIN_HEIGHT:-180}"
 min_changed_pixels="${QS_MENU_SMOKE_MIN_CHANGED_PIXELS:-5000}"
@@ -110,6 +111,18 @@ capture_panel() {
   }
 }
 
+write_contact_sheet() {
+  local files=() panel
+
+  command -v montage >/dev/null 2>&1 || return 0
+  for panel in "${panels[@]}"; do
+    [ -s "$out_dir/$panel.png" ] && files+=("$out_dir/$panel.png")
+  done
+  [ "${#files[@]}" -gt 0 ] || return 0
+  montage "${files[@]}" -thumbnail 420x260 -label "%t" -background "#202020" -fill white -geometry +12+28 "$contact_sheet" >/dev/null 2>&1 || return 0
+  printf "contact %s\n" "$contact_sheet"
+}
+
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;
 esac
@@ -135,5 +148,6 @@ done
 
 printf 'dir  %s\n' "$out_dir"
 printf 'latest %s\n' "$latest_link"
+write_contact_sheet
 printf 'summary %s\n' "$summary_file"
 exit "$status"
