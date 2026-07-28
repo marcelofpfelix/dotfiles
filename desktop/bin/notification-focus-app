@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+desktop_entry=${1:-}
+app_name=${2:-}
+
+lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+needle_entry=$(lower "${desktop_entry%.desktop}")
+needle_app=$(lower "$app_name")
+
+addr=$(hyprctl clients -j 2>/dev/null | jq -r --arg entry "$needle_entry" --arg app "$needle_app" '
+  def norm: ascii_downcase | sub("\\.desktop$"; "");
+  .[]
+  | select(
+      ($entry != "" and ((.class // "" | norm) == $entry or (.initialClass // "" | norm) == $entry))
+      or ($app != "" and ((.title // "" | norm) | contains($app)))
+      or ($app != "" and ((.class // "" | norm) | contains($app)))
+    )
+  | .address
+' | sed -n '1p')
+
+if [ -z "$addr" ] || [ "$addr" = "null" ]; then
+    exit 1
+fi
+
+hyprctl dispatch focuswindow "address:$addr" >/dev/null

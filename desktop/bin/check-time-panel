@@ -2,6 +2,7 @@
 set -euo pipefail
 
 now=$(date +%s)
+today=$(date +%-d)
 printf 'Timezones\n'
 TZ=Europe/Lisbon date '+  Lisbon   %a %d %b %H:%M:%S %Z'
 TZ=UTC date '+  UTC      %a %d %b %H:%M:%S %Z'
@@ -10,8 +11,13 @@ TZ=America/Los_Angeles date '+  SF       %a %d %b %H:%M:%S %Z'
 printf '\nTimestamps\n'
 printf '  Unix     %s\n' "$now"
 printf '  Hex      0x%x\n' "$now"
+if uptime_text=$(uptime -p 2>/dev/null | sed 's/^up //'); then
+    [ -n "$uptime_text" ] && printf '  Uptime   %s\n' "$uptime_text"
+fi
 printf '\nCalendar\n'
-cal -m 2>/dev/null | sed 's/^/  /'
+cal -m 2>/dev/null \
+    | TODAY="$today" perl -pe 'if ($. > 2) { $d = $ENV{TODAY}; s/(^|\s)\K\Q$d\E(?=\s|$)/[$d]/; }' \
+    | sed 's/^/  /'
 
 if command -v khal >/dev/null 2>&1; then
     events=$(khal list today 7d 2>/dev/null | sed '/^[[:space:]]*$/d' | head -n 8 || true)

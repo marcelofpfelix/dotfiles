@@ -18,9 +18,68 @@ primary_connection() {
     '
 }
 
+wifi_signal() {
+    nmcli -t -f ACTIVE,SIGNAL dev wifi 2>/dev/null | awk -F: '$1 == "yes" { print $2; found = 1; exit } END { if (!found) print "" }'
+}
+
+wifi_icon() {
+    local signal=${1:-}
+    if [ -z "$signal" ]; then
+        printf '󰖪\n'
+    elif [ "$signal" -ge 80 ]; then
+        printf '󰤨\n'
+    elif [ "$signal" -ge 60 ]; then
+        printf '󰤥\n'
+    elif [ "$signal" -ge 40 ]; then
+        printf '󰤢\n'
+    elif [ "$signal" -ge 20 ]; then
+        printf '󰤟\n'
+    else
+        printf '󰤯\n'
+    fi
+}
+
+local_ip() {
+    ip -4 route get 1.1.1.1 2>/dev/null | awk '{ for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit } }'
+}
+
+public_ip() {
+    [ "${NETWORK_STATUS_PUBLIC_IP:-1}" = "1" ] || return 0
+    curl -fsS --max-time 2 https://api.ipify.org 2>/dev/null || true
+}
+
 case "${1:-status}" in
+    bar)
+        signal=$(wifi_signal)
+        icon=$(wifi_icon "$signal")
+        if [ -n "$signal" ]; then
+            printf '%s %s%%\n' "$icon" "$signal"
+        else
+            printf '%s\n' "$icon"
+        fi
+        ;;
     status)
-        printf '%s • Wi-Fi %s\n' "$(primary_connection)" "$(wifi_state)"
+        signal=$(wifi_signal)
+        if [ -n "$signal" ]; then
+            printf '%s • Wi-Fi %s • %s %s%%\n' "$(primary_connection)" "$(wifi_state)" "$(wifi_icon "$signal")" "$signal"
+        else
+            printf '%s • Wi-Fi %s\n' "$(primary_connection)" "$(wifi_state)"
+        fi
+        ;;
+    details)
+        signal=$(wifi_signal)
+        printf '%s\n' "$(primary_connection)"
+        printf 'Wi-Fi: %s' "$(wifi_state)"
+        [ -n "$signal" ] && printf ' • %s %s%%' "$(wifi_icon "$signal")" "$signal"
+        printf '\n'
+        ip_addr=$(local_ip)
+        if [ -n "$ip_addr" ]; then
+            printf 'Local IP: %s\n' "$ip_addr"
+        fi
+        pub_ip=$(public_ip)
+        if [ -n "$pub_ip" ]; then
+            printf 'Public IP: %s\n' "$pub_ip"
+        fi
         ;;
     wifi-toggle)
         if [ "$(wifi_state)" = "enabled" ]; then
@@ -30,7 +89,7 @@ case "${1:-status}" in
         fi
         ;;
     *)
-        printf 'use: network-status [status|wifi-toggle]\n' >&2
+        printf 'use: network-status [bar|status|details|wifi-toggle]\n' >&2
         exit 2
         ;;
 esac

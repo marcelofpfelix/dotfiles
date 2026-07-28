@@ -124,7 +124,7 @@ Reference review snapshot: 2026-07-26. Keep exact star counts out of this file b
 
 ### Open UI/UX enhancement tasks
 
-Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-review`; refresh the clones before using exact upstream code.
+Review snapshot: 2026-07-28. Sources were local clones under `/tmp/wayland-ui-review`; refreshed clones include Caelestia, end-4, Noctalia, Omarchy, cxOrz, Aylur AGS, surface-dots, ilyamiro/nixos-configuration, ML4W, and JaKooLit. Refresh again before copying exact upstream code.
 
 - [x] Add a launcher command mode.
   - Sources: Caelestia launcher actions/calculator/wallpaper modes, Omarchy menu app library.
@@ -301,6 +301,52 @@ Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-re
 - [x] Review Electron apps for Wayland/PipeWire wrappers: Slack first, then 1Password, Obsidian, Zed-like editors, Discord/Zoom if installed.
   - Current behavior: Slack, 1Password, Discord, and Obsidian launch through local Wayland wrappers that unset inherited Nix/Mesa loader state and pass `--ozone-platform=wayland` plus `UseOzonePlatform,WebRTCPipeWireCapturer`.
   - Decision: Zed is already a native local app, and Zoom uses its own `/opt/zoom/ZoomLauncher`; no Electron flags are forced into either.
+
+## 2026-07-28 Dashboard And Integration Tasks
+
+Task source: this file is the canonical local queue for the Hyprland/Quickshell migration. It is fed by direct user requests, current local dotfiles behavior, smoke-test results, local reference clones under `/tmp/wayland-ui-review`, and official service docs when an external API is involved.
+
+- [x] Highlight today and show uptime in the calendar popup.
+  - Sources: current `check-time-panel`; Caelestia lock/system info shows uptime as compact status.
+  - Acceptance: clock click shows Lisbon time, Unix/hex timestamp, uptime, and the current day visibly marked in the text calendar.
+  - Validation: `check-time-panel` and `qs-menu-smoke calendar`.
+- [x] Add signal-aware network status and on-demand public IP.
+  - Sources: ilyamiro Quickshell/NMCLI Wi-Fi signal icon thresholds; current local `network-status`.
+  - Acceptance: bar uses Wi-Fi strength icons; network popup shows local IP and public IP without polling public IP every bar refresh.
+  - Validation: `network-status bar`, `NETWORK_STATUS_PUBLIC_IP=0 network-status details`, and `qs-menu-smoke network controls`.
+- [x] Add a configurable shell primary color defaulting to Catppuccin Mocha lavender.
+  - Sources: current Catppuccin palette in `shell.qml`; user preference for lavender as primary.
+  - Acceptance: primary color is state-backed and used for notification attention, DND, muted audio, and selected notification borders.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`.
+- [x] Add notification source-app focusing.
+  - Sources: Quickshell notification API exposes actions and `desktopEntry`; Hyprland exposes clients through `hyprctl -j`.
+  - Acceptance: expanded notification rows expose `Open`; clicking an already-expanded notification attempts to focus a matching Hyprland client by desktop entry, app name, class, or title.
+  - Validation: send a desktop notification from an open app, open Notifications, expand it, then use `Open`.
+- [ ] Add a launcher hidden-app smoke test.
+  - Sources: Caelestia app info page exposes favorite/hidden launcher settings; local launcher already persists `hiddenAppIds` in Quickshell state.
+  - Acceptance: a non-destructive smoke command can inject a temporary hidden desktop entry, prove it disappears from launcher results, restore state, and report pass/fail.
+  - Validation: `qs-menu-smoke launcher-hidden` or equivalent helper output.
+- [ ] Integrate secret-aware clipboard handling with gopass/GPaste.
+  - Sources: local `gopass-clip-copy`, `gopass-clip-clear`, `history-secrets`, `passmenu`, wiki GPG/gopass notes, homework `gopass-env.sh` and import helpers, and end-4/JakooLit cliphist watcher patterns.
+  - Constraint: keep decrypted values out of argv, logs, QML state, and normal clipboard history by default.
+  - Acceptance: password copy paths continue using GPaste password entries when available; Quickshell clipboard history can hide or flag secret-looking rows; `passmenu` never writes secrets into normal `cliphist` history unless explicitly requested.
+  - Validation: dry-run `history-secrets`, `passmenu --name`, `passmenu --user`, and a safe fake secret clipboard test.
+- [ ] Build a small unread-work dashboard fed by local CLI/API helpers.
+  - Sources: Slack Conversations API `conversations.info/list/history`, GitHub CLI `gh pr list --search`, Linear inbox/notifications docs.
+  - Acceptance: Quickshell can show counts for Slack unread DMs/mentions, PRs awaiting review, and Linear inbox items without storing tokens in QML or polling aggressively.
+  - Validation: helper commands return redacted JSON, Quickshell panel renders counts, and missing credentials show a quiet unavailable state.
+- [ ] Add future Google Calendar agenda integration.
+  - Source: Google Calendar Events `list` API supports calendar event listing and sync tokens.
+  - Acceptance: calendar popup can show the next events through a helper that uses local credentials and caches sync state; no credentials enter QML.
+  - Validation: helper lists redacted upcoming event metadata and calendar popup handles offline/auth-failure states.
+- [ ] Redesign meeting/privacy awareness around DND.
+  - Sources: AGS/Astal audio/video service model, Noctalia privacy/recording indicators, current `desktop-privacy-status`.
+  - Acceptance: mic/camera/screenshare indicators become a single DND-aware meeting state with clear active/inactive/muted colors, quieter bar output, and detailed state only in the controls/privacy popup.
+  - Validation: `desktop-privacy-status status`, Meet mic/camera/share manual test, and `qs-menu-smoke controls screen`.
+- [ ] Add app-open deep links for notification producers where generic focusing is not enough.
+  - Sources: notification `desktopEntry` metadata, app-specific desktop files, Hyprland client matching.
+  - Acceptance: Slack/Chrome/Linear-style notifications can open or focus the useful app/window when a default action is absent.
+  - Validation: one notification from each supported app focuses the right window or reports unsupported.
 
 ## Automation helpers
 

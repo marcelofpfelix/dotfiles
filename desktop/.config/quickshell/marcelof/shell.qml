@@ -811,12 +811,12 @@ ShellRoot {
     // ponytail: O(apps * notifications), capped at 50; index by app only if history grows.
     for (let appIndex = 0; appIndex < apps.length; appIndex++) {
       const app = apps[appIndex]
-      notificationInboxModel.append({ kind: "group", app: app, count: counts[app], sourceIndex: -1, summary: "", body: "", text: "", actionsText: "", time: "" })
+      notificationInboxModel.append({ kind: "group", app: app, count: counts[app], sourceIndex: -1, summary: "", body: "", text: "", actionsText: "", desktopEntry: "", time: "" })
       for (let i = 0; i < notificationHistory.count; i++) {
         const row = notificationHistory.get(i)
         if (String(row.app || "Notification") !== app)
           continue
-        notificationInboxModel.append({ kind: "notification", app: row.app, count: counts[app], sourceIndex: i, summary: row.summary, body: row.body, text: row.text, actionsText: row.actionsText, time: row.time })
+        notificationInboxModel.append({ kind: "notification", app: row.app, count: counts[app], sourceIndex: i, summary: row.summary, body: row.body, text: row.text, actionsText: row.actionsText, desktopEntry: row.desktopEntry || "", time: row.time })
       }
     }
   }
@@ -859,6 +859,7 @@ ShellRoot {
       body: body,
       text: root.notificationPreview(summary, body, app),
       actionsText: actionLabels.join(" | "),
+      desktopEntry: root.cleanNotificationText(notification.desktopEntry),
       time: Qt.formatDateTime(new Date(), "HH:mm")
     })
     root.notificationObjects = [notification].concat(root.notificationObjects)
@@ -907,6 +908,13 @@ ShellRoot {
     return root.notificationActionLabelsFrom(root.notificationObjects[index])
   }
 
+  function focusNotificationApp(index) {
+    if (index < 0 || index >= notificationHistory.count)
+      return
+    const row = notificationHistory.get(index)
+    Quickshell.execDetached(["/home/marcelof/bin/notification-focus-app", row.desktopEntry || "", row.app || ""])
+  }
+
   function invokeNotificationAction(index, actionIndex) {
     const notification = root.notificationObjects[index]
     if (!notification || !notification.actions || actionIndex < 0 || actionIndex >= notification.actions.length)
@@ -916,7 +924,6 @@ ShellRoot {
     if (!notification.resident)
       root.dismissNotification(index)
   }
-
   function updateAudioStreams(output) {
     audioStreams.clear()
     const lines = String(output || "").trim().split(/\n+/)
@@ -1093,6 +1100,7 @@ ShellRoot {
       property bool nativeTrayMenus: false
       property bool doNotDisturb: false
       property bool denseUi: false
+      property string primaryColor: "#b4befe"
       property string weatherLocation: "Lisbon"
       property var favoriteAppIds: []
       property var hiddenAppIds: []
@@ -1618,7 +1626,7 @@ ShellRoot {
       Text {
         Layout.alignment: Qt.AlignVCenter
         visible: shellSettings.doNotDisturb
-        color: "#f9e2af"
+        color: shellSettings.primaryColor
         font.family: "FiraCode Nerd Font"
         font.pixelSize: 12
         text: "󰂛"
@@ -1627,7 +1635,7 @@ ShellRoot {
 
       Text {
         Layout.alignment: Qt.AlignVCenter
-        color: "#9399b2"
+        color: root.defaultSinkAudio() && root.defaultSinkAudio().muted ? shellSettings.primaryColor : "#9399b2"
         font.family: "FiraCode Nerd Font"
               font.styleName: "Retina"
         font.pixelSize: 12
@@ -1693,7 +1701,7 @@ ShellRoot {
 
       StatusText { command: ["sh", "-c", "WEATHER_LOCATION=" + root.shellQuote(shellSettings.weatherLocation) + " /home/marcelof/bin/check-weather"]; interval: 900000 }
       StatusText { command: ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print \"󰃠 \" $4}' || printf '󰃠 --'"]; interval: 5000; leftClickCommand: ["/home/marcelof/bin/qs-bar", "controls"]; rightClickCommand: ["/home/marcelof/bin/qs-bar", "controls"]; wheelUpCommand: ["brightnessctl", "set", "+5%"]; wheelDownCommand: ["brightnessctl", "set", "5%-"] }
-      StatusText { command: ["sh", "-c", "nmcli -t -f active dev wifi 2>/dev/null | awk -F: '$1 == \"yes\" {found=1} END {if (found) print \"󰖩\"; else print \"󰖪\"}'"]; interval: 10000; leftClickCommand: ["hypr-clean-env", "nm-connection-editor"]; rightClickCommand: ["hypr-clean-env", "nm-connection-editor"] }
+      StatusText { command: ["/home/marcelof/bin/network-status", "bar"]; interval: 10000; leftClickCommand: ["hypr-clean-env", "nm-connection-editor"]; rightClickCommand: ["hypr-clean-env", "nm-connection-editor"] }
 
       Text {
         Layout.alignment: Qt.AlignVCenter
@@ -1721,7 +1729,7 @@ ShellRoot {
 
       Text {
         Layout.alignment: Qt.AlignVCenter
-        color: notificationHistory.count > 0 ? "#f9e2af" : "#9399b2"
+        color: notificationHistory.count > 0 ? shellSettings.primaryColor : "#9399b2"
         font.family: "FiraCode Nerd Font"
         font.styleName: "Retina"
         font.pixelSize: 12
@@ -2469,6 +2477,7 @@ ShellRoot {
               required property string body
               required property string text
               required property string actionsText
+              required property string desktopEntry
               required property string time
 
               readonly property int notificationIndex: sourceIndex
@@ -2478,7 +2487,7 @@ ShellRoot {
               height: isGroup ? 32 : (expanded ? Math.max(104, detailColumn.implicitHeight + 22) : 60)
               radius: isGroup ? 0 : 5
               color: isGroup ? "transparent" : (expanded ? "#242438" : "#1e1e2e")
-              border.color: expanded ? "#b4befe" : "transparent"
+              border.color: expanded ? shellSettings.primaryColor : "transparent"
               border.width: expanded ? 1 : 0
 
               Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
@@ -2488,7 +2497,7 @@ ShellRoot {
                 acceptedButtons: Qt.LeftButton
                 enabled: !notificationDelegate.isGroup
                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: root.selectedNotificationIndex = expanded ? -1 : notificationIndex
+                onClicked: { if (expanded) root.focusNotificationApp(notificationIndex); else root.selectedNotificationIndex = notificationIndex }
               }
 
               RowLayout {
@@ -2552,8 +2561,10 @@ ShellRoot {
 
                 RowLayout {
                   Layout.fillWidth: true
-                  visible: expanded && actionsText.length > 0
+                  visible: expanded && (actionsText.length > 0 || desktopEntry.length > 0 || app.length > 0)
                   spacing: 6
+
+                  ActionButton { icon: "󰍉"; label: "Open"; minWidth: 58; tooltip: "Focus source app"; onTriggered: root.focusNotificationApp(notificationIndex) }
 
                   Repeater {
                     model: root.notificationActionLabels(notificationIndex)
@@ -2766,7 +2777,7 @@ ShellRoot {
 
   Process {
     id: networkStatusRefresh
-    command: ["/home/marcelof/bin/network-status", "status"]
+    command: ["/home/marcelof/bin/network-status", "details"]
     running: true
     stdout: StdioCollector { onStreamFinished: root.networkStatusText = this.text.trim() }
   }
