@@ -5,10 +5,16 @@ have_ddc() { command -v ddcutil >/dev/null 2>&1; }
 
 status() {
   have_ddc || exit 0
-  local displays
+  local displays current max pct
   displays=$(ddcutil detect --brief 2>/dev/null | awk '/^Display / { count++ } END { print count+0 }')
   [ "${displays:-0}" -gt 0 ] || exit 0
-  printf 'External brightness: %s display%s\n' "$displays" "$( [ "$displays" = 1 ] && printf '' || printf s )"
+  read -r current max < <(ddcutil getvcp 10 --brief 2>/dev/null | awk '/^VCP 10 / { print $4, $5; exit }')
+  if [ -n "${current:-}" ] && [ -n "${max:-}" ] && [ "$max" -gt 0 ] 2>/dev/null; then
+    pct=$((current * 100 / max))
+    printf 'External brightness: %s%% (%s display%s)\n' "$pct" "$displays" "$( [ "$displays" = 1 ] && printf '' || printf s )"
+  else
+    printf 'External brightness: %s display%s\n' "$displays" "$( [ "$displays" = 1 ] && printf '' || printf s )"
+  fi
 }
 
 change() {
@@ -16,13 +22,14 @@ change() {
   case "${1:-}" in
     up) ddcutil setvcp 10 + 10 ;;
     down) ddcutil setvcp 10 - 10 ;;
-    *) printf 'use: external-brightness [status|up|down|self-test]\n' >&2; exit 2 ;;
+    set) [ -n "${2:-}" ] || { printf 'missing brightness value\n' >&2; exit 2; }; ddcutil setvcp 10 "$2" ;;
+    *) printf 'use: external-brightness [status|up|down|set N|self-test]\n' >&2; exit 2 ;;
   esac
 }
 
 case "${1:-status}" in
   status) status ;;
-  up|down) change "$1" ;;
+  up|down|set) change "$@" ;;
   self-test) printf 'external-brightness self-test: ok\n' ;;
-  *) printf 'use: external-brightness [status|up|down|self-test]\n' >&2; exit 2 ;;
+  *) printf 'use: external-brightness [status|up|down|set N|self-test]\n' >&2; exit 2 ;;
 esac

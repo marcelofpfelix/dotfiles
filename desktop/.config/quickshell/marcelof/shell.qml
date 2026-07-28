@@ -500,6 +500,7 @@ ShellRoot {
   property string mediaNowText: ""
   property string weatherPanelText: ""
   property string externalBrightnessText: ""
+  property real externalBrightnessValue: 0
   property string osdIconText: ""
   property string osdBodyText: ""
   property string osdPendingKind: ""
@@ -1217,6 +1218,18 @@ ShellRoot {
     root.brightnessText = root.brightnessValue + "%"
     root.runBrightness(String(root.brightnessValue))
     root.showOsd("󰃠", "Brightness " + root.brightnessText)
+  }
+
+  function setExternalBrightness(value) {
+    root.externalBrightnessValue = Math.max(0, Math.min(100, Math.round(value)))
+    Quickshell.execDetached(["/home/marcelof/bin/external-brightness", "set", String(root.externalBrightnessValue)])
+    externalBrightnessRefreshLater.restart()
+    root.showOsd("󰍹", "External brightness " + root.externalBrightnessValue + "%")
+  }
+
+  function runExternalBrightness(action) {
+    Quickshell.execDetached(["/home/marcelof/bin/external-brightness", action])
+    externalBrightnessRefreshLater.restart()
   }
 
   function runKbdBrightness(action) {
@@ -2133,9 +2146,10 @@ ShellRoot {
             visible: root.externalBrightnessText.length > 0
             spacing: 10
             Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰍹" }
-            Text { Layout.fillWidth: true; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.externalBrightnessText }
-            ActionButton { icon: "-"; label: ""; minWidth: 34; tooltip: "External brightness down"; onTriggered: Quickshell.execDetached(["external-brightness", "down"]) }
-            ActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "External brightness up"; onTriggered: Quickshell.execDetached(["external-brightness", "up"]) }
+            Slider { Layout.fillWidth: true; from: 0; to: 100; value: root.externalBrightnessValue; onMoved: root.setExternalBrightness(value) }
+            Text { width: 128; color: "#bac2de"; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.externalBrightnessText }
+            ActionButton { icon: "-"; label: ""; minWidth: 34; tooltip: "External brightness down"; onTriggered: root.runExternalBrightness("down") }
+            ActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "External brightness up"; onTriggered: root.runExternalBrightness("up") }
           }
 
           RowLayout {
@@ -2747,7 +2761,20 @@ ShellRoot {
     id: externalBrightnessRefresh
     command: ["/home/marcelof/bin/external-brightness", "status"]
     running: true
-    stdout: StdioCollector { onStreamFinished: root.externalBrightnessText = this.text.trim() }
+    stdout: StdioCollector {
+      onStreamFinished: {
+        root.externalBrightnessText = this.text.trim()
+        const match = root.externalBrightnessText.match(/([0-9]+)%/)
+        root.externalBrightnessValue = match ? Number(match[1]) : 0
+      }
+    }
+  }
+
+  Timer {
+    id: externalBrightnessRefreshLater
+    interval: 600
+    repeat: false
+    onTriggered: externalBrightnessRefresh.running = true
   }
 
   Process {

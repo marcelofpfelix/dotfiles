@@ -161,7 +161,7 @@ Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-re
   - Dependencies: if `ddcutil` is used, track it in homelab install intent first.
   - Acceptance: laptop brightness stays on `brightnessctl`; external displays get separate controls only when `ddcutil detect` finds controllable monitors.
   - Validation: `desktop-package-audit`, `qs-menu-smoke controls`, and manual external-monitor brightness change.
-  - Current behavior: `ddcutil` is installed and tracked in homelab; `external-brightness status` detects one external display, and VCP 10 write access was validated by setting the current value back to itself.
+  - Current behavior: `ddcutil` is installed and tracked in homelab; `external-brightness status` reports the current percent, `external-brightness set N` was validated by setting the current value back to itself, and Controls exposes the external display as a slider.
 - [x] Add richer Bluetooth device controls.
   - Sources: Caelestia Bluetooth popout and device battery display.
   - Dependencies: reuse Quickshell Bluetooth service and existing controls popup.
