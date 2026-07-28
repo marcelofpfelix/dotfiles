@@ -51,7 +51,7 @@ hypr-session reload
 
 ## Menu testing
 
-Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `qs-menu-smoke wallpaper media notifications` for targeted visual checks or `qs-menu-smoke` for the full popup set.
+Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `qs-menu-smoke wallpaper media notifications` for targeted visual checks, `qs-menu-smoke` for the full popup set, or `qs-menu-smoke --open` to capture and open the contact sheet.
 
 ## X11 archive
 

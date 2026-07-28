@@ -3255,7 +3255,7 @@ ShellRoot {
     id: networkPanel
     visible: false
     implicitWidth: 460
-    implicitHeight: 320
+    implicitHeight: 420
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
@@ -3338,7 +3338,7 @@ ShellRoot {
     id: exitDialog
     visible: false
     implicitWidth: 460
-    implicitHeight: 320
+    implicitHeight: 420
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)

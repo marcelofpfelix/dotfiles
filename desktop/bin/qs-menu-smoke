@@ -14,9 +14,10 @@ min_height="${QS_MENU_SMOKE_MIN_HEIGHT:-180}"
 min_changed_pixels="${QS_MENU_SMOKE_MIN_CHANGED_PIXELS:-5000}"
 panels=(launcher launcher-script controls media notifications calendar wallpaper screen settings keybindings clipboard websearch network tray power power-confirm)
 status=0
+open_after=0
 
 usage() {
-  printf 'use: qs-menu-smoke [--list|panel ...]\n' >&2
+  printf 'use: qs-menu-smoke [--open] [--list|panel ...]\n' >&2
   printf 'captures: %s\n' "${panels[*]}" >&2
 }
 
@@ -124,6 +125,10 @@ write_contact_sheet() {
 }
 
 case "${1:-}" in
+  --open) open_after=1; shift ;;
+esac
+
+case "${1:-}" in
   --list) printf '%s\n' "${panels[@]}"; exit 0 ;;
   -h|--help) usage; exit 0 ;;
 esac
@@ -150,5 +155,8 @@ done
 printf 'dir  %s\n' "$out_dir"
 printf 'latest %s\n' "$latest_link"
 write_contact_sheet
+if [ "$open_after" -eq 1 ] && [ -s "$contact_sheet" ]; then
+  xdg-open "$contact_sheet" >/dev/null 2>&1 &
+fi
 printf 'summary %s\n' "$summary_file"
 exit "$status"
