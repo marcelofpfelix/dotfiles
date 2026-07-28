@@ -237,7 +237,8 @@ check_screen_share() {
 }
 
 check_qs_menu_smoke_latest() {
-  local base latest summary contact failed max_age now mtime age qml_file qml_mtime
+  local base latest summary contact failed max_age now mtime age qml_file qml_mtime panel
+  local panels=(launcher launcher-script controls media notifications calendar wallpaper screen settings keybindings clipboard websearch network tray power)
 
   base="${QS_MENU_SMOKE_BASE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/menu-smoke}"
   latest="${QS_MENU_SMOKE_LATEST:-$base/latest}"
@@ -267,10 +268,12 @@ check_qs_menu_smoke_latest() {
     return
   fi
 
-  if ! awk -F "\t" '$1 == "launcher-script" && $2 == "ok" { found=1 } END { exit !found }' "$summary"; then
-    fail qs-menu-smoke-latest "missing launcher-script panel" "qs-menu-smoke launcher-script"
-    return
-  fi
+  for panel in "${panels[@]}"; do
+    if ! awk -F "\t" -v panel="$panel" '$1 == panel && $2 == "ok" { found=1 } END { exit !found }' "$summary"; then
+      fail qs-menu-smoke-latest "missing $panel panel" "qs-menu-smoke $panel"
+      return
+    fi
+  done
 
   if [ ! -s "$contact" ]; then
     fail qs-menu-smoke-latest "missing contact sheet" "qs-menu-smoke"

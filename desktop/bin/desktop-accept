@@ -3,7 +3,7 @@ set -euo pipefail
 
 export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
 repo=${DOTFILES_REPO:-$HOME/gwt/marcelofpfelix/dotfiles/main}
-panels=${DESKTOP_ACCEPT_PANELS:-"launcher launcher-script controls notifications calendar media screen settings"}
+panels=${DESKTOP_ACCEPT_PANELS:-"launcher launcher-script controls media notifications calendar wallpaper screen settings keybindings clipboard websearch network tray power"}
 
 cd "$repo"
 
