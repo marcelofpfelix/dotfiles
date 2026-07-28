@@ -343,10 +343,14 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Acceptance: calendar popup shows the current Pomodoro mode, remaining time, focus label, and start/pause/resume/stop/break controls backed only by `pomodoroctl`.
   - Current behavior: the calendar popup refreshes `pomodoroctl status`, shows mode, remaining time, label, Timewarrior state, and exposes Start/Pause/Resume/Stop/5m/15m controls.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke calendar`, and `desktop-doctor`.
-- [ ] Wire a future board-backed personal dashboard into Quickshell.
-  - Sources: rush `board/docs/personal-dashboards.md`, current Quickshell calendar/controls panels, board `personal.today`/`personal.money` surfaces once implemented.
-  - Acceptance: Quickshell renders Today, Money, Health, and Habits tabs from board state only; buttons call `board action`; QML does not run hledger, fetch prices, parse health exports, or store raw private data.
-  - Validation: `qs-menu-smoke personal-dashboard`, `desktop-doctor`, and `board render text personal.today`.
+- [x] Add a board-rendered personal dashboard shell to Quickshell.
+  - Sources: rush `board/docs/personal-dashboards.md`, current Quickshell controls/work-inbox panel patterns, and installed board `render text personal.*` surfaces.
+  - Current behavior: `qs-bar personal-dashboard` opens a right-side Quickshell popup with Today, Money, Health, and Habits tabs rendered only from `board --config ~/.config/board/board.toml render text`; Controls exposes it as Dash.
+  - Validation: `board render text personal.today`, `qmllint`, `qs-menu-smoke personal-dashboard`, and `desktop-doctor`.
+- [ ] Add board actions to the personal dashboard once board exposes an action CLI.
+  - Current blocker: installed `board` supports `once`, `run`, `render`, `check`, `checks`, `metrics`, `doctor`, and `tui`, but no `action` subcommand yet.
+  - Acceptance: Quickshell dashboard buttons call `board action ...`; QML still does not run hledger, fetch prices, parse health exports, or store raw private data.
+  - Validation: `board action --help`, action dry-run checks, `qs-menu-smoke personal-dashboard`, and `desktop-doctor`.
 
 - [x] Make the Quickshell clipboard picker a true popup.
   - Sources: current Quickshell clipboard picker, launcher popup behavior, user report that clipboard should be popup-like instead of a normal window.
@@ -417,12 +421,16 @@ Do these in this order; each task should leave one small validation command behi
    - Result: `desktop/bin/pomodoroctl` implements status/start/pause/resume/stop/break/self-test and is covered by `desktop-doctor`.
    - Result: the calendar popup renders `pomodoroctl` status and calls the helper for all timer actions.
    - Next: calendar agenda integration or visual consistency pass.
-8. Calendar agenda integration.
+8. Personal dashboard shell. Done.
+   - Task: add a Quickshell popup that renders board-owned Today, Money, Health, and Habits surfaces without collecting private data in QML.
+   - Result: `qs-bar personal-dashboard` toggles the popup, Controls exposes Dash, and smoke tests capture the panel.
+   - Blocked next: board action buttons wait for an installed `board action` subcommand.
+9. Calendar agenda integration.
    - Task: add a helper for cached Google Calendar event summaries, then feed the existing calendar popup.
    - Depends on: local credential storage decision and no-secret QML boundary.
    - Validation: helper prints redacted next-event metadata; calendar popup handles offline/auth failure.
    - Stop if: credentials are not configured; keep current local `khal`/time dashboard.
-9. Visual consistency pass.
+10. Visual consistency pass.
    - Task: normalize panel spacing, action row size, and empty states across launcher, clipboard, network, notifications, calendar, media, and controls using current local components.
    - Sources: Noctalia compact control-center layout, Caelestia settings/actions, cxOrz quick settings, end-4 smoke/utility polish.
    - Depends on: screenshot smoke visibility.

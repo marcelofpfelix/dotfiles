@@ -14,7 +14,7 @@ previous_dir="${QS_MENU_SMOKE_PREVIOUS_DIR:-}"
 min_width="${QS_MENU_SMOKE_MIN_WIDTH:-320}"
 min_height="${QS_MENU_SMOKE_MIN_HEIGHT:-180}"
 min_changed_pixels="${QS_MENU_SMOKE_MIN_CHANGED_PIXELS:-5000}"
-panels=(launcher launcher-script controls media notifications work-inbox calendar wallpaper screen settings keybindings clipboard websearch network tray power power-confirm)
+panels=(launcher launcher-script controls media notifications work-inbox personal-dashboard calendar wallpaper screen settings keybindings clipboard websearch network tray power power-confirm)
 status=0
 open_after=0
 inspect_after=0
@@ -94,6 +94,7 @@ crop_panel_region() {
     clipboard) width=760; height=600; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     websearch) width=820; height=340; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     calendar) width=560; height=660; x=$((max_w - width)); y=0 ;;
+    personal-dashboard) width=560; height=520; x=$((max_w - width)); y=0 ;;
     *) width=560; height=520; x=$((max_w - width)); y=0 ;;
   esac
   (( width > max_w )) && width=$max_w

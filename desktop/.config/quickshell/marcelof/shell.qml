@@ -579,6 +579,7 @@ ShellRoot {
   property bool wallpaperPanelOpen: false
   property bool calendarOpen: false
   property bool workInboxOpen: false
+  property bool personalDashboardOpen: false
   property bool settingsOpen: false
   property bool osdOpen: false
   property bool notificationCenterOpen: false
@@ -625,6 +626,9 @@ ShellRoot {
   property bool workInboxLinearAvailable: false
   property int workInboxLinearNotifications: 0
   property string workInboxLinearReason: "not loaded"
+  property string personalDashboardSurface: "personal.today"
+  property string personalDashboardText: ""
+  readonly property var personalDashboardSurfaces: ["personal.today", "personal.money", "personal.health", "personal.habits"]
   readonly property var calendarWeekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 
   function calendarDayAt(index) {
@@ -776,6 +780,7 @@ ShellRoot {
     root.wallpaperPanelOpen = false
     root.calendarOpen = false
     root.workInboxOpen = false
+    root.personalDashboardOpen = false
     root.settingsOpen = false
     root.notificationCenterOpen = false
     root.keybindingsOpen = false
@@ -899,6 +904,24 @@ ShellRoot {
     root.workInboxOpen = next
     if (next)
       workInboxRefresh.running = true
+  }
+
+  function togglePersonalDashboard() {
+    const next = !root.personalDashboardOpen
+    root.closeTransientPanels()
+    root.personalDashboardOpen = next
+    if (next)
+      personalDashboardRefresh.running = true
+  }
+
+  function setPersonalDashboardSurface(surface) {
+    root.personalDashboardSurface = surface
+    personalDashboardRefresh.running = true
+  }
+
+  function personalDashboardRichText() {
+    const text = String(root.personalDashboardText || "").trim()
+    return text.length > 0 ? text.replace(/\n/g, "<br/>") : "No board data"
   }
 
   function toggleSettings() {
@@ -1456,6 +1479,13 @@ ShellRoot {
     stdout: StdioCollector { onStreamFinished: root.updateWorkInbox(this.text) }
   }
 
+  Process {
+    id: personalDashboardRefresh
+    command: ["board", "--config", "/home/marcelof/.config/board/board.toml", "render", "text", root.personalDashboardSurface]
+    running: false
+    stdout: StdioCollector { onStreamFinished: root.personalDashboardText = this.text.trim() }
+  }
+
   Timer {
     interval: 1000
     running: true
@@ -1728,6 +1758,7 @@ ShellRoot {
     function wallpaper() { root.toggleWallpaperPanel() }
     function calendar() { root.toggleCalendar() }
     function workInbox() { root.toggleWorkInbox() }
+    function personalDashboard() { root.togglePersonalDashboard() }
     function notifications() { root.toggleNotifications() }
     function power() { root.togglePowerMenu() }
     function inhibit() { root.toggleIdleInhibit() }
@@ -2514,6 +2545,7 @@ ShellRoot {
             spacing: 7
             ActionButton { icon: "󰥔"; label: "Time"; minWidth: 68; tooltip: "Calendar and time"; onTriggered: root.toggleCalendar() }
             ActionButton { icon: "󰻞"; label: "Work"; minWidth: 68; tooltip: "Unread work inbox"; onTriggered: root.toggleWorkInbox() }
+            ActionButton { icon: "󰡨"; label: "Dash"; minWidth: 68; tooltip: "Personal dashboard"; onTriggered: root.togglePersonalDashboard() }
             ActionButton { icon: "󰂚"; label: "Notes"; minWidth: 68; tooltip: "Notifications"; onTriggered: root.toggleNotifications() }
             ActionButton { icon: "󰒓"; label: "Set"; minWidth: 68; tooltip: "Shell settings"; onTriggered: root.toggleSettings() }
             ActionButton { icon: "󱊖"; label: "Tray"; minWidth: 68; tooltip: "Tray manager"; onTriggered: root.toggleTrayManage() }
@@ -2895,6 +2927,66 @@ ShellRoot {
           }
 
           Text { Layout.fillWidth: true; color: "#7f849c"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.workInboxUpdatedText.length > 0 ? ("Updated " + root.workInboxUpdatedText) : "Counts load when opened" }
+        }
+      }
+    }
+
+    PopupWindow {
+      id: personalDashboardWindow
+      visible: root.personalDashboardOpen
+      color: "transparent"
+      implicitWidth: 500
+      implicitHeight: 430
+      anchor.window: bar
+      anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
+      anchor.rect.y: bar.height + 6
+
+      Rectangle {
+        anchors.fill: parent
+        radius: 6
+        color: "#11111b"
+        border.color: "#45475a"
+        border.width: 1
+
+        ColumnLayout {
+          anchors.fill: parent
+          anchors.margins: 10
+          spacing: 9
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Personal" }
+            ActionButton { icon: "󰑓"; label: "Refresh"; minWidth: 82; tooltip: "Refresh board surface"; onTriggered: personalDashboardRefresh.running = true }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
+            Repeater {
+              model: root.personalDashboardSurfaces
+              ActionButton { required property string modelData; Layout.fillWidth: true; icon: "󰡨"; label: modelData.replace("personal.", ""); minWidth: 74; active: root.personalDashboardSurface === modelData; tooltip: modelData; onTriggered: root.setPersonalDashboardSurface(modelData) }
+            }
+          }
+
+          Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
+
+          ScrollView {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+
+            Text {
+              width: parent.width
+              color: "#bac2de"
+              font.family: "FiraCode Nerd Font"
+              font.pixelSize: 12
+              lineHeight: 1.15
+              wrapMode: Text.Wrap
+              textFormat: Text.RichText
+              text: root.personalDashboardRichText()
+            }
+          }
         }
       }
     }
