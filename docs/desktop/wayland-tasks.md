@@ -331,10 +331,13 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Sources: current `check-todo-panel`, `check-time-panel`, `check-weather`, user preference for Palmela weather and primary-color today marker.
   - Acceptance: time popup shows Taskwarrior ready tasks without broken leading indentation, highlights today in a native QML calendar grid with the configured primary color, and shows Palmela weather with today/tomorrow min-max temperatures.
   - Validation: `check-todo-panel`, `check-time-panel`, `WEATHER_LOCATION="Palmela, Portugal" check-weather panel`, `qmllint`, and `qs-menu-smoke calendar`.
-- [ ] Design Pomodoro plus timewarrior integration.
+- [x] Design Pomodoro plus timewarrior integration.
   - Sources: current calendar/time menu, Taskwarrior todo block, possible `timew` tracking state.
-  - Acceptance: design a minimal Pomodoro surface for the time menu with start/pause/stop, current focus label, optional Taskwarrior task link, and optional timewarrior interval start/stop without storing task notes in QML state.
-  - Validation: design note with commands and no-secret state boundary before implementation.
+  - Current behavior: `docs/desktop/pomodoro-timewarrior.md` defines a future `pomodoroctl` helper boundary, JSON shape, state file, Timewarrior ownership rules, and Quickshell calendar surface.
+  - Validation: `test -s docs/desktop/pomodoro-timewarrior.md`.
+- [ ] Implement `pomodoroctl` before adding QML controls.
+  - Acceptance: helper supports `status`, `start`, `pause`, `resume`, `stop`, `break`, and `self-test`; it never stops unrelated Timewarrior intervals.
+  - Validation: `pomodoroctl self-test` and `pomodoroctl status`.
 - [ ] Wire a future board-backed personal dashboard into Quickshell.
   - Sources: rush `board/docs/personal-dashboards.md`, current Quickshell calendar/controls panels, board `personal.today`/`personal.money` surfaces once implemented.
   - Acceptance: Quickshell renders Today, Money, Health, and Habits tabs from board state only; buttons call `board action`; QML does not run hledger, fetch prices, parse health exports, or store raw private data.
@@ -403,10 +406,10 @@ Do these in this order; each task should leave one small validation command behi
    - Task: collapse mic/camera/screenshare into one DND-aware meeting indicator and move details into controls/privacy popup.
    - Result: capture indicators and DND are shown as one bar item; Controls and Screen show the detailed helper output. This intentionally reports capture state only, not confirmed Meet identity.
    - Validation: `desktop-privacy-status self-test`, `qmllint`, `qs-menu-smoke controls screen`, and `desktop-doctor`.
-7. Pomodoro plus timewarrior design.
+7. Pomodoro plus timewarrior design. Done.
    - Task: write the minimal design for a time-menu Pomodoro timer with optional Taskwarrior/timewarrior links before implementation.
-   - Depends on: current calendar popup and local `task`/`timew` availability.
-   - Validation: design note documents commands, state files, and no-secret QML boundary.
+   - Result: `docs/desktop/pomodoro-timewarrior.md` documents commands, state files, Timewarrior ownership, JSON output, and no-secret QML boundary.
+   - Next: implement `pomodoroctl` before wiring QML controls.
 8. Calendar agenda integration.
    - Task: add a helper for cached Google Calendar event summaries, then feed the existing calendar popup.
    - Depends on: local credential storage decision and no-secret QML boundary.
