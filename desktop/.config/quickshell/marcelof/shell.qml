@@ -640,6 +640,12 @@ ShellRoot {
       exitDialog.visible = false
   }
 
+  function togglePowerMenu() {
+    const next = !exitDialog.visible
+    root.closeTransientPanels()
+    exitDialog.visible = next
+  }
+
   function toggleTrayManage() {
     const next = !root.trayManageOpen
     root.closeTransientPanels()
@@ -1386,7 +1392,7 @@ ShellRoot {
     function wallpaper() { root.toggleWallpaperPanel() }
     function calendar() { root.toggleCalendar() }
     function notifications() { root.toggleNotifications() }
-    function power() { exitDialog.visible = true }
+    function power() { root.togglePowerMenu() }
     function inhibit() { root.toggleIdleInhibit() }
     function dnd() { root.toggleDnd() }
     function settings() { root.toggleSettings() }
@@ -2116,7 +2122,7 @@ ShellRoot {
             ActionButton { icon: root.idleInhibitActive() ? "󰒳" : "󰒲"; label: "Awake"; active: root.idleInhibitActive(); tooltip: root.idleInhibitActive() ? "Allow idle and sleep" : "Prevent idle and sleep"; onTriggered: root.toggleIdleInhibit() }
             ActionButton { icon: "󰒲"; label: "Sleep"; tooltip: "Suspend system"; onTriggered: root.suspendSession() }
             ActionButton { icon: "󰜉"; label: "Reboot"; tooltip: "Reboot system"; onTriggered: Quickshell.execDetached(["systemctl", "reboot"]) }
-            ActionButton { icon: "⏻"; label: "Power"; tooltip: "Power menu"; onTriggered: exitDialog.visible = true }
+            ActionButton { icon: "⏻"; label: "Power"; tooltip: "Power menu"; onTriggered: root.togglePowerMenu() }
           }
 
           Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Menus" }
@@ -3306,8 +3312,8 @@ ShellRoot {
     IpcHandler {
       target: "session"
 
-      function confirmExit() { exitDialog.visible = true }
-      function power() { exitDialog.visible = true }
+      function confirmExit() { root.togglePowerMenu() }
+      function power() { root.togglePowerMenu() }
       function hide() { exitDialog.visible = false }
     }
 
