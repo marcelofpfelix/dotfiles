@@ -10,7 +10,7 @@ Goal: add a small Pomodoro surface to the existing Quickshell calendar popup wit
 
 ## Minimal Shape
 
-Add one helper later: `pomodoroctl`.
+Helper: `desktop/bin/pomodoroctl`.
 
 Commands:
 

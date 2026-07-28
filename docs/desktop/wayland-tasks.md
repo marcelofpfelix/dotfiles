@@ -335,9 +335,13 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Sources: current calendar/time menu, Taskwarrior todo block, possible `timew` tracking state.
   - Current behavior: `docs/desktop/pomodoro-timewarrior.md` defines a future `pomodoroctl` helper boundary, JSON shape, state file, Timewarrior ownership rules, and Quickshell calendar surface.
   - Validation: `test -s docs/desktop/pomodoro-timewarrior.md`.
-- [ ] Implement `pomodoroctl` before adding QML controls.
+- [x] Implement `pomodoroctl` before adding QML controls.
   - Acceptance: helper supports `status`, `start`, `pause`, `resume`, `stop`, `break`, and `self-test`; it never stops unrelated Timewarrior intervals.
+  - Current behavior: `desktop/bin/pomodoroctl` stores local timer state under Quickshell state, prints redacted JSON for QML, uses Timewarrior only when available and idle, and stops Timewarrior only for helper-owned `pomodoro` intervals.
   - Validation: `pomodoroctl self-test` and `pomodoroctl status`.
+- [ ] Wire `pomodoroctl` into the calendar popup.
+  - Acceptance: calendar popup shows the current Pomodoro mode, remaining time, focus label, and start/pause/resume/stop/break controls backed only by `pomodoroctl`.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke calendar`, and `desktop-doctor`.
 - [ ] Wire a future board-backed personal dashboard into Quickshell.
   - Sources: rush `board/docs/personal-dashboards.md`, current Quickshell calendar/controls panels, board `personal.today`/`personal.money` surfaces once implemented.
   - Acceptance: Quickshell renders Today, Money, Health, and Habits tabs from board state only; buttons call `board action`; QML does not run hledger, fetch prices, parse health exports, or store raw private data.
@@ -409,7 +413,8 @@ Do these in this order; each task should leave one small validation command behi
 7. Pomodoro plus timewarrior design. Done.
    - Task: write the minimal design for a time-menu Pomodoro timer with optional Taskwarrior/timewarrior links before implementation.
    - Result: `docs/desktop/pomodoro-timewarrior.md` documents commands, state files, Timewarrior ownership, JSON output, and no-secret QML boundary.
-   - Next: implement `pomodoroctl` before wiring QML controls.
+   - Result: `desktop/bin/pomodoroctl` implements status/start/pause/resume/stop/break/self-test and is covered by `desktop-doctor`.
+   - Next: wire `pomodoroctl` into the calendar popup without moving timer logic into QML.
 8. Calendar agenda integration.
    - Task: add a helper for cached Google Calendar event summaries, then feed the existing calendar popup.
    - Depends on: local credential storage decision and no-secret QML boundary.

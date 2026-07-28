@@ -1,0 +1,295 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/marcelof"
+state_file="$state_dir/pomodoro.json"
+
+usage() {
+  printf 'use: pomodoroctl [status|start [--task UUID|--label TEXT]|pause|resume|stop|break [short|long]|self-test]\n' >&2
+}
+
+need_jq() {
+  command -v jq >/dev/null 2>&1 || {
+    printf '{"schema":1,"ok":false,"reason":"missing jq"}\n'
+    exit 0
+  }
+}
+
+now_s() {
+  date +%s
+}
+
+clean_label() {
+  printf '%s' "${1:-}" | tr '\n\r\t' '   ' | cut -c1-80
+}
+
+empty_status() {
+  local available=false tracking=false
+  command -v timew >/dev/null 2>&1 && available=true
+  timew_tracking && tracking=true
+  jq -n \
+    --argjson available "$available" \
+    --argjson tracking "$tracking" \
+    '{
+      schema: 1,
+      ok: true,
+      mode: "idle",
+      running: false,
+      paused: false,
+      complete: false,
+      remaining_seconds: 0,
+      label: "",
+      task_uuid: "",
+      timew: {available: $available, tracking: $tracking, owned: false}
+    }'
+}
+
+read_state() {
+  [ -s "$state_file" ] && jq -e '.schema == 1' "$state_file" >/dev/null 2>&1
+}
+
+state_value() {
+  local expr=$1 fallback=$2
+  jq -r "$expr // $fallback" "$state_file" 2>/dev/null || printf '%s\n' "$fallback"
+}
+
+write_state() {
+  mkdir -p "$state_dir"
+  local tmp="$state_file.$$"
+  cat >"$tmp"
+  mv "$tmp" "$state_file"
+}
+
+timew_tracking() {
+  command -v timew >/dev/null 2>&1 || return 1
+  timew 2>/dev/null | grep -q '^Tracking '
+}
+
+timew_start_owned() {
+  command -v timew >/dev/null 2>&1 || return 1
+  timew_tracking && return 1
+  if [ -n "${1:-}" ]; then
+    timew start pomodoro "task:$1" >/dev/null 2>&1
+  else
+    timew start pomodoro >/dev/null 2>&1
+  fi
+}
+
+stop_owned_timew() {
+  local owned=false
+  read_state || return 0
+  owned=$(state_value '.timew_started' false)
+  [ "$owned" = true ] || return 0
+  timew_tracking || return 0
+  timew 2>/dev/null | grep -q 'pomodoro' || return 0
+  timew stop >/dev/null 2>&1 || true
+}
+
+emit_status() {
+  if ! read_state; then
+    empty_status
+    return
+  fi
+
+  local now mode running paused duration started paused_at pause_acc label task_uuid timew_started
+  local elapsed remaining complete=false available=false tracking=false
+  now=$(now_s)
+  mode=$(state_value '.mode' '"idle"')
+  running=$(state_value '.running' false)
+  paused=$(state_value '.paused' false)
+  duration=$(state_value '.duration_seconds' 0)
+  started=$(state_value '.started_at' 0)
+  paused_at=$(state_value '.paused_at' 0)
+  pause_acc=$(state_value '.pause_accumulated_seconds' 0)
+  label=$(state_value '.label' '""')
+  task_uuid=$(state_value '.task_uuid' '""')
+  timew_started=$(state_value '.timew_started' false)
+
+  if [ "$running" = true ]; then
+    if [ "$paused" = true ]; then
+      elapsed=$((paused_at - started - pause_acc))
+    else
+      elapsed=$((now - started - pause_acc))
+    fi
+    [ "$elapsed" -lt 0 ] && elapsed=0
+    remaining=$((duration - elapsed))
+    if [ "$remaining" -le 0 ]; then
+      remaining=0
+      running=false
+      paused=false
+      complete=true
+    fi
+  else
+    remaining=0
+  fi
+
+  command -v timew >/dev/null 2>&1 && available=true
+  timew_tracking && tracking=true
+
+  jq -n \
+    --arg mode "$mode" \
+    --arg label "$label" \
+    --arg task_uuid "$task_uuid" \
+    --argjson running "$running" \
+    --argjson paused "$paused" \
+    --argjson complete "$complete" \
+    --argjson remaining "$remaining" \
+    --argjson available "$available" \
+    --argjson tracking "$tracking" \
+    --argjson owned "$timew_started" \
+    '{
+      schema: 1,
+      ok: true,
+      mode: $mode,
+      running: $running,
+      paused: $paused,
+      complete: $complete,
+      remaining_seconds: $remaining,
+      label: $label,
+      task_uuid: $task_uuid,
+      timew: {available: $available, tracking: $tracking, owned: $owned}
+    }'
+}
+
+start_focus() {
+  local task_uuid="" label="" owned=false
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --task) task_uuid=${2:-}; shift 2 ;;
+      --task=*) task_uuid=${1#--task=}; shift ;;
+      --label) label=$(clean_label "${2:-}"); shift 2 ;;
+      --label=*) label=$(clean_label "${1#--label=}"); shift ;;
+      *) usage; exit 2 ;;
+    esac
+  done
+  if [ -n "$task_uuid" ] && ! [[ "$task_uuid" =~ ^[[:alnum:]_.:-]+$ ]]; then
+    printf 'pomodoroctl: unsafe task uuid\n' >&2
+    exit 2
+  fi
+  [ -n "$label" ] || [ -z "$task_uuid" ] || label="Task ${task_uuid:0:8}"
+
+  stop_owned_timew
+  if timew_start_owned "$task_uuid"; then
+    owned=true
+  fi
+
+  jq -n \
+    --arg label "$label" \
+    --arg task_uuid "$task_uuid" \
+    --argjson started "$(now_s)" \
+    --argjson owned "$owned" \
+    '{
+      schema: 1,
+      mode: "focus",
+      running: true,
+      paused: false,
+      duration_seconds: 1500,
+      started_at: $started,
+      paused_at: 0,
+      pause_accumulated_seconds: 0,
+      label: $label,
+      task_uuid: $task_uuid,
+      timew_started: $owned
+    }' | write_state
+  emit_status
+}
+
+pause_timer() {
+  read_state || { empty_status; return; }
+  [ "$(state_value '.running' false)" = true ] || { emit_status; return; }
+  [ "$(state_value '.paused' false)" = false ] || { emit_status; return; }
+  jq --argjson paused_at "$(now_s)" '.paused = true | .paused_at = $paused_at' "$state_file" | write_state
+  emit_status
+}
+
+resume_timer() {
+  read_state || { empty_status; return; }
+  [ "$(state_value '.paused' false)" = true ] || { emit_status; return; }
+  local now paused_at pause_acc
+  now=$(now_s)
+  paused_at=$(state_value '.paused_at' 0)
+  pause_acc=$(state_value '.pause_accumulated_seconds' 0)
+  jq \
+    --argjson pause_acc "$((pause_acc + now - paused_at))" \
+    '.paused = false | .paused_at = 0 | .pause_accumulated_seconds = $pause_acc' \
+    "$state_file" | write_state
+  emit_status
+}
+
+stop_timer() {
+  stop_owned_timew
+  rm -f "$state_file"
+  empty_status
+}
+
+start_break() {
+  local kind=${1:-short} duration mode
+  case "$kind" in
+    short) duration=300; mode=short-break ;;
+    long) duration=900; mode=long-break ;;
+    *) usage; exit 2 ;;
+  esac
+  stop_owned_timew
+  jq -n \
+    --arg mode "$mode" \
+    --argjson started "$(now_s)" \
+    --argjson duration "$duration" \
+    '{
+      schema: 1,
+      mode: $mode,
+      running: true,
+      paused: false,
+      duration_seconds: $duration,
+      started_at: $started,
+      paused_at: 0,
+      pause_accumulated_seconds: 0,
+      label: "",
+      task_uuid: "",
+      timew_started: false
+    }' | write_state
+  emit_status
+}
+
+self_test() {
+  local tmp fakebin log rc=0
+  tmp=$(mktemp -d)
+  fakebin="$tmp/bin"
+  log="$tmp/timew.log"
+  mkdir -p "$fakebin"
+  cat >"$fakebin/timew" <<'EOF'
+#!/usr/bin/env bash
+case "${1:-}" in
+  start) printf '%s\n' "$*" >>"$POMODOROCTL_TEST_LOG"; touch "$POMODOROCTL_TEST_TRACKING" ;;
+  stop) printf '%s\n' "$*" >>"$POMODOROCTL_TEST_LOG"; rm -f "$POMODOROCTL_TEST_TRACKING" ;;
+  *) [ -e "$POMODOROCTL_TEST_TRACKING" ] && printf 'Tracking pomodoro\n' ;;
+esac
+EOF
+  chmod +x "$fakebin/timew"
+
+  PATH="$fakebin:$PATH" XDG_STATE_HOME="$tmp/state" POMODOROCTL_TEST_LOG="$log" POMODOROCTL_TEST_TRACKING="$tmp/tracking" "$0" status | jq -e '.mode == "idle" and .running == false' >/dev/null || rc=1
+  PATH="$fakebin:$PATH" XDG_STATE_HOME="$tmp/state" POMODOROCTL_TEST_LOG="$log" POMODOROCTL_TEST_TRACKING="$tmp/tracking" "$0" start --label test | jq -e '.mode == "focus" and .running == true and .label == "test" and .timew.owned == true' >/dev/null || rc=1
+  PATH="$fakebin:$PATH" XDG_STATE_HOME="$tmp/state" POMODOROCTL_TEST_LOG="$log" POMODOROCTL_TEST_TRACKING="$tmp/tracking" "$0" pause | jq -e '.paused == true' >/dev/null || rc=1
+  PATH="$fakebin:$PATH" XDG_STATE_HOME="$tmp/state" POMODOROCTL_TEST_LOG="$log" POMODOROCTL_TEST_TRACKING="$tmp/tracking" "$0" resume | jq -e '.paused == false' >/dev/null || rc=1
+  PATH="$fakebin:$PATH" XDG_STATE_HOME="$tmp/state" POMODOROCTL_TEST_LOG="$log" POMODOROCTL_TEST_TRACKING="$tmp/tracking" "$0" break short | jq -e '.mode == "short-break" and .timew.owned == false' >/dev/null || rc=1
+  PATH="$fakebin:$PATH" XDG_STATE_HOME="$tmp/state" POMODOROCTL_TEST_LOG="$log" POMODOROCTL_TEST_TRACKING="$tmp/tracking" "$0" stop | jq -e '.mode == "idle"' >/dev/null || rc=1
+  grep -Fq 'start pomodoro' "$log" || rc=1
+  grep -Fq 'stop' "$log" || rc=1
+
+  rm -rf "$tmp"
+  [ "$rc" -eq 0 ] || { printf 'pomodoroctl self-test: failed\n' >&2; exit 1; }
+  printf 'pomodoroctl self-test: ok\n'
+}
+
+need_jq
+
+case "${1:-status}" in
+  status) emit_status ;;
+  start) shift; start_focus "$@" ;;
+  pause) pause_timer ;;
+  resume) resume_timer ;;
+  stop) stop_timer ;;
+  break) shift; start_break "${1:-short}" ;;
+  self-test|--self-test) self_test ;;
+  -h|--help) usage ;;
+  *) usage; exit 2 ;;
+esac
