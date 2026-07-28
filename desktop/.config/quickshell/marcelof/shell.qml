@@ -513,6 +513,23 @@ ShellRoot {
   property string inhibitStatusText: "inactive"
   property string lisbonClockText: "--"
   property string timePanelText: ""
+  readonly property var calendarWeekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+
+  function calendarDayAt(index) {
+    const date = clock.date
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7
+    const day = index - firstWeekday + 1
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    return day >= 1 && day <= daysInMonth ? day : 0
+  }
+
+  function isCalendarToday(day) {
+    const date = clock.date
+    return day === date.getDate()
+  }
+
   property string todoPanelText: ""
   property string sinkDescription: "Default output"
   property string audioIconText: "󰐊"
@@ -1104,7 +1121,7 @@ ShellRoot {
       property bool doNotDisturb: false
       property bool denseUi: false
       property string primaryColor: "#b4befe"
-      property string weatherLocation: "Lisbon"
+      property string weatherLocation: "Palmela, Portugal"
       property var favoriteAppIds: []
       property var hiddenAppIds: []
     }
@@ -1168,7 +1185,7 @@ ShellRoot {
 
   Process {
     id: weatherPanelRefresh
-    command: ["sh", "-c", "WEATHER_LOCATION=" + root.shellQuote(shellSettings.weatherLocation) + " /home/marcelof/bin/check-weather"]
+    command: ["sh", "-c", "WEATHER_LOCATION=" + root.shellQuote(shellSettings.weatherLocation) + " /home/marcelof/bin/check-weather panel"]
     running: true
     stdout: StdioCollector { onStreamFinished: root.weatherPanelText = this.text.trim() }
   }
@@ -2298,8 +2315,8 @@ ShellRoot {
           }
           RowLayout { Layout.fillWidth: true; spacing: 7
             ActionButton { Layout.fillWidth: true; icon: "󰈙"; label: "Dense"; active: shellSettings.denseUi; tooltip: "Toggle compact shell spacing"; onTriggered: shellSettings.denseUi = !shellSettings.denseUi }
+            ActionButton { Layout.fillWidth: true; icon: "󰖐"; label: "Palmela"; active: shellSettings.weatherLocation === "Palmela, Portugal"; tooltip: "Weather: Palmela"; onTriggered: { shellSettings.weatherLocation = "Palmela, Portugal"; weatherPanelRefresh.running = true } }
             ActionButton { Layout.fillWidth: true; icon: "󰖐"; label: "Lisbon"; active: shellSettings.weatherLocation === "Lisbon"; tooltip: "Weather: Lisbon"; onTriggered: { shellSettings.weatherLocation = "Lisbon"; weatherPanelRefresh.running = true } }
-            ActionButton { Layout.fillWidth: true; icon: "󰖐"; label: "Porto"; active: shellSettings.weatherLocation === "Porto"; tooltip: "Weather: Porto"; onTriggered: { shellSettings.weatherLocation = "Porto"; weatherPanelRefresh.running = true } }
           }
           RowLayout { Layout.fillWidth: true; spacing: 7
             ActionButton { Layout.fillWidth: true; icon: "󰀻"; label: "Apps"; tooltip: "Open app launcher"; onTriggered: { root.closeTransientPanels(); root.toggleLauncher() } }
@@ -2362,6 +2379,46 @@ ShellRoot {
             text: root.weatherPanelText.length > 0 ? root.weatherPanelText : "Weather --"
           }
 
+          GridLayout {
+            Layout.fillWidth: true
+            columns: 7
+            rowSpacing: 4
+            columnSpacing: 4
+
+            Repeater {
+              model: root.calendarWeekdays
+              Text {
+                required property string modelData
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                color: "#9399b2"
+                font.family: "FiraCode Nerd Font"
+                font.pixelSize: 11
+                text: modelData
+              }
+            }
+
+            Repeater {
+              model: 42
+              Rectangle {
+                required property int index
+                readonly property int day: root.calendarDayAt(index)
+                Layout.fillWidth: true
+                implicitHeight: 24
+                radius: 4
+                color: day > 0 && root.isCalendarToday(day) ? shellSettings.primaryColor : "transparent"
+
+                Text {
+                  anchors.centerIn: parent
+                  color: parent.day > 0 && root.isCalendarToday(parent.day) ? "#11111b" : (parent.day > 0 ? "#bac2de" : "transparent")
+                  font.family: "FiraCode Nerd Font"
+                  font.pixelSize: 12
+                  text: parent.day > 0 ? parent.day : ""
+                }
+              }
+            }
+          }
+
           ScrollView {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -2383,7 +2440,7 @@ ShellRoot {
           RowLayout {
             Layout.fillWidth: true
             spacing: 8
-            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Todo" }
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Ready tasks" }
             ActionButton {
               icon: "󰄬"
               label: "Task"

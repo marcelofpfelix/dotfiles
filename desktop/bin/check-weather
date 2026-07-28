@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-location=${WEATHER_LOCATION:-Lisbon}
+location=${WEATHER_LOCATION:-Palmela, Portugal}
+mode=${1:-bar}
 cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof
-cache_file="$cache_dir/weather.txt"
+cache_key=$(printf '%s-%s' "$location" "$mode" | tr -cs '[:alnum:]_.-' '_')
+cache_file="$cache_dir/weather-$cache_key.txt"
 max_age=${WEATHER_MAX_AGE_SECONDS:-900}
 mkdir -p "$cache_dir"
 
@@ -16,7 +18,38 @@ if [ -s "$cache_file" ]; then
     fi
 fi
 
+weather_icon() {
+    local lower
+    lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+    case "$lower" in
+        *sunny*|*clear*) printf '󰖙' ;;
+        *rain*|*drizzle*|*shower*) printf '󰖗' ;;
+        *thunder*|*storm*) printf '󰖓' ;;
+        *snow*|*sleet*|*ice*) printf '󰖘' ;;
+        *fog*|*mist*|*haze*) printf '󰖑' ;;
+        *) printf '󰖐' ;;
+    esac
+}
+
 encoded=${location// /+}
+
+if [ "$mode" = "panel" ] && command -v jq >/dev/null 2>&1; then
+    json=$(curl -fsS --max-time 3 "https://wttr.in/${encoded}?format=j1" 2>/dev/null || true)
+    row=$(printf '%s' "$json" | jq -r '[.current_condition[0].weatherDesc[0].value, .current_condition[0].temp_C, .weather[0].mintempC, .weather[0].maxtempC, .weather[1].mintempC, .weather[1].maxtempC] | @tsv' 2>/dev/null || true)
+    if [ -n "$row" ]; then
+        IFS=$'\t' read -r condition temp today_min today_max tomorrow_min tomorrow_max <<EOF
+$row
+EOF
+        icon=$(weather_icon "$condition")
+        {
+            printf '%s %s %s°C\n' "$icon" "$condition" "$temp"
+            printf 'Today %s-%s°C\n' "$today_min" "$today_max"
+            printf 'Tomorrow %s-%s°C' "$tomorrow_min" "$tomorrow_max"
+        } | tee "$cache_file"
+        exit 0
+    fi
+fi
+
 raw=$(curl -fsS --max-time 3 "https://wttr.in/${encoded}?format=%C+%t" 2>/dev/null || true)
 raw=${raw//$'\n'/ }
 raw=$(printf '%s' "$raw" | sed 's/[[:space:]]\+/ /g; s/^ //; s/ $//')
@@ -32,15 +65,5 @@ fi
 
 condition=${raw% *}
 temp=${raw##* }
-lower=$(printf '%s' "$condition" | tr '[:upper:]' '[:lower:]')
-icon='󰖐'
-case "$lower" in
-    *sunny*|*clear*) icon='󰖙' ;;
-    *rain*|*drizzle*|*shower*) icon='󰖗' ;;
-    *thunder*|*storm*) icon='󰖓' ;;
-    *snow*|*sleet*|*ice*) icon='󰖘' ;;
-    *fog*|*mist*|*haze*) icon='󰖑' ;;
-    *cloud*) icon='󰖐' ;;
-esac
-
+icon=$(weather_icon "$condition")
 printf '%s %s' "$icon" "$temp" | tee "$cache_file"

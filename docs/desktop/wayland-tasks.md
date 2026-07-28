@@ -326,6 +326,19 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Sources: Caelestia app info page exposes favorite/hidden launcher settings; local launcher already persists `hiddenAppIds` in Quickshell state.
   - Acceptance: `qs-menu-smoke launcher-hidden` asks Quickshell to hide one visible desktop entry in memory, proves it disappears, restores the override, and reports pass/fail without editing persisted launcher settings.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `bash -n desktop/bin/qs-menu-smoke`, `home -y`, `qs-bar reload`, `qs-menu-smoke launcher-hidden`, and `qs-menu-smoke launcher`.
+
+- [x] Polish calendar popup task/weather presentation.
+  - Sources: current `check-todo-panel`, `check-time-panel`, `check-weather`, user preference for Palmela weather and primary-color today marker.
+  - Acceptance: time popup shows Taskwarrior ready tasks without broken leading indentation, highlights today in a native QML calendar grid with the configured primary color, and shows Palmela weather with today/tomorrow min-max temperatures.
+  - Validation: `check-todo-panel`, `check-time-panel`, `WEATHER_LOCATION="Palmela, Portugal" check-weather panel`, `qmllint`, and `qs-menu-smoke calendar`.
+- [ ] Design Pomodoro plus timewarrior integration.
+  - Sources: current calendar/time menu, Taskwarrior todo block, possible `timew` tracking state.
+  - Acceptance: design a minimal Pomodoro surface for the time menu with start/pause/stop, current focus label, optional Taskwarrior task link, and optional timewarrior interval start/stop without storing task notes in QML state.
+  - Validation: design note with commands and no-secret state boundary before implementation.
+- [ ] Wire a future board-backed personal dashboard into Quickshell.
+  - Sources: rush `board/docs/personal-dashboards.md`, current Quickshell calendar/controls panels, board `personal.today`/`personal.money` surfaces once implemented.
+  - Acceptance: Quickshell renders Today, Money, Health, and Habits tabs from board state only; buttons call `board action`; QML does not run hledger, fetch prices, parse health exports, or store raw private data.
+  - Validation: `qs-menu-smoke personal-dashboard`, `desktop-doctor`, and `board render text personal.today`.
 - [ ] Integrate secret-aware clipboard handling with gopass/GPaste.
   - Sources: local `gopass-clip-copy`, `gopass-clip-clear`, `history-secrets`, `passmenu`, wiki GPG/gopass notes, homework `gopass-env.sh` and import helpers, and end-4/JakooLit cliphist watcher patterns.
   - Constraint: keep decrypted values out of argv, logs, QML state, and normal clipboard history by default.
@@ -380,12 +393,16 @@ Do these in this order; each task should leave one small validation command behi
    - Depends on: PipeWire source outputs, `/dev/video*` holders, portal screen-share state, DND state.
    - Validation: `desktop-privacy-status status`, `qs-menu-smoke controls screen`, manual Google Meet mic/camera/share check.
    - Stop if: Chrome/Meet does not expose enough metadata to distinguish call state from generic media capture; show capture state only.
-6. Calendar agenda integration.
+6. Pomodoro plus timewarrior design.
+   - Task: write the minimal design for a time-menu Pomodoro timer with optional Taskwarrior/timewarrior links before implementation.
+   - Depends on: current calendar popup and local `task`/`timew` availability.
+   - Validation: design note documents commands, state files, and no-secret QML boundary.
+7. Calendar agenda integration.
    - Task: add a helper for cached Google Calendar event summaries, then feed the existing calendar popup.
    - Depends on: local credential storage decision and no-secret QML boundary.
    - Validation: helper prints redacted next-event metadata; calendar popup handles offline/auth failure.
    - Stop if: credentials are not configured; keep current local `khal`/time dashboard.
-7. Visual consistency pass.
+8. Visual consistency pass.
    - Task: normalize panel spacing, action row size, and empty states across launcher, clipboard, network, notifications, calendar, media, and controls using current local components.
    - Sources: Noctalia compact control-center layout, Caelestia settings/actions, cxOrz quick settings, end-4 smoke/utility polish.
    - Depends on: screenshot smoke visibility.
