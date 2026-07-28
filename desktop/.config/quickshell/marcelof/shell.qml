@@ -3349,6 +3349,7 @@ ShellRoot {
 
       function confirmExit() { root.togglePowerMenu() }
       function power() { root.togglePowerMenu() }
+      function confirmReboot() { root.openSessionConfirm("Reboot", "󰜉", ["systemctl", "reboot"]) }
       function hide() { root.hidePowerMenu() }
     }
 

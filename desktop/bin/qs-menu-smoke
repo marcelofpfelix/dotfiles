@@ -12,7 +12,7 @@ contact_sheet="$out_dir/contact.png"
 min_width="${QS_MENU_SMOKE_MIN_WIDTH:-320}"
 min_height="${QS_MENU_SMOKE_MIN_HEIGHT:-180}"
 min_changed_pixels="${QS_MENU_SMOKE_MIN_CHANGED_PIXELS:-5000}"
-panels=(launcher launcher-script controls media notifications calendar wallpaper screen settings keybindings clipboard websearch network tray power)
+panels=(launcher launcher-script controls media notifications calendar wallpaper screen settings keybindings clipboard websearch network tray power power-confirm)
 status=0
 
 usage() {

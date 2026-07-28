@@ -83,6 +83,7 @@ case "${1:-status}" in
   websearch) ipc_target websearch toggle ;;
   lock) ipc_target lock lock ;;
   power|session) ipc power ;;
+  power-confirm) ipc_target session confirmReboot ;;
   inhibit|stay-awake) ipc inhibit ;;
   keybindings|keys) ipc keybindings ;;
   clipboard) ipc clipboard ;;
