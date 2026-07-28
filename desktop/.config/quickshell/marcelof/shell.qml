@@ -640,6 +640,12 @@ ShellRoot {
       exitDialog.visible = false
   }
 
+  function toggleTrayManage() {
+    const next = !root.trayManageOpen
+    root.closeTransientPanels()
+    root.trayManageOpen = next
+  }
+
   function toggleControlPanel() {
     const next = !root.controlPanelOpen
     root.closeTransientPanels()
@@ -1373,7 +1379,7 @@ ShellRoot {
     function toggle() { root.barHidden = !root.barHidden }
     function show() { root.barHidden = false }
     function hide() { root.barHidden = true }
-    function trayManage() { root.trayManageOpen = !root.trayManageOpen }
+    function trayManage() { root.toggleTrayManage() }
     function controls() { root.toggleControlPanel() }
     function media() { root.toggleMediaPanel() }
     function screen() { root.toggleScreenPanel() }
@@ -2139,6 +2145,7 @@ ShellRoot {
             ActionButton { icon: "󰥔"; label: "Time"; minWidth: 68; tooltip: "Calendar and time"; onTriggered: root.toggleCalendar() }
             ActionButton { icon: "󰂚"; label: "Notes"; minWidth: 68; tooltip: "Notifications"; onTriggered: root.toggleNotifications() }
             ActionButton { icon: "󰒓"; label: "Set"; minWidth: 68; tooltip: "Shell settings"; onTriggered: root.toggleSettings() }
+            ActionButton { icon: "󱊖"; label: "Tray"; minWidth: 68; tooltip: "Tray manager"; onTriggered: root.toggleTrayManage() }
           }
 
           RowLayout {
