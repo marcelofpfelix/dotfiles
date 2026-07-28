@@ -36,7 +36,7 @@ fix_hint() {
   fi
 
   case "$1" in
-    hypr-session|hypr-keys|hypr-term|qs-bar|qs-menu-smoke|desktop-reload|desktop-notification-smoke|desktop-inhibit|desktop-accept|desktop-startup-report|audioctl|check-audio-streams|cliphist-menu|passmenu-action|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland|desktop-privacy-status|desktop-osd|external-brightness|media-now-playing|notification-focus-app|work-inbox-status|pomodoroctl)
+    hypr-session|hypr-keys|hypr-term|qs-bar|qs-menu-smoke|desktop-reload|desktop-notification-smoke|desktop-inhibit|desktop-accept|desktop-startup-report|audioctl|check-audio-streams|cliphist-menu|passmenu-action|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland|desktop-privacy-status|desktop-osd|external-brightness|media-now-playing|notification-focus-app|work-inbox-status|pomodoroctl|calendar-agenda-status)
       printf 'fix  %-22s home -y\n' "$1"
       ;;
     walker|gum|fzf|identify|compare|montage)
@@ -340,7 +340,7 @@ check_notification_smoke_status() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys hypr-term qs-bar qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app work-inbox-status pomodoroctl; do
+for cmd in hypr-session hypr-keys hypr-term qs-bar qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app work-inbox-status pomodoroctl calendar-agenda-status; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes
@@ -408,6 +408,9 @@ run_required work-inbox-status-no-network work-inbox-status --no-network
 section "pomodoro"
 run_required pomodoroctl-self-test pomodoroctl self-test
 run_required pomodoroctl-status pomodoroctl status
+
+section "calendar agenda"
+run_required calendar-agenda-status-self-test calendar-agenda-status self-test
 
 section "screen share"
 check_screen_share

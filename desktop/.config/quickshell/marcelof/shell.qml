@@ -607,6 +607,7 @@ ShellRoot {
   property string inhibitStatusText: "inactive"
   property string lisbonClockText: "--"
   property string timePanelText: ""
+  property string agendaPanelText: ""
   property string pomodoroModeText: "idle"
   property string pomodoroLabelText: ""
   property int pomodoroRemainingSeconds: 0
@@ -893,6 +894,7 @@ ShellRoot {
     if (next) {
       timePanelRefresh.running = true
       todoPanelRefresh.running = true
+      agendaPanelRefresh.running = true
       weatherPanelRefresh.running = true
       pomodoroRefresh.running = true
     }
@@ -1452,6 +1454,13 @@ ShellRoot {
   }
 
   Process {
+    id: agendaPanelRefresh
+    command: ["/home/marcelof/bin/calendar-agenda-status"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.agendaPanelText = this.text.trim() }
+  }
+
+  Process {
     id: weatherPanelRefresh
     command: ["sh", "-c", "WEATHER_LOCATION=" + root.shellQuote(shellSettings.weatherLocation) + " /home/marcelof/bin/check-weather panel"]
     running: true
@@ -1498,6 +1507,13 @@ ShellRoot {
     running: true
     repeat: true
     onTriggered: todoPanelRefresh.running = root.calendarOpen
+  }
+
+  Timer {
+    interval: 60000
+    running: true
+    repeat: true
+    onTriggered: agendaPanelRefresh.running = root.calendarOpen
   }
 
   Timer {
@@ -2790,7 +2806,7 @@ ShellRoot {
 
           ScrollView {
             Layout.fillWidth: true
-            Layout.preferredHeight: 160
+            Layout.preferredHeight: 104
             clip: true
 
             Text {
@@ -2802,6 +2818,26 @@ ShellRoot {
               wrapMode: Text.Wrap
               text: root.timePanelText.length > 0 ? root.timePanelText : "Loading time data..."
             }
+          }
+
+          Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+            Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Agenda" }
+            ActionButton { icon: "󰑓"; label: "Refresh"; minWidth: 82; tooltip: "Refresh agenda"; onTriggered: agendaPanelRefresh.running = true }
+          }
+
+          Text {
+            Layout.fillWidth: true
+            color: "#bac2de"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 12
+            maximumLineCount: 3
+            elide: Text.ElideRight
+            wrapMode: Text.Wrap
+            text: root.agendaPanelText.length > 0 ? root.agendaPanelText : "Agenda\n  loading..."
           }
 
           Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }

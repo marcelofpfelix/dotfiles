@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  printf 'use: calendar-agenda-status [status|self-test]\n' >&2
+}
+
+agenda() {
+  local output
+  if ! command -v khal >/dev/null 2>&1; then
+    printf 'Agenda\n'
+    printf '  unavailable: khal missing\n'
+    return
+  fi
+
+  output=$(khal list today 7d --notstarted 2>/dev/null | sed '/^[[:space:]]*$/d' | head -n "${CALENDAR_AGENDA_LIMIT:-8}" || true)
+  printf 'Agenda\n'
+  if [ -n "$output" ]; then
+    printf '%s\n' "$output" | sed 's/^/  /'
+  else
+    printf '  no upcoming events\n'
+  fi
+}
+
+self_test() {
+  local tmp fakebin out
+  tmp=$(mktemp -d)
+  fakebin="$tmp/bin"
+  mkdir -p "$fakebin"
+  cat >"$fakebin/khal" <<'EOF'
+#!/usr/bin/env bash
+printf 'Today\n10:00 Standup\nTomorrow\n13:00 Focus\n'
+EOF
+  chmod +x "$fakebin/khal"
+  out=$(PATH="$fakebin:$PATH" "$0" status)
+  grep -Fq 'Agenda' <<<"$out"
+  grep -Fq '10:00 Standup' <<<"$out"
+  rm -rf "$tmp"
+  printf 'calendar-agenda-status self-test: ok\n'
+}
+
+case "${1:-status}" in
+  status) agenda ;;
+  self-test|--self-test) self_test ;;
+  -h|--help) usage ;;
+  *) usage; exit 2 ;;
+esac

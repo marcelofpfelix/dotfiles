@@ -13,11 +13,3 @@ printf '  Hex    0x%x\n' "$now"
 if uptime_text=$(uptime -p 2>/dev/null | sed 's/^up //'); then
     [ -n "$uptime_text" ] && printf '  Up     %s\n' "$uptime_text"
 fi
-
-if command -v khal >/dev/null 2>&1; then
-    events=$(khal list today 7d 2>/dev/null | sed '/^[[:space:]]*$/d' | head -n 8 || true)
-    if [ -n "$events" ]; then
-        printf '\nEvents\n'
-        printf '%s\n' "$events" | sed 's/^/  /'
-    fi
-fi

@@ -368,10 +368,14 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
 - [x] Build a small unread-work Quickshell dashboard from `work-inbox-status`.
   - Current behavior: `qs-bar work-inbox` opens a right-side Quickshell popup with Slack unread/mentions, GitHub review requests, and Linear notification counts from the helper. Controls also has a Work button.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke work-inbox`, and `desktop-doctor`.
-- [ ] Add future Google Calendar agenda integration.
-  - Source: Google Calendar Events `list` API supports calendar event listing and sync tokens.
-  - Acceptance: calendar popup can show the next events through a helper that uses local credentials and caches sync state; no credentials enter QML.
-  - Validation: helper lists redacted upcoming event metadata and calendar popup handles offline/auth-failure states.
+- [x] Add local calendar agenda integration.
+  - Source: existing `khal` local calendar cache; future Google/CalDAV sync stays outside Quickshell.
+  - Current behavior: `calendar-agenda-status` renders upcoming local agenda text from `khal list today 7d --notstarted`; the calendar popup shows it in a dedicated Agenda block and refreshes through the helper.
+  - Validation: `calendar-agenda-status self-test`, `qmllint`, `qs-menu-smoke calendar`, and `desktop-doctor`.
+- [ ] Add Google Calendar sync credentials outside Quickshell if needed.
+  - Current blocker: no tracked `gcalcli` or `vdirsyncer` setup is present; Quickshell only consumes local khal output.
+  - Acceptance: external sync populates the local khal calendar cache without credentials entering QML or shell command argv.
+  - Validation: `khal list today 7d --notstarted` shows synced events and `calendar-agenda-status` handles auth/offline states.
 - [x] Redesign meeting/privacy awareness around DND.
   - Current behavior: the bar uses one DND-aware privacy indicator for mic, camera, screen share/recording, and DND; left click opens Screen details and right click toggles DND. Controls includes a compact privacy state block with refresh/details actions.
   - Constraint: this detects capture state, not a guaranteed Google Meet meeting identity, because Chrome/portal state does not expose enough app-specific call metadata locally.
@@ -425,11 +429,10 @@ Do these in this order; each task should leave one small validation command behi
    - Task: add a Quickshell popup that renders board-owned Today, Money, Health, and Habits surfaces without collecting private data in QML.
    - Result: `qs-bar personal-dashboard` toggles the popup, Controls exposes Dash, and smoke tests capture the panel.
    - Blocked next: board action buttons wait for an installed `board action` subcommand.
-9. Calendar agenda integration.
-   - Task: add a helper for cached Google Calendar event summaries, then feed the existing calendar popup.
-   - Depends on: local credential storage decision and no-secret QML boundary.
-   - Validation: helper prints redacted next-event metadata; calendar popup handles offline/auth failure.
-   - Stop if: credentials are not configured; keep current local `khal`/time dashboard.
+9. Calendar agenda integration. Done locally.
+   - Task: add a helper for cached calendar summaries, then feed the existing calendar popup.
+   - Result: `calendar-agenda-status` renders upcoming events from the local khal cache, and the calendar popup has a dedicated Agenda section.
+   - Blocked next: Google account sync credentials/tooling are intentionally outside Quickshell and not configured here.
 10. Visual consistency pass.
    - Task: normalize panel spacing, action row size, and empty states across launcher, clipboard, network, notifications, calendar, media, and controls using current local components.
    - Sources: Noctalia compact control-center layout, Caelestia settings/actions, cxOrz quick settings, end-4 smoke/utility polish.
