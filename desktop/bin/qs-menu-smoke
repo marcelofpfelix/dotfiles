@@ -72,16 +72,36 @@ assert_capture() {
   fi
 }
 
-crop_focused_monitor() {
-  local panel=$1 file=$2 crop=$3 geometry
+crop_panel_region() {
+  local panel=$1 _baseline=$2 file=$3 crop=$4 geometry monitor_after
+  local max_w max_h width height x y
 
   command -v hyprctl >/dev/null 2>&1 || return 1
   command -v jq >/dev/null 2>&1 || return 1
   command -v convert >/dev/null 2>&1 || return 1
   geometry=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | "\(.width)x\(.height)+\(.x)+\(.y)"' | sed -n '1p')
-  [[ "$geometry" =~ ^[0-9]+x[0-9]+[+-][0-9]+[+-][0-9]+$ ]] || return 1
-  convert "$file" -crop "$geometry" +repage "$crop" >/dev/null 2>&1 || return 1
-  printf "crop-monitor %s %s\n" "$panel" "$crop"
+  [[ "$geometry" =~ ^([0-9]+)x([0-9]+)[+-][0-9]+[+-][0-9]+$ ]] || return 1
+  max_w=${BASH_REMATCH[1]}
+  max_h=${BASH_REMATCH[2]}
+  monitor_after="$out_dir/$panel.monitor.png"
+
+  convert "$file" -crop "$geometry" +repage "$monitor_after" >/dev/null 2>&1 || return 1
+  case "$panel" in
+    launcher|launcher-script) width=900; height=680; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
+    clipboard) width=760; height=600; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
+    websearch) width=820; height=340; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
+    calendar) width=560; height=660; x=$((max_w - width)); y=0 ;;
+    *) width=560; height=520; x=$((max_w - width)); y=0 ;;
+  esac
+  (( width > max_w )) && width=$max_w
+  (( height > max_h )) && height=$max_h
+  (( x < 0 )) && x=0
+  (( y < 0 )) && y=0
+  (( x + width > max_w )) && x=$((max_w - width))
+  (( y + height > max_h )) && y=$((max_h - height))
+
+  convert "$monitor_after" -crop "${width}x${height}+${x}+${y}" +repage "$crop" >/dev/null 2>&1 || return 1
+  printf "crop-region %s %s\n" "$panel" "$crop"
 }
 
 capture_panel() {
@@ -116,7 +136,7 @@ capture_panel() {
     read -r width height _ < <(identify -format "%w %h %[standard-deviation]\n" "$file" 2>/dev/null || printf -- '- - -\n')
     changed=$(compare -metric AE "$baseline" "$file" null: 2>&1 >/dev/null || true)
     changed=${changed%% *}
-    crop_focused_monitor "$panel" "$file" "$crop" || true
+    crop_panel_region "$panel" "$baseline" "$file" "$crop" || true
     record_result "$panel" ok "${width}x${height}:changed=$changed" "$file" "$baseline"
     printf 'ok   %s %s\n' "$panel" "$file"
   else

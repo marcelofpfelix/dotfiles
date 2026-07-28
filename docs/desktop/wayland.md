@@ -37,7 +37,7 @@ hypr-session test
 HYPR_PROFILE=omarchy hypr-session test
 ```
 
-`qs-menu-smoke` writes full screenshots, focused-monitor `*.crop.png` contact-sheet inputs, `contact.png`, and `summary.tsv` under `~/.local/state/quickshell/menu-smoke/`, with `latest` pointing at the newest run. `desktop-doctor` treats that latest run as stale after 24 hours and after newer live Quickshell QML; set `QS_MENU_SMOKE_MAX_AGE_SECONDS=0` to skip only the age check.
+`qs-menu-smoke` writes full screenshots, focused-monitor `*.monitor.png` files, menu-region `*.crop.png` contact-sheet inputs, `contact.png`, and `summary.tsv` under `~/.local/state/quickshell/menu-smoke/`, with `latest` pointing at the newest run. `desktop-doctor` treats that latest run as stale after 24 hours and after newer live Quickshell QML; set `QS_MENU_SMOKE_MAX_AGE_SECONDS=0` to skip only the age check.
 
 Use `HYPR_PROFILE=default` for the current default profile and `HYPR_PROFILE=omarchy` for the Omarchy-like Wayland profile.
 
