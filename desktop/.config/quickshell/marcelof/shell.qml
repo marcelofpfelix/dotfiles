@@ -2566,6 +2566,11 @@ ShellRoot {
             ActionButton { icon: "󰻞"; label: "Work"; minWidth: 68; tooltip: "Unread work inbox"; onTriggered: root.toggleWorkInbox() }
             ActionButton { icon: "󰡨"; label: "Dash"; minWidth: 68; tooltip: "Personal dashboard"; onTriggered: root.togglePersonalDashboard() }
             ActionButton { icon: "󰂚"; label: "Notes"; minWidth: 68; tooltip: "Notifications"; onTriggered: root.toggleNotifications() }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 7
             ActionButton { icon: "󰒓"; label: "Set"; minWidth: 68; tooltip: "Shell settings"; onTriggered: root.toggleSettings() }
             ActionButton { icon: "󱊖"; label: "Tray"; minWidth: 68; tooltip: "Tray manager"; onTriggered: root.toggleTrayManage() }
           }
