@@ -18,10 +18,22 @@ fi
 
 echo
 
+echo "effective Hyprland autostart"
+if command -v dex >/dev/null 2>&1; then
+  dex -ad -e Hyprland 2>/dev/null | sed "s/^Executing command: /- /"
+else
+  echo "- dex missing"
+fi
+
+echo
+
 echo "autostart desktop files"
 for dir in "$HOME/.config/autostart" /etc/xdg/autostart; do
   [ -d "$dir" ] || continue
   find "$dir" -maxdepth 1 -name "*.desktop" -print 2>/dev/null | sort | while IFS= read -r file; do
+    if [ "$dir" = /etc/xdg/autostart ] && [ -f "$HOME/.config/autostart/$(basename "$file")" ]; then
+      continue
+    fi
     name=$(sed -n "s/^Name=//p" "$file" | head -n 1)
     hidden=$(sed -n "s/^Hidden=//p" "$file" | head -n 1)
     echo "- ${name:-$(basename "$file")} ${hidden:+Hidden=$hidden} ($file)"
