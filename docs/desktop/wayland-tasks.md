@@ -349,10 +349,13 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Constraint: keep decrypted values out of argv, logs, QML state, and normal clipboard history by default.
   - Current behavior: `passmenu` opens a Quickshell password picker again; QML stores only entry names, and selection delegates copy/type work to `passmenu-action`. Copy mode uses `gopass show -c` with tracked `GOPASS_CLIPBOARD_COPY_CMD`/`GOPASS_CLIPBOARD_CLEAR_CMD` defaults, so gopass owns timeout/clear behavior through repo-managed hooks. `gopass-clip-copy` is stdin-only and does not use local `gpaste-client add-password`, because that command requires the decrypted password in argv on this machine; unsafe `copyq` secret copy is refused. Quickshell clipboard history filters obvious secret-like rows from the normal picker.
   - Validation: `passmenu-action --self-test`, fake-backend `passmenu --name`, fake-backend `passmenu --user`, `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `bash -n desktop/bin/passmenu desktop/bin/passmenu-action desktop/bin/gopass-clip-copy desktop/bin/gopass-clip-clear desktop/bin/desktop-doctor desktop/bin/desktop-accept desktop/bin/hypr-session`, `qs-menu-smoke`, and `desktop-doctor`.
-- [ ] Build a small unread-work dashboard fed by local CLI/API helpers.
-  - Sources: Slack Conversations API `conversations.info/list/history`, GitHub CLI `gh pr list --search`, Linear inbox/notifications docs.
-  - Acceptance: Quickshell can show counts for Slack unread DMs/mentions, PRs awaiting review, and Linear inbox items without storing tokens in QML or polling aggressively.
-  - Validation: helper commands return redacted JSON, Quickshell panel renders counts, and missing credentials show a quiet unavailable state.
+- [x] Add a redacted work inbox status helper.
+  - Sources: Slack Conversations API, GitHub search through `gh api`, Linear notifications GraphQL, and existing cache patterns.
+  - Current behavior: `work-inbox-status` prints cached JSON for Slack unread counts, GitHub PR review requests, and Linear notification counts. Missing credentials are quiet unavailable states; tokens and message text never enter stdout or curl argv.
+  - Validation: `work-inbox-status --self-test`, `work-inbox-status --no-network`, and `desktop-doctor`.
+- [ ] Build a small unread-work Quickshell dashboard from `work-inbox-status`.
+  - Acceptance: Quickshell renders counts without blocking and leaves credential/API work inside the helper.
+  - Validation: `qs-menu-smoke work-inbox` and `desktop-doctor`.
 - [ ] Add future Google Calendar agenda integration.
   - Source: Google Calendar Events `list` API supports calendar event listing and sync tokens.
   - Acceptance: calendar popup can show the next events through a helper that uses local credentials and caches sync state; no credentials enter QML.
@@ -391,12 +394,11 @@ Do these in this order; each task should leave one small validation command behi
    - Depends on: `passmenu`, `passmenu-action`, `gopass-clip-copy`, `gopass-clip-clear`, and the local GPaste/gopass command surface.
    - Validation: `passmenu-action --self-test`, fake-backend `passmenu --name`, fake-backend `passmenu --user`, `qs-menu-smoke`, and `desktop-doctor`.
    - Result: `passmenu` has a Quickshell popup target again; copy/type actions run in a helper, not QML; gopass copy uses repo-managed clipboard hook defaults; local GPaste password-entry mode and copyq secret copy are intentionally not used because they require password argv.
-5. Work inbox helper first, dashboard second.
-   - Task: create one CLI helper that returns redacted JSON counts for Slack unread/mentions, GitHub PR review requests, and Linear notifications; build the Quickshell panel only after the helper is useful.
-   - Sources: Slack Conversations API, `gh pr list --search`, Linear notification/inbox APIs.
-   - Depends on: local token/env/gopass lookup strategy and a short cache TTL.
-   - Validation: helper prints redacted JSON with missing-credential states; Quickshell renders counts without blocking.
-   - Stop if: API tokens are not available through existing gopass/env patterns.
+5. Work inbox helper first, dashboard second. Helper done.
+   - Task: `work-inbox-status` returns redacted cached JSON counts for Slack unread, GitHub PR review requests, and Linear notifications.
+   - Sources: Slack Conversations API, GitHub search through `gh api`, Linear notifications GraphQL, and local cache patterns.
+   - Validation: `work-inbox-status --self-test`, `work-inbox-status --no-network`, and `desktop-doctor`.
+   - Next: build the Quickshell panel only after live credentials prove the counts are useful.
 6. Meeting and DND awareness.
    - Task: collapse mic/camera/screenshare into one DND-aware meeting indicator and move details into controls/privacy popup.
    - Sources: current `desktop-privacy-status`, AGS/Astal audio/video service model, Noctalia privacy indicators.

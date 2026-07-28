@@ -1,0 +1,248 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof
+cache_file=${WORK_INBOX_CACHE:-$cache_dir/work-inbox.json}
+ttl=${WORK_INBOX_TTL_SECONDS:-120}
+timeout=${WORK_INBOX_TIMEOUT_SECONDS:-4}
+mode=${1:-status}
+
+usage() {
+  printf 'use: work-inbox-status [status|--refresh|--no-network|--self-test]\n' >&2
+}
+
+need_jq() {
+  command -v jq >/dev/null 2>&1 || {
+    printf '{"ok":false,"reason":"missing jq"}\n'
+    exit 0
+  }
+}
+
+iso_now() {
+  date -u '+%Y-%m-%dT%H:%M:%SZ'
+}
+
+cache_valid() {
+  [ -s "$cache_file" ] || return 1
+  local now mtime age
+  now=$(date +%s)
+  mtime=$(stat -c %Y "$cache_file" 2>/dev/null || printf 0)
+  age=$((now - mtime))
+  [ "$age" -lt "$ttl" ]
+}
+
+secret_value() {
+  local env_name=$1 path_env_name=$2 value path
+  value=${!env_name:-}
+  if [ -n "$value" ]; then
+    printf '%s' "$value"
+    return
+  fi
+
+  path=${!path_env_name:-}
+  if [ -n "$path" ] && command -v gopass >/dev/null 2>&1; then
+    gopass show -o "$path" 2>/dev/null || true
+  fi
+}
+
+slack_unread_count() {
+  jq -r '[.channels[]? | (.unread_count_display // .unread_count // 0)] | add // 0'
+}
+
+auth_curl() {
+  local auth_header=$1 url=$2 data=${3:-} cfg
+  cfg=$(mktemp "${TMPDIR:-/tmp}/work-inbox-curl.XXXXXX")
+  chmod 600 "$cfg"
+  {
+    printf 'silent\nshow-error\nfail\n'
+    printf 'max-time = "%s"\n' "$timeout"
+    printf 'header = "%s"\n' "$auth_header"
+    if [ -n "$data" ]; then
+      printf 'header = "Content-Type: application/json"\n'
+    fi
+    printf 'url = "%s"\n' "$url"
+  } >"$cfg"
+
+  if [ -n "$data" ]; then
+    curl -K "$cfg" --data "$data" 2>/dev/null || true
+  else
+    curl -K "$cfg" 2>/dev/null || true
+  fi
+  rm -f "$cfg"
+}
+
+github_review_count() {
+  jq -r '.total_count // (.items | length) // 0'
+}
+
+linear_notification_count() {
+  jq -r '(.data.notifications.nodes // .data.viewer.notifications.nodes // []) | length'
+}
+
+slack_status() {
+  local token json count
+  token=$(secret_value SLACK_TOKEN WORK_INBOX_SLACK_GOPASS_PATH)
+  if [ -z "$token" ]; then
+    printf 'false\t0\t0\tmissing token\n'
+    return
+  fi
+
+  json=$(auth_curl "Authorization: Bearer $token" 'https://slack.com/api/users.conversations?types=im,mpim,private_channel,public_channel&exclude_archived=true&limit=200')
+  if [ -z "$json" ] || [ "$(printf '%s' "$json" | jq -r '.ok // false' 2>/dev/null)" != true ]; then
+    printf 'false\t0\t0\tslack api unavailable\n'
+    return
+  fi
+
+  count=$(printf '%s' "$json" | slack_unread_count 2>/dev/null || printf 0)
+  printf 'true\t%s\t0\tmentions not configured\n' "${count:-0}"
+}
+
+github_status() {
+  local json count
+  if ! command -v gh >/dev/null 2>&1; then
+    printf 'false\t0\tmissing gh\n'
+    return
+  fi
+  if ! gh auth status >/dev/null 2>&1; then
+    printf 'false\t0\tgh not authenticated\n'
+    return
+  fi
+
+  json=$(gh api search/issues -f q='is:pr is:open review-requested:@me archived:false' 2>/dev/null || true)
+  if [ -z "$json" ]; then
+    printf 'false\t0\tgithub query failed\n'
+    return
+  fi
+
+  count=$(printf '%s' "$json" | github_review_count 2>/dev/null || printf 0)
+  printf 'true\t%s\tok\n' "${count:-0}"
+}
+
+linear_status() {
+  local token json count
+  token=$(secret_value LINEAR_API_KEY WORK_INBOX_LINEAR_GOPASS_PATH)
+  if [ -z "$token" ]; then
+    token=$(secret_value LINEAR_TOKEN WORK_INBOX_LINEAR_GOPASS_PATH)
+  fi
+  if [ -z "$token" ]; then
+    printf 'false\t0\tmissing token\n'
+    return
+  fi
+
+  json=$(auth_curl "Authorization: $token" 'https://api.linear.app/graphql' '{"query":"query { notifications(first: 50, filter: { readAt: { null: true } }) { nodes { id } } }"}')
+  if [ -z "$json" ] || [ "$(printf '%s' "$json" | jq -r 'has("errors")' 2>/dev/null)" = true ]; then
+    printf 'false\t0\tlinear api unavailable\n'
+    return
+  fi
+
+  count=$(printf '%s' "$json" | linear_notification_count 2>/dev/null || printf 0)
+  printf 'true\t%s\tok\n' "${count:-0}"
+}
+
+emit_json() {
+  local source stale slack_line github_line linear_line
+  source=$1
+  stale=$2
+  slack_line=$3
+  github_line=$4
+  linear_line=$5
+
+  IFS=$'\t' read -r slack_available slack_unread slack_mentions slack_reason <<<"$slack_line"
+  IFS=$'\t' read -r github_available github_reviews github_reason <<<"$github_line"
+  IFS=$'\t' read -r linear_available linear_notifications linear_reason <<<"$linear_line"
+
+  jq -n \
+    --arg updated_at "$(iso_now)" \
+    --arg source "$source" \
+    --argjson stale "$stale" \
+    --argjson slack_available "$slack_available" \
+    --argjson slack_unread "${slack_unread:-0}" \
+    --argjson slack_mentions "${slack_mentions:-0}" \
+    --arg slack_reason "$slack_reason" \
+    --argjson github_available "$github_available" \
+    --argjson github_reviews "${github_reviews:-0}" \
+    --arg github_reason "$github_reason" \
+    --argjson linear_available "$linear_available" \
+    --argjson linear_notifications "${linear_notifications:-0}" \
+    --arg linear_reason "$linear_reason" \
+    '{
+      schema: 1,
+      ok: true,
+      updated_at: $updated_at,
+      source: $source,
+      stale: $stale,
+      slack: {
+        available: $slack_available,
+        unread: $slack_unread,
+        mentions: $slack_mentions,
+        reason: $slack_reason
+      },
+      github: {
+        available: $github_available,
+        review_requests: $github_reviews,
+        reason: $github_reason
+      },
+      linear: {
+        available: $linear_available,
+        notifications: $linear_notifications,
+        reason: $linear_reason
+      }
+    }'
+}
+
+no_network() {
+  emit_json no-network false \
+    $'false\t0\t0\tnetwork disabled' \
+    $'false\t0\tnetwork disabled' \
+    $'false\t0\tnetwork disabled'
+}
+
+refresh() {
+  mkdir -p "$cache_dir"
+  local tmp
+  tmp="$cache_file.$$"
+  emit_json live false "$(slack_status)" "$(github_status)" "$(linear_status)" >"$tmp"
+  mv "$tmp" "$cache_file"
+  cat "$cache_file"
+}
+
+self_test() {
+  local slack github linear
+  slack=$(printf '{"ok":true,"channels":[{"unread_count_display":2},{"unread_count":3}]}' | slack_unread_count)
+  github=$(printf '{"total_count":4,"items":[]}' | github_review_count)
+  linear=$(printf '{"data":{"notifications":{"nodes":[{"id":"a"},{"id":"b"}]}}}' | linear_notification_count)
+
+  [ "$slack" = 5 ]
+  [ "$github" = 4 ]
+  [ "$linear" = 2 ]
+  no_network | jq -e '.ok == true and .slack.available == false and .github.available == false and .linear.available == false' >/dev/null
+  printf 'work-inbox-status self-test: ok\n'
+}
+
+need_jq
+
+case "$mode" in
+  status)
+    if cache_valid; then
+      jq '.source = "cache"' "$cache_file"
+    else
+      refresh
+    fi
+    ;;
+  --refresh|refresh)
+    refresh
+    ;;
+  --no-network|no-network)
+    no_network
+    ;;
+  --self-test|self-test)
+    self_test
+    ;;
+  -h|--help)
+    usage
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
