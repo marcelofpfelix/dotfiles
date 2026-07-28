@@ -8,22 +8,39 @@ owner() {
   gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.GetNameOwner org.freedesktop.Notifications >/dev/null
 }
 
+capabilities() {
+  command -v gdbus >/dev/null 2>&1 || return 0
+  gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.GetCapabilities
+}
+
+actions_supported() {
+  capabilities | grep -q actions
+}
+
+send_action_notification() {
+  local log="${XDG_RUNTIME_DIR:-/tmp}/desktop-notification-smoke.action"
+  notify-send -a desktop-notification-smoke -A open=Open -A done=Done -t 10000 "Desktop notification action smoke" "Open notifications; this card should show Open and Done buttons." >"$log" 2>/dev/null &
+  qs-bar notifications >/dev/null 2>&1 || true
+  printf "action-log %s\n" "$log"
+}
+
 case "${1:-run}" in
   --status|status)
     command -v notify-send >/dev/null 2>&1
     command -v qs-bar >/dev/null 2>&1
     owner
+    actions_supported
     ;;
   -h|--help)
-    printf 'use: desktop-notification-smoke [--status]\n'
+    printf "use: desktop-notification-smoke [--status|actions]\n"
     ;;
-  run)
+  run|actions)
     owner
-    notify-send -a desktop-notification-smoke -A open=Open -t 6000 "Desktop notification smoke" "Toast should appear; click it, then check the notification center."
-    qs-bar notifications >/dev/null 2>&1 || true
+    actions_supported
+    send_action_notification
     ;;
   *)
-    printf 'use: desktop-notification-smoke [--status]\n' >&2
+    printf "use: desktop-notification-smoke [--status|actions]\n" >&2
     exit 2
     ;;
 esac

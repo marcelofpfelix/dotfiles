@@ -16,7 +16,7 @@ For the short switch procedure, see
 - `desktop/bin/desktop-package-audit`: checks the active Wayland package intent against the sibling homelab install list.
 - `desktop/bin/qs-menu-smoke`: visual smoke helper that opens, captures, closes, and checks Quickshell menu screenshots under local state.
 - `desktop/bin/desktop-reload`: validates, copies, and reloads the live Quickshell shell and board config.
-- `desktop/bin/desktop-notification-smoke`: explicit notification toast/center smoke test.
+- `desktop/bin/desktop-notification-smoke`: notification toast, action capability, and center smoke test.
 - `desktop/bin/hypr-gdm`: installs the generated `/usr/share/wayland-sessions/hyprland.desktop` login-manager entry and GDM account defaults.
 - `desktop/bin/hypr-scratch`: helper-backed special workspace scratchpad.
 - `desktop/bin/hyprdrop`: parked Wayland dropdown experiment for the old archived `ddspawn` behavior; it is not bound by default.

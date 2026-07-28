@@ -142,7 +142,7 @@ Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-re
   - Sources: Caelestia DND toggle, Omarchy persisted notification DND and bar indicator.
   - Dependencies: reuse the current Quickshell notification owner and history model.
   - Acceptance: DND suppresses popup toasts but still records notifications in history, has a visible active state, and persists across `qs-bar reload`.
-  - Validation: `desktop-notification-smoke`, `qs-menu-smoke notifications controls`, and manual `notify-send` while DND is active.
+  - Validation: `desktop-notification-smoke --status`, `desktop-notification-smoke actions`, `qs-menu-smoke notifications controls`, and manual DND check.
   - Current behavior: DND persists in Quickshell state, suppresses toast popups, keeps notification history, and has bar/settings indicators.
 - [x] Add volume, mic, and brightness OSD feedback.
   - Sources: Caelestia OSD module, Noctalia OSD overlay.
@@ -214,7 +214,7 @@ Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-re
   - Acceptance: `qs-bar media` and audio right-click open a dedicated media popup with previous/play-next, pause-all, local noise/music state, stream volume controls, and pavucontrol output switching.
 - [x] Build a notification dashboard/inbox.
   - Sources: Omarchy quattro notification service/card split, Noctalia notification center, AGS notification popup replacement behavior.
-  - Current behavior: existing center groups recent notifications by app, preserves notification actions, and supports clear-one, clear-app, and clear-all.
+  - Current behavior: existing center groups recent notifications by app, preserves notification actions, supports clear-one, clear-app, and clear-all, and `desktop-notification-smoke --status` verifies D-Bus action capability.
   - Acceptance: group by app, show seen/unseen or recent sections, preserve actions, clear one app, clear all.
 - [x] Add a small wallpaper/theme popup only if it uses existing local tools.
   - Sources: Caelestia structured config/wallpaper handling, end-4 wallpaper/theme panels.
