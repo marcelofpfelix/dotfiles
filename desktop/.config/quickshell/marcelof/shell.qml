@@ -606,6 +606,13 @@ ShellRoot {
   property string inhibitStatusText: "inactive"
   property string lisbonClockText: "--"
   property string timePanelText: ""
+  property string pomodoroModeText: "idle"
+  property string pomodoroLabelText: ""
+  property int pomodoroRemainingSeconds: 0
+  property bool pomodoroRunning: false
+  property bool pomodoroPaused: false
+  property bool pomodoroComplete: false
+  property string pomodoroTimewText: "timew idle"
   property string workInboxUpdatedText: ""
   property string workInboxSourceText: ""
   property bool workInboxSlackAvailable: false
@@ -882,6 +889,7 @@ ShellRoot {
       timePanelRefresh.running = true
       todoPanelRefresh.running = true
       weatherPanelRefresh.running = true
+      pomodoroRefresh.running = true
     }
   }
 
@@ -1167,6 +1175,50 @@ ShellRoot {
     }
   }
 
+  function formatPomodoroTime(seconds) {
+    const total = Math.max(0, Number(seconds || 0))
+    const minutes = Math.floor(total / 60)
+    const rest = total % 60
+    return minutes + ":" + (rest < 10 ? "0" : "") + rest
+  }
+
+  function pomodoroStatusText() {
+    if (root.pomodoroModeText === "idle")
+      return "No Pomodoro"
+    const mode = root.pomodoroModeText.replace("-", " ")
+    const suffix = root.pomodoroPaused ? " paused" : (root.pomodoroComplete ? " done" : "")
+    return mode + " " + root.formatPomodoroTime(root.pomodoroRemainingSeconds) + suffix
+  }
+
+  function updatePomodoro(output) {
+    const text = String(output || "").trim()
+    if (text.length === 0)
+      return
+
+    try {
+      const data = JSON.parse(text)
+      const timew = data.timew || {}
+      root.pomodoroModeText = data.mode || "idle"
+      root.pomodoroLabelText = data.label || ""
+      root.pomodoroRemainingSeconds = Number(data.remaining_seconds || 0)
+      root.pomodoroRunning = data.running === true
+      root.pomodoroPaused = data.paused === true
+      root.pomodoroComplete = data.complete === true
+      root.pomodoroTimewText = timew.available === true ? (timew.tracking === true ? (timew.owned === true ? "timew pomodoro" : "timew busy") : "timew idle") : "timew unavailable"
+    } catch (error) {
+      root.pomodoroModeText = "parse error"
+      root.pomodoroTimewText = "pomodoroctl parse error"
+    }
+  }
+
+  function runPomodoro(action, extra) {
+    const command = ["/home/marcelof/bin/pomodoroctl", action]
+    if (extra)
+      command.push(extra)
+    Quickshell.execDetached(command)
+    pomodoroRefreshLater.restart()
+  }
+
   function refreshAudioMixer() {
     audioStreamsRefresh.running = true
   }
@@ -1384,6 +1436,20 @@ ShellRoot {
   }
 
   Process {
+    id: pomodoroRefresh
+    command: ["/home/marcelof/bin/pomodoroctl", "status"]
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.updatePomodoro(this.text) }
+  }
+
+  Timer {
+    id: pomodoroRefreshLater
+    interval: 300
+    repeat: false
+    onTriggered: pomodoroRefresh.running = true
+  }
+
+  Process {
     id: workInboxRefresh
     command: ["/home/marcelof/bin/work-inbox-status"]
     running: false
@@ -1402,6 +1468,13 @@ ShellRoot {
     running: true
     repeat: true
     onTriggered: todoPanelRefresh.running = root.calendarOpen
+  }
+
+  Timer {
+    interval: 1000
+    running: true
+    repeat: true
+    onTriggered: pomodoroRefresh.running = root.calendarOpen
   }
 
   Process {
@@ -2644,6 +2717,41 @@ ShellRoot {
                   font.pixelSize: 12
                   text: parent.day > 0 ? parent.day : ""
                 }
+              }
+            }
+          }
+
+          Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 92
+            radius: 5
+            color: "#1e1e2e"
+
+            ColumnLayout {
+              anchors.fill: parent
+              anchors.margins: 10
+              spacing: 7
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Text { color: root.pomodoroRunning ? shellSettings.primaryColor : "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 18; text: root.pomodoroPaused ? "󰏤" : "󰐊" }
+                ColumnLayout {
+                  Layout.fillWidth: true
+                  spacing: 2
+                  Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.pomodoroStatusText() }
+                  Text { Layout.fillWidth: true; color: "#9399b2"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.pomodoroLabelText.length > 0 ? root.pomodoroLabelText + " / " + root.pomodoroTimewText : root.pomodoroTimewText }
+                }
+              }
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 7
+                ActionButton { Layout.fillWidth: true; icon: "󰐊"; label: "Start"; minWidth: 68; active: root.pomodoroModeText === "focus" && root.pomodoroRunning; tooltip: "Start focus timer"; onTriggered: root.runPomodoro("start") }
+                ActionButton { Layout.fillWidth: true; icon: root.pomodoroPaused ? "󰐊" : "󰏤"; label: root.pomodoroPaused ? "Resume" : "Pause"; minWidth: 68; active: root.pomodoroRunning && !root.pomodoroPaused; tooltip: root.pomodoroPaused ? "Resume timer" : "Pause timer"; onTriggered: root.runPomodoro(root.pomodoroPaused ? "resume" : "pause") }
+                ActionButton { Layout.fillWidth: true; icon: "󰓛"; label: "Stop"; minWidth: 62; tooltip: "Stop timer"; onTriggered: root.runPomodoro("stop") }
+                ActionButton { Layout.fillWidth: true; icon: "󰔛"; label: "5m"; minWidth: 54; active: root.pomodoroModeText === "short-break" && root.pomodoroRunning; tooltip: "Start short break"; onTriggered: root.runPomodoro("break") }
+                ActionButton { Layout.fillWidth: true; icon: "󰔛"; label: "15m"; minWidth: 54; active: root.pomodoroModeText === "long-break" && root.pomodoroRunning; tooltip: "Start long break"; onTriggered: root.runPomodoro("break", "long") }
               }
             }
           }

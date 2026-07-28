@@ -339,8 +339,9 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Acceptance: helper supports `status`, `start`, `pause`, `resume`, `stop`, `break`, and `self-test`; it never stops unrelated Timewarrior intervals.
   - Current behavior: `desktop/bin/pomodoroctl` stores local timer state under Quickshell state, prints redacted JSON for QML, uses Timewarrior only when available and idle, and stops Timewarrior only for helper-owned `pomodoro` intervals.
   - Validation: `pomodoroctl self-test` and `pomodoroctl status`.
-- [ ] Wire `pomodoroctl` into the calendar popup.
+- [x] Wire `pomodoroctl` into the calendar popup.
   - Acceptance: calendar popup shows the current Pomodoro mode, remaining time, focus label, and start/pause/resume/stop/break controls backed only by `pomodoroctl`.
+  - Current behavior: the calendar popup refreshes `pomodoroctl status`, shows mode, remaining time, label, Timewarrior state, and exposes Start/Pause/Resume/Stop/5m/15m controls.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke calendar`, and `desktop-doctor`.
 - [ ] Wire a future board-backed personal dashboard into Quickshell.
   - Sources: rush `board/docs/personal-dashboards.md`, current Quickshell calendar/controls panels, board `personal.today`/`personal.money` surfaces once implemented.
@@ -414,7 +415,8 @@ Do these in this order; each task should leave one small validation command behi
    - Task: write the minimal design for a time-menu Pomodoro timer with optional Taskwarrior/timewarrior links before implementation.
    - Result: `docs/desktop/pomodoro-timewarrior.md` documents commands, state files, Timewarrior ownership, JSON output, and no-secret QML boundary.
    - Result: `desktop/bin/pomodoroctl` implements status/start/pause/resume/stop/break/self-test and is covered by `desktop-doctor`.
-   - Next: wire `pomodoroctl` into the calendar popup without moving timer logic into QML.
+   - Result: the calendar popup renders `pomodoroctl` status and calls the helper for all timer actions.
+   - Next: calendar agenda integration or visual consistency pass.
 8. Calendar agenda integration.
    - Task: add a helper for cached Google Calendar event summaries, then feed the existing calendar popup.
    - Depends on: local credential storage decision and no-secret QML boundary.
