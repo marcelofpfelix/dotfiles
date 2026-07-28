@@ -2,18 +2,26 @@
 
 ################################################################################
 #                                 FILE INFO
-# aggressive local cache cleanup with dry-run by default
+# local disk cleanup with dry-run by default; Linux and macOS friendly
 ################################################################################
 
 set -Eeuo pipefail
 
 EXECUTE=0
 GWT_ROOT=${GWT_ROOT:-"$HOME/gwt"}
+TRANSFER_AGE_DAYS=${TRANSFER_AGE_DAYS:-365}
+TRANSFER_MIN_SIZE=${TRANSFER_MIN_SIZE:-100M}
 DO_DOCKER=1
+DO_DOCKER_VOLUMES=0
 DO_BREW=1
 DO_NPM=1
 DO_JS_STORES=1
 DO_PYTHON=1
+DO_GO=1
+DO_POETRY=1
+DO_TRASH=1
+DO_LOGS=1
+DO_TRANSFER=1
 DO_MAC=1
 DO_GWT=1
 
@@ -24,19 +32,29 @@ Usage: clean-caches [--execute] [options]
 Dry-runs by default. Pass --execute to delete caches and run prune commands.
 
 Options:
-  --execute             actually delete/prune
-  --gwt-root PATH       gwt root to scan (default: $HOME/gwt)
-  --skip-docker         skip docker system/builder pruning
-  --skip-brew           skip Homebrew cleanup
-  --skip-npm            skip npm cache cleanup
-  --skip-js-stores      skip pnpm/yarn cache pruning
-  --skip-python         skip pip/uv cache cleanup
-  --skip-mac            skip macOS developer/cache directories
-  --skip-gwt            skip ignored build/dependency folders under gwt
-  -h, --help            show this help
+  --execute                 actually delete/prune
+  --gwt-root PATH           gwt root to scan (default: $HOME/gwt)
+  --transfer-age-days N     delete transfer/download files older than N days (default: 365)
+  --transfer-min-size SIZE  delete transfer/download files larger than SIZE (default: 100M)
+  --include-docker-volumes  prune unused Docker volumes too; off by default
+  --skip-docker             skip docker image/network/builder pruning
+  --skip-brew               skip Homebrew cleanup
+  --skip-npm                skip npm cache cleanup
+  --skip-js-stores          skip pnpm/yarn cache pruning
+  --skip-python             skip pip/uv cache cleanup
+  --skip-go                 skip Go module/build cache cleanup
+  --skip-poetry             skip Poetry cache/data cleanup
+  --skip-trash              skip Trash cleanup
+  --skip-logs               skip log cleanup
+  --skip-transfer           skip old/large files in ~/transfer ~/Downloads ~/tdown
+  --skip-mac                skip macOS developer/cache directories
+  --skip-gwt                skip ignored build/dependency folders under gwt
+  -h, --help                show this help
 
+Docker volumes are never removed unless --include-docker-volumes is passed.
+Transfer cleanup deletes files under ~/transfer, ~/Downloads, and ~/tdown when
+older than TRANSFER_AGE_DAYS or larger than TRANSFER_MIN_SIZE.
 The gwt cleanup only removes candidate directories that are ignored by Git.
-Dry-runs print sizes grouped by compact paths, up to three folders deep.
 EOF
 }
 
@@ -47,7 +65,9 @@ log() {
 run() {
   if (( EXECUTE )); then
     log "run: $*"
-    "$@"
+    if ! "$@"; then
+      log "warn: command failed: $*"
+    fi
   else
     log "would run: $*"
   fi
@@ -89,29 +109,17 @@ print_size_summary() {
   local input=$1
 
   awk -F '\t' '
-    {
-      size[$2] += $1
-    }
-    END {
-      for (path in size) {
-        print size[path] "\t" path
-      }
-    }
+    { size[$2] += $1 }
+    END { for (path in size) print size[path] "\t" path }
   ' "$input" |
     sort -nr |
     awk -F '\t' '
       function human(kb) {
-        if (kb >= 1048576) {
-          return sprintf("%.1fG", kb / 1048576)
-        }
-        if (kb >= 1024) {
-          return sprintf("%.0fM", kb / 1024)
-        }
+        if (kb >= 1048576) return sprintf("%.1fG", kb / 1048576)
+        if (kb >= 1024) return sprintf("%.0fM", kb / 1024)
         return sprintf("%dK", kb)
       }
-      {
-        printf "%8s  %s\n", human($1), $2
-      }
+      { printf "%8s  %s\n", human($1), $2 }
     '
 }
 
@@ -124,9 +132,33 @@ remove_path() {
   size=$(path_size "$path")
   if (( EXECUTE )); then
     log "remove ${size:-?} $(compact_path "$path" "$root")"
-    rm -rf -- "$path"
+    rm -rf -- "$path" || sudo -n rm -rf -- "$path"
   else
     printf '%8s  %s\n' "${size:-?}" "$(compact_path "$path" "$root")"
+  fi
+}
+
+remove_contents() {
+  local dir=$1
+  local root=${2:-$HOME}
+  [[ -d "$dir" ]] || return 0
+  if (( EXECUTE )); then
+    log "empty $(compact_path "$dir" "$root")"
+    find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+  else
+    remove_path "$dir" "$root"
+  fi
+}
+
+remove_contents_sudo() {
+  local dir=$1
+  local root=${2:-$HOME}
+  [[ -d "$dir" ]] || return 0
+  if (( EXECUTE )); then
+    log "empty sudo $(compact_path "$dir" "$root")"
+    sudo -n find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+  else
+    remove_path "$dir" "$root"
   fi
 }
 
@@ -137,47 +169,37 @@ have() {
 parse_args() {
   while (($#)); do
     case "$1" in
-      --execute)
-        EXECUTE=1
-        ;;
+      --execute) EXECUTE=1 ;;
       --gwt-root)
         shift
-        [[ $# -gt 0 ]] || {
-          log "missing value for --gwt-root" >&2
-          exit 2
-        }
+        [[ $# -gt 0 ]] || { log "missing value for --gwt-root" >&2; exit 2; }
         GWT_ROOT=$1
         ;;
-      --skip-docker)
-        DO_DOCKER=0
+      --transfer-age-days)
+        shift
+        [[ $# -gt 0 ]] || { log "missing value for --transfer-age-days" >&2; exit 2; }
+        TRANSFER_AGE_DAYS=$1
         ;;
-      --skip-brew)
-        DO_BREW=0
+      --transfer-min-size)
+        shift
+        [[ $# -gt 0 ]] || { log "missing value for --transfer-min-size" >&2; exit 2; }
+        TRANSFER_MIN_SIZE=$1
         ;;
-      --skip-npm)
-        DO_NPM=0
-        ;;
-      --skip-js-stores)
-        DO_JS_STORES=0
-        ;;
-      --skip-python)
-        DO_PYTHON=0
-        ;;
-      --skip-mac)
-        DO_MAC=0
-        ;;
-      --skip-gwt)
-        DO_GWT=0
-        ;;
-      -h|--help)
-        usage
-        exit 0
-        ;;
-      *)
-        log "unknown argument: $1" >&2
-        usage >&2
-        exit 2
-        ;;
+      --include-docker-volumes) DO_DOCKER_VOLUMES=1 ;;
+      --skip-docker) DO_DOCKER=0 ;;
+      --skip-brew) DO_BREW=0 ;;
+      --skip-npm) DO_NPM=0 ;;
+      --skip-js-stores) DO_JS_STORES=0 ;;
+      --skip-python) DO_PYTHON=0 ;;
+      --skip-go) DO_GO=0 ;;
+      --skip-poetry) DO_POETRY=0 ;;
+      --skip-trash) DO_TRASH=0 ;;
+      --skip-logs) DO_LOGS=0 ;;
+      --skip-transfer) DO_TRANSFER=0 ;;
+      --skip-mac) DO_MAC=0 ;;
+      --skip-gwt) DO_GWT=0 ;;
+      -h|--help) usage; exit 0 ;;
+      *) log "unknown argument: $1" >&2; usage >&2; exit 2 ;;
     esac
     shift
   done
@@ -188,10 +210,17 @@ cleanup_docker() {
   have docker || return 0
 
   log "== docker =="
-  run docker system prune --all --force --volumes
+  run docker container prune --force
+  run docker image prune --all --force
+  run docker network prune --force
   run docker builder prune --all --force
   if docker buildx version >/dev/null 2>&1; then
     run docker buildx prune --all --force
+  fi
+  if (( DO_DOCKER_VOLUMES )); then
+    run docker volume prune --force
+  else
+    log "skip docker volumes; pass --include-docker-volumes to prune them"
   fi
 }
 
@@ -216,28 +245,108 @@ cleanup_js_stores() {
   (( DO_JS_STORES )) || return 0
 
   log "== js package stores =="
-  if have pnpm; then
-    run pnpm store prune
-  fi
-  if have yarn; then
-    run yarn cache clean
-  fi
+  if have pnpm; then run pnpm store prune; fi
+  if have yarn; then run yarn cache clean; fi
 }
 
 cleanup_python() {
   (( DO_PYTHON )) || return 0
 
   log "== python =="
-  if have pip; then
-    run pip cache purge
+  if have pip; then run pip cache purge; fi
+  if have uv; then run uv cache clean; fi
+}
+
+cleanup_go() {
+  (( DO_GO )) || return 0
+  have go || return 0
+
+  log "== go =="
+  run go clean -cache -modcache -testcache -fuzzcache
+}
+
+cleanup_poetry() {
+  (( DO_POETRY )) || return 0
+
+  log "== poetry =="
+  remove_path "$HOME/.cache/pypoetry"
+  remove_path "$HOME/.local/share/pypoetry"
+}
+
+cleanup_trash() {
+  (( DO_TRASH )) || return 0
+
+  log "== trash =="
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    remove_contents "$HOME/.Trash"
+  else
+    remove_contents_sudo "$HOME/.local/share/Trash/files"
+    remove_contents_sudo "$HOME/.local/share/Trash/info"
   fi
-  if have uv; then
-    run uv cache clean
+}
+
+cleanup_logs() {
+  (( DO_LOGS )) || return 0
+
+  log "== logs =="
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    remove_contents "$HOME/Library/Logs"
+    return 0
+  fi
+
+  if have journalctl; then
+    run sudo -n journalctl --vacuum-size=500M
+  fi
+  for log_file in /var/log/syslog /var/log/syslog.1 /var/log/kern.log /var/log/kern.log.1 /var/log/auth.log /var/log/auth.log.1; do
+    [[ -f "$log_file" ]] || continue
+    if (( EXECUTE )); then
+      log "truncate $(path_size "$log_file") $log_file"
+      sudo -n truncate -s 0 "$log_file"
+    else
+      printf '%8s  %s\n' "$(path_size "$log_file")" "$log_file"
+    fi
+  done
+}
+
+cleanup_transfer_files() {
+  local root
+  local tmp
+  local path
+  local changed=0
+
+  (( DO_TRANSFER )) || return 0
+  log "== old or large transfer/download files =="
+
+  if (( ! EXECUTE )); then
+    tmp=$(mktemp "${TMPDIR:-/tmp}/clean-caches-transfer.XXXXXX")
+  fi
+
+  for root in "$HOME/transfer" "$HOME/Downloads" "$HOME/tdown"; do
+    [[ -d "$root" ]] || continue
+    while IFS= read -r -d '' path; do
+      changed=1
+      if (( EXECUTE )); then
+        remove_path "$path" "$root"
+      else
+        du -sk "$path" 2>/dev/null | awk -v label="$(compact_path "$path" "$root")" '{print $1 "\t" label}' >>"$tmp"
+      fi
+    done < <(find "$root" -xdev -type f \( -mtime +"$TRANSFER_AGE_DAYS" -o -size +"$TRANSFER_MIN_SIZE" \) -print0)
+    if (( EXECUTE )); then
+      find "$root" -xdev -type d -empty -delete 2>/dev/null || true
+    fi
+  done
+
+  if (( ! EXECUTE )); then
+    if [[ -s "$tmp" ]]; then print_size_summary "$tmp"; fi
+    rm -f "$tmp"
+  elif (( ! changed )); then
+    log "no matching files"
   fi
 }
 
 cleanup_mac() {
   (( DO_MAC )) || return 0
+  [[ "$(uname -s)" == "Darwin" ]] || return 0
 
   log "== macOS developer caches =="
   remove_path "$HOME/Library/Developer/Xcode/DerivedData"
@@ -261,12 +370,8 @@ git_ignored() {
   [[ -n "$repo" ]] || return 1
 
   case "$path" in
-    "$repo"/*)
-      rel=${path#"$repo"/}
-      ;;
-    *)
-      return 1
-      ;;
+    "$repo"/*) rel=${path#"$repo"/} ;;
+    *) return 1 ;;
   esac
 
   git -C "$repo" check-ignore -q -- "$rel"
@@ -277,15 +382,10 @@ cleanup_gwt_ignored_dirs() {
   local tmp
 
   (( DO_GWT )) || return 0
-  [[ -d "$GWT_ROOT" ]] || {
-    log "skip gwt: $GWT_ROOT not found"
-    return 0
-  }
+  [[ -d "$GWT_ROOT" ]] || { log "skip gwt: $GWT_ROOT not found"; return 0; }
 
   log "== ignored gwt build/dependency folders =="
-  if (( ! EXECUTE )); then
-    tmp=$(mktemp "${TMPDIR:-/tmp}/clean-caches.XXXXXX")
-  fi
+  if (( ! EXECUTE )); then tmp=$(mktemp "${TMPDIR:-/tmp}/clean-caches.XXXXXX"); fi
   while IFS= read -r -d '' path; do
     if git_ignored "$path"; then
       if (( EXECUTE )); then
@@ -320,9 +420,7 @@ cleanup_gwt_ignored_dirs() {
   )
 
   if (( ! EXECUTE )); then
-    if [[ -s "$tmp" ]]; then
-      print_size_summary "$tmp"
-    fi
+    if [[ -s "$tmp" ]]; then print_size_summary "$tmp"; fi
     rm -f "$tmp"
   fi
 }
@@ -334,11 +432,16 @@ main() {
     log "dry-run mode; pass --execute to delete caches"
   fi
 
+  cleanup_trash
+  cleanup_logs
+  cleanup_transfer_files
   cleanup_docker
   cleanup_brew
   cleanup_npm
   cleanup_js_stores
   cleanup_python
+  cleanup_go
+  cleanup_poetry
   cleanup_mac
   cleanup_gwt_ignored_dirs
 }
