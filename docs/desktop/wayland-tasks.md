@@ -433,11 +433,11 @@ Do these in this order; each task should leave one small validation command behi
    - Task: add a helper for cached calendar summaries, then feed the existing calendar popup.
    - Result: `calendar-agenda-status` renders upcoming events from the local khal cache, and the calendar popup has a dedicated Agenda section.
    - Blocked next: Google account sync credentials/tooling are intentionally outside Quickshell and not configured here.
-10. Visual consistency pass.
+10. Visual consistency pass. Done first pass.
    - Task: normalize panel spacing, action row size, and empty states across launcher, clipboard, network, notifications, calendar, media, and controls using current local components.
    - Sources: Noctalia compact control-center layout, Caelestia settings/actions, cxOrz quick settings, end-4 smoke/utility polish.
-   - Depends on: screenshot smoke visibility.
-   - Validation: full `qs-menu-smoke`, inspect contact sheet, `desktop-doctor`.
+   - Result: shared action buttons now keep a stable height and elide long labels instead of overflowing; the media popup width matches the other right-side dashboards.
+   - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke controls media notifications clipboard network calendar`, and `desktop-doctor`.
 
 ## Automation helpers
 

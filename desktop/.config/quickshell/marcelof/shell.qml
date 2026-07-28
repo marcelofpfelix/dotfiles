@@ -1692,7 +1692,10 @@ ShellRoot {
 
     implicitHeight: 32
     implicitWidth: Math.max(minWidth, actionRow.implicitWidth + 18)
+    Layout.minimumHeight: implicitHeight
+    Layout.preferredHeight: implicitHeight
     radius: 6
+    clip: true
     color: actionMouse.containsMouse ? (active ? "#585b70" : "#45475a") : (active ? "#3b4252" : "#313244")
 
     RowLayout {
@@ -1701,7 +1704,7 @@ ShellRoot {
       spacing: 6
 
       Text { color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: actionButtonRoot.icon }
-      Text { color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: actionButtonRoot.label }
+      Text { Layout.maximumWidth: Math.max(0, actionButtonRoot.width - actionButtonRoot.implicitHeight - 18); color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: actionButtonRoot.label }
     }
 
     MouseArea {
@@ -2342,7 +2345,7 @@ ShellRoot {
       id: mediaPanelWindow
       visible: root.mediaPanelOpen
       color: "transparent"
-      implicitWidth: 500
+      implicitWidth: 460
       implicitHeight: 420
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
