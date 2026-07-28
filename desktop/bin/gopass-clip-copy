@@ -10,14 +10,15 @@ BACKEND="${CLIP_BACKEND:-gpaste}"
 
 case "$BACKEND" in
     gpaste)
-        gpaste-client add-password "$1"
+        # gpaste-client add-password requires the secret in argv. Keep stdin-only
+        # handling here and pause GPaste tracking so the secret is not saved there.
+        gpaste-client stop 2>/dev/null || true
+        gpaste-client
+        gpaste-client start 2>/dev/null || true
         ;;
     copyq)
-        # disable monitoring so the secret is not recorded in history,
-        # copy via stdin, then re-enable monitoring
-        copyq disable
-        copyq copy -- "$(cat)"
-        copyq enable
+        echo "gopass-clip-copy: copyq backend cannot safely copy secrets without argv" >&2
+        exit 1
         ;;
     *)
         echo "gopass-clip-copy: unknown CLIP_BACKEND: $BACKEND" >&2

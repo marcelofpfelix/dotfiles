@@ -344,11 +344,11 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Sources: current Quickshell clipboard picker, launcher popup behavior, user report that clipboard should be popup-like instead of a normal window.
   - Current behavior: `qs-bar clipboard` toggles a centered 720x500 floating Quickshell picker, uses the same Hyprland float/center rule shape as launcher/web search, takes focus immediately, and closes through Escape, focus-grab clear, or repeated toggle.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `luac -p desktop/.config/hypr/init.lua desktop/.config/hypr/profiles/default.lua desktop/.config/hypr/profiles/omarchy.lua`, `bash -n desktop/bin/qs-menu-smoke desktop/bin/hypr-session desktop/bin/qs-bar`, `qs-menu-smoke clipboard-toggle clipboard`, and `desktop-doctor`.
-- [ ] Integrate secret-aware clipboard handling with gopass/GPaste.
-  - Sources: local `gopass-clip-copy`, `gopass-clip-clear`, `history-secrets`, `passmenu`, wiki GPG/gopass notes, homework `gopass-env.sh` and import helpers, and end-4/JakooLit cliphist watcher patterns.
+- [x] Integrate secret-aware clipboard handling with gopass/GPaste.
+  - Sources: local `gopass-clip-copy`, `gopass-clip-clear`, `history-secrets`, `passmenu`, local gopass/GPaste command surface, and the current Quickshell clipboard picker.
   - Constraint: keep decrypted values out of argv, logs, QML state, and normal clipboard history by default.
-  - Acceptance: password copy paths continue using GPaste password entries when available; Quickshell clipboard history can hide or flag secret-looking rows; `passmenu` never writes secrets into normal `cliphist` history unless explicitly requested.
-  - Validation: dry-run `history-secrets`, `passmenu --name`, `passmenu --user`, and a safe fake secret clipboard test.
+  - Current behavior: `passmenu` opens a Quickshell password picker again; QML stores only entry names, and selection delegates copy/type work to `passmenu-action`. Copy mode uses `gopass show -c` with tracked `GOPASS_CLIPBOARD_COPY_CMD`/`GOPASS_CLIPBOARD_CLEAR_CMD` defaults, so gopass owns timeout/clear behavior through repo-managed hooks. `gopass-clip-copy` is stdin-only and does not use local `gpaste-client add-password`, because that command requires the decrypted password in argv on this machine; unsafe `copyq` secret copy is refused. Quickshell clipboard history filters obvious secret-like rows from the normal picker.
+  - Validation: `passmenu-action --self-test`, fake-backend `passmenu --name`, fake-backend `passmenu --user`, `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `bash -n desktop/bin/passmenu desktop/bin/passmenu-action desktop/bin/gopass-clip-copy desktop/bin/gopass-clip-clear desktop/bin/desktop-doctor desktop/bin/desktop-accept desktop/bin/hypr-session`, `qs-menu-smoke`, and `desktop-doctor`.
 - [ ] Build a small unread-work dashboard fed by local CLI/API helpers.
   - Sources: Slack Conversations API `conversations.info/list/history`, GitHub CLI `gh pr list --search`, Linear inbox/notifications docs.
   - Acceptance: Quickshell can show counts for Slack unread DMs/mentions, PRs awaiting review, and Linear inbox items without storing tokens in QML or polling aggressively.
@@ -386,11 +386,11 @@ Do these in this order; each task should leave one small validation command behi
    - Depends on: current Quickshell clipboard picker and `cliphist-menu` data path.
    - Validation: `qs-menu-smoke clipboard-toggle clipboard` and `desktop-doctor`.
    - Result: clipboard now toggles through Quickshell IPC, is centered/floating by Hyprland title rule, and exposes a smoke-test visible state.
-4. Secret-safe clipboard and gopass integration.
-   - Task: audit active password copy paths, keep `gopass-clip-copy`/GPaste as the password path, and make Quickshell clipboard hide or mark likely secret rows from normal `cliphist`.
-   - Depends on: `history-secrets`, `passmenu`, `gopass-clip-copy`, `gopass-clip-clear`, GPaste availability.
-   - Validation: `history-secrets --dry-run`, `passmenu --name`, `passmenu --user`, safe fake-secret copy/clear.
-   - Stop if: decrypted secret content would be stored in QML state, logs, argv, screenshots, or normal clipboard history.
+4. Secret-safe clipboard and gopass integration. Done.
+   - Task: audit active password copy paths, keep decrypted values out of QML, and make Quickshell clipboard hide likely secret rows from normal `cliphist`.
+   - Depends on: `passmenu`, `passmenu-action`, `gopass-clip-copy`, `gopass-clip-clear`, and the local GPaste/gopass command surface.
+   - Validation: `passmenu-action --self-test`, fake-backend `passmenu --name`, fake-backend `passmenu --user`, `qs-menu-smoke`, and `desktop-doctor`.
+   - Result: `passmenu` has a Quickshell popup target again; copy/type actions run in a helper, not QML; gopass copy uses repo-managed clipboard hook defaults; local GPaste password-entry mode and copyq secret copy are intentionally not used because they require password argv.
 5. Work inbox helper first, dashboard second.
    - Task: create one CLI helper that returns redacted JSON counts for Slack unread/mentions, GitHub PR review requests, and Linear notifications; build the Quickshell panel only after the helper is useful.
    - Sources: Slack Conversations API, `gh pr list --search`, Linear notification/inbox APIs.

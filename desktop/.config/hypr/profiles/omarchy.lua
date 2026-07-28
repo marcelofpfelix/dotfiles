@@ -142,6 +142,7 @@ hl.window_rule({ match = { title = "hypr-popup-tmux" }, float = true, size = { 8
 hl.window_rule({ match = { class = "floating" }, float = true, size = { 800, 600 }, center = true })
 hl.window_rule({ match = { title = "quickshell-launcher" }, float = true, size = { 720, 520 }, center = true })
 hl.window_rule({ match = { title = "quickshell-clipboard" }, float = true, size = { 720, 500 }, center = true })
+hl.window_rule({ match = { title = "quickshell-passmenu" }, float = true, size = { 720, 520 }, center = true })
 hl.window_rule({ match = { title = "quickshell-websearch" }, float = true, size = { 640, 220 }, center = true })
 hl.window_rule({ name = "suppress-maximize-events", match = { class = ".*" }, suppress_event = "maximize" })
 hl.window_rule({ match = { class = "com.mitchellh.ghostty" }, scroll_touchpad = 0.2 })

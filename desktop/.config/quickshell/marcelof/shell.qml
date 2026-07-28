@@ -158,11 +158,62 @@ ShellRoot {
     const entries = []
     for (let i = 0; i < lines.length; i++) {
       const entry = lines[i].trim()
-      if (entry.length > 0)
+      if (entry.length > 0 && !root.looksSecretClipboardEntry(entry))
         entries.push(entry)
     }
     root.clipboardEntries = entries
     root.rebuildClipboardModel()
+  }
+
+  function looksSecretClipboardEntry(entry) {
+    const text = String(entry || "")
+    const body = text.replace(/^\d+\s+/, "")
+    if (/^(password|passwd|secret|token|api[_-]?key|authorization|bearer)[:=]/i.test(body))
+      return true
+    if (/^(otpauth:\/\/|-----BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----)/i.test(body))
+      return true
+    if (/^[A-Za-z0-9+\/=]{32,}$/.test(body) && /[A-Z]/.test(body) && /[a-z]/.test(body) && /[0-9]/.test(body))
+      return true
+    return false
+  }
+
+  function rebuildPassModel() {
+    const query = passSearch ? passSearch.text : ""
+    const rows = []
+    for (let i = 0; i < root.passEntries.length; i++) {
+      const entry = String(root.passEntries[i] || "")
+      if (entry.length === 0)
+        continue
+      const score = root.clipboardScore(entry, query)
+      if (score < 0)
+        continue
+      rows.push({ entry: entry, score: score, key: entry.toLowerCase() })
+    }
+    rows.sort((a, b) => {
+      if (query.trim().length > 0 && a.score !== b.score)
+        return b.score - a.score
+      return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)
+    })
+    passModel.clear()
+    const count = Math.min(rows.length, 250)
+    for (let i = 0; i < count; i++)
+      passModel.append({ path: rows[i].entry })
+    if (passList) {
+      passList.currentIndex = passModel.count > 0 ? 0 : -1
+      Qt.callLater(() => { if (passModel.count > 0) passList.positionViewAtIndex(passList.currentIndex, ListView.Contain) })
+    }
+  }
+
+  function updatePassEntries(output) {
+    const lines = String(output || "").split(/\n+/)
+    const entries = []
+    for (let i = 0; i < lines.length; i++) {
+      const entry = lines[i].trim()
+      if (entry.length > 0)
+        entries.push(entry)
+    }
+    root.passEntries = entries
+    root.rebuildPassModel()
   }
 
   function updateKeybindingRows(output) {
@@ -189,6 +240,34 @@ ShellRoot {
     clipSearch.forceActiveFocus()
   }
 
+  function passModeLabel() {
+    if (root.passMode === "type-pass") return "Type password"
+    if (root.passMode === "type-user") return "Type username"
+    if (root.passMode === "type-name") return "Type entry name"
+    return "Copy password"
+  }
+
+  function openPassmenu(mode, userKey, backend) {
+    root.closeTransientPanels()
+    root.passMode = String(mode || "copy")
+    root.passUserKey = String(userKey || "username")
+    root.passBackend = String(backend || "gopass")
+    root.passMenuOpen = true
+    passSearch.text = ""
+    root.passEntries = []
+    passModel.clear()
+    passEntriesRefresh.running = true
+    passSearch.forceActiveFocus()
+  }
+
+  function runPassEntry() {
+    if (!root.passMenuOpen || passList.currentIndex < 0 || passList.currentIndex >= passModel.count)
+      return
+    const entry = passModel.get(passList.currentIndex).path
+    root.passMenuOpen = false
+    Quickshell.execDetached(["passmenu-action", root.passMode, root.passUserKey, root.passBackend, entry])
+  }
+
   function toggleClipboard() {
     if (root.clipboardOpen) {
       root.clipboardOpen = false
@@ -210,7 +289,12 @@ ShellRoot {
   property string launcherModeText: "Apps"
   property var launcherCounts: ({})
   property var clipboardEntries: []
+  property var passEntries: []
   property bool clipboardOpen: false
+  property bool passMenuOpen: false
+  property string passMode: "copy"
+  property string passUserKey: "username"
+  property string passBackend: "gopass"
   property bool keybindingsOpen: false
   property bool webSearchOpen: false
   property string webSearchSite: "google"
@@ -664,6 +748,7 @@ ShellRoot {
   function closeTransientPanels() {
     root.hideLauncher()
     root.clipboardOpen = false
+    root.passMenuOpen = false
     root.trayManageOpen = false
     root.controlPanelOpen = false
     root.mediaPanelOpen = false
@@ -2964,12 +3049,19 @@ ShellRoot {
     stdout: StdioCollector { onStreamFinished: root.updateLauncherMru(this.text) }
   }
   ListModel { id: clipboardModel }
+  ListModel { id: passModel }
   ListModel { id: keybindingModel }
 
   Process {
     id: clipboardRefresh
     command: ["sh", "-c", "cliphist list 2>/dev/null"]
     stdout: StdioCollector { onStreamFinished: root.updateClipboardEntries(this.text) }
+  }
+
+  Process {
+    id: passEntriesRefresh
+    command: ["sh", "-c", root.shellQuote(root.passBackend) + " ls --flat 2>/dev/null"]
+    stdout: StdioCollector { onStreamFinished: root.updatePassEntries(this.text) }
   }
 
   Process {
@@ -3278,6 +3370,132 @@ ShellRoot {
             font.family: "FiraCode Nerd Font"
             font.pixelSize: 12
             text: clipboardRefresh.running ? "Loading clipboard..." : (root.clipboardEntries.length > 0 ? "No clipboard matches" : "Clipboard history is empty")
+          }
+        }
+      }
+    }
+  }
+
+  FloatingWindow {
+    id: passMenu
+    title: "quickshell-passmenu"
+    screen: root.laptopScreen
+    visible: root.passMenuOpen
+    implicitWidth: 720
+    implicitHeight: shellSettings.denseUi ? 480 : 520
+    color: "transparent"
+
+    HyprlandFocusGrab {
+      active: passMenu.visible
+      windows: [passMenu]
+      onCleared: root.passMenuOpen = false
+    }
+
+    IpcHandler {
+      target: "passmenu"
+      function open(mode: string, userKey: string, backend: string) { root.openPassmenu(mode, userKey, backend) }
+      function hide() { root.passMenuOpen = false }
+    }
+
+    Rectangle {
+      anchors.fill: parent
+      color: "#11111b"
+      border.color: "#45475a"
+      border.width: 1
+      radius: 6
+
+      ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 14
+        spacing: 10
+
+        RowLayout {
+          Layout.fillWidth: true
+          Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 15; text: "Passwords" }
+          Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.passModeLabel() }
+        }
+
+        Rectangle {
+          Layout.fillWidth: true
+          height: 42
+          color: "#1e1e2e"
+          border.color: passSearch.activeFocus ? "#b4befe" : "#313244"
+          border.width: 1
+          radius: 6
+
+          Text {
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            verticalAlignment: Text.AlignVCenter
+            color: "#6c7086"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 13
+            text: "Search passwords"
+            visible: passSearch.text.length === 0
+          }
+
+          TextInput {
+            id: passSearch
+            anchors.fill: parent
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            verticalAlignment: TextInput.AlignVCenter
+            color: "#cdd6f4"
+            selectionColor: "#45475a"
+            selectedTextColor: "#cdd6f4"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 16
+            clip: true
+            onTextChanged: root.rebuildPassModel()
+            Keys.onEscapePressed: root.passMenuOpen = false
+            Keys.onDownPressed: { if (passModel.count > 0) passList.currentIndex = (passList.currentIndex + 1) % passModel.count }
+            Keys.onUpPressed: { if (passModel.count > 0) passList.currentIndex = (passList.currentIndex - 1 + passModel.count) % passModel.count }
+            Keys.onReturnPressed: root.runPassEntry()
+            Keys.onEnterPressed: root.runPassEntry()
+          }
+        }
+
+        ListView {
+          id: passList
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          visible: passModel.count > 0
+          clip: true
+          spacing: 4
+          model: passModel
+          currentIndex: -1
+
+          delegate: Rectangle {
+            id: passRow
+            required property string path
+            required property int index
+            width: passList.width
+            height: 40
+            radius: 4
+            color: ListView.isCurrentItem ? "#313244" : "transparent"
+            Text { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10; verticalAlignment: Text.AlignVCenter; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: passRow.path }
+            MouseArea { anchors.fill: parent; hoverEnabled: true; onEntered: passList.currentIndex = index; onClicked: { passList.currentIndex = index; root.runPassEntry() } }
+          }
+        }
+
+        Rectangle {
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          visible: passModel.count === 0
+          radius: 6
+          color: "#1e1e2e"
+          border.color: "#313244"
+          border.width: 1
+
+          Text {
+            anchors.centerIn: parent
+            width: parent.width - 28
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.Wrap
+            color: "#7f849c"
+            font.family: "FiraCode Nerd Font"
+            font.pixelSize: 12
+            text: passEntriesRefresh.running ? "Loading passwords..." : "No password entries"
           }
         }
       }

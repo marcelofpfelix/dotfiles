@@ -214,6 +214,7 @@ quickshell_ipc_status() {
         "function osdKbd()"
         "function osdMic()"
         "target: \"launcher\""
+        "target: \"passmenu\""
         "target: \"websearch\""
         "target: \"network\""
         "target: \"lock\""

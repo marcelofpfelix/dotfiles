@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  printf 'use: passmenu-action [--self-test|copy|type-pass|type-user|type-name user-key backend entry]\n' >&2
+}
+
+fail() {
+  printf 'passmenu-action: %s\n' "$1" >&2
+  exit 1
+}
+
+type_stdin() {
+  if [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v ydotool >/dev/null 2>&1; then
+    ydotool type --file -
+  elif [[ -n "${WAYLAND_DISPLAY:-}" ]] && command -v wtype >/dev/null 2>&1; then
+    wtype -
+  elif [[ -n "${DISPLAY:-}" ]] && command -v xdotool >/dev/null 2>&1; then
+    xdotool type --clearmodifiers --file -
+  else
+    fail "no typing tool found"
+  fi
+}
+
+run_action() {
+  local mode=$1 user_key=$2 backend=$3 entry=$4
+
+  case "$mode" in
+    copy)
+      GOPASS_CLIPBOARD_COPY_CMD="${GOPASS_CLIPBOARD_COPY_CMD:-gopass-clip-copy}" \
+        GOPASS_CLIPBOARD_CLEAR_CMD="${GOPASS_CLIPBOARD_CLEAR_CMD:-gopass-clip-clear}" \
+        "$backend" show -c "$entry" >/dev/null
+      ;;
+    type-pass)
+      "$backend" show -o "$entry" | tr -d '\n' | type_stdin
+      ;;
+    type-user)
+      "$backend" show -f "$entry" "$user_key" | sed -n '1p' | tr -d '\n' | type_stdin
+      ;;
+    type-name)
+      printf '%s' "${entry##*/}" | type_stdin
+      ;;
+    *)
+      usage
+      exit 2
+      ;;
+  esac
+}
+
+self_test() {
+  local tmp fake_gopass fake_type log
+  tmp=$(mktemp -d)
+  trap "rm -rf '$tmp'" EXIT
+  log="$tmp/calls.log"
+  fake_gopass="$tmp/gopass"
+  fake_type="$tmp/ydotool"
+
+  cat >"$fake_gopass" <<'SH'
+#!/usr/bin/env bash
+printf 'gopass %q %q %q %q\n' "${1:-}" "${2:-}" "${3:-}" "${4:-}" >>"$PASSMENU_ACTION_TEST_LOG"
+case "$1 $2" in
+  "show -c") exit 0 ;;
+  "show -o") printf 'fake-secret\n' ;;
+  "show -f") printf 'fake-user\n' ;;
+esac
+SH
+  cat >"$fake_type" <<'SH'
+#!/usr/bin/env bash
+printf 'ydotool %q %q ' "${1:-}" "${2:-}" >>"$PASSMENU_ACTION_TEST_LOG"
+cat >>"$PASSMENU_ACTION_TEST_LOG"
+printf '\n' >>"$PASSMENU_ACTION_TEST_LOG"
+SH
+  chmod +x "$fake_gopass" "$fake_type"
+
+  PATH="$tmp:$PATH" PASSMENU_ACTION_TEST_LOG="$log" WAYLAND_DISPLAY=test run_action copy username gopass example/site
+  PATH="$tmp:$PATH" PASSMENU_ACTION_TEST_LOG="$log" WAYLAND_DISPLAY=test run_action type-pass username gopass example/site
+  PATH="$tmp:$PATH" PASSMENU_ACTION_TEST_LOG="$log" WAYLAND_DISPLAY=test run_action type-user username gopass example/site
+  PATH="$tmp:$PATH" PASSMENU_ACTION_TEST_LOG="$log" WAYLAND_DISPLAY=test run_action type-name username gopass example/site
+
+  grep -q 'gopass show -c example/site' "$log"
+  grep -q 'gopass show -o example/site' "$log"
+  grep -q 'gopass show -f example/site username' "$log"
+  grep -q 'fake-secret' "$log"
+  grep -q 'fake-user' "$log"
+  grep -q 'site' "$log"
+  printf 'passmenu-action self-test: ok\n'
+}
+
+case "${1:-}" in
+  --self-test)
+    self_test
+    ;;
+  "")
+    usage
+    exit 2
+    ;;
+  *)
+    [[ "$#" -eq 4 ]] || { usage; exit 2; }
+    run_action "$@"
+    ;;
+esac
