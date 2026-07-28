@@ -257,6 +257,7 @@ Review snapshot: 2026-07-27. Sources were local clones under `/tmp/wayland-ui-re
 - [x] Build a Quickshell power/session popup for `lock`, `logout`, `suspend`, `hibernate`, `reboot`, and `shutdown`.
   - Use native commands behind a local helper or IPC target: `loginctl lock-session`, `hyprctl dispatch exit`, `systemctl suspend`, `systemctl hibernate`, `systemctl reboot`, and `systemctl poweroff`.
   - Require confirmation for `logout`, `hibernate`, `reboot`, and `shutdown`.
+  - Current behavior: the session popup asks for an in-menu confirmation before Hibernate, Reboot, Shutdown, or Exit Hyprland runs; Lock and Suspend stay one-click.
   - Wire `Win+Shift+E` to this popup in the i3-compatible default profile instead of the current exit-only confirmation.
   - Add one common secondary binding, such as `Ctrl+Alt+Delete` or `Win+Delete`, only if it does not conflict with existing i3 parity.
 - [x] Build a Quickshell keybindings popup.

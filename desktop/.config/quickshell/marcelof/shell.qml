@@ -475,6 +475,9 @@ ShellRoot {
   property bool barHidden: false
   property bool trayExpanded: false
   property bool trayManageOpen: false
+  property string sessionConfirmLabel: ""
+  property string sessionConfirmIcon: ""
+  property var sessionConfirmCommand: []
   property bool controlPanelOpen: false
   property bool mediaPanelOpen: false
   property bool screenPanelOpen: false
@@ -636,6 +639,7 @@ ShellRoot {
     root.webSearchOpen = false
     if (typeof networkPanel !== 'undefined')
       networkPanel.visible = false
+    root.clearSessionConfirm()
     if (typeof exitDialog !== 'undefined')
       exitDialog.visible = false
   }
@@ -1258,6 +1262,37 @@ ShellRoot {
 
   function suspendSession() {
     Quickshell.execDetached(["systemctl", "suspend"])
+  }
+
+  function setSessionConfirm(label, icon, command) {
+    root.sessionConfirmLabel = label
+    root.sessionConfirmIcon = icon
+    root.sessionConfirmCommand = command
+  }
+
+  function openSessionConfirm(label, icon, command) {
+    root.closeTransientPanels()
+    exitDialog.visible = true
+    root.setSessionConfirm(label, icon, command)
+  }
+
+  function clearSessionConfirm() {
+    root.sessionConfirmLabel = ""
+    root.sessionConfirmIcon = ""
+    root.sessionConfirmCommand = []
+  }
+
+  function hidePowerMenu() {
+    root.clearSessionConfirm()
+    exitDialog.visible = false
+  }
+
+  function runSessionConfirm() {
+    if (root.sessionConfirmCommand.length === 0)
+      return
+    const command = root.sessionConfirmCommand
+    root.hidePowerMenu()
+    Quickshell.execDetached(command)
   }
 
   component IconButton: Rectangle {
@@ -2121,7 +2156,7 @@ ShellRoot {
             spacing: 7
             ActionButton { icon: root.idleInhibitActive() ? "󰒳" : "󰒲"; label: "Awake"; active: root.idleInhibitActive(); tooltip: root.idleInhibitActive() ? "Allow idle and sleep" : "Prevent idle and sleep"; onTriggered: root.toggleIdleInhibit() }
             ActionButton { icon: "󰒲"; label: "Sleep"; tooltip: "Suspend system"; onTriggered: root.suspendSession() }
-            ActionButton { icon: "󰜉"; label: "Reboot"; tooltip: "Reboot system"; onTriggered: Quickshell.execDetached(["systemctl", "reboot"]) }
+            ActionButton { icon: "󰜉"; label: "Reboot"; tooltip: "Reboot system"; onTriggered: root.openSessionConfirm("Reboot", "󰜉", ["systemctl", "reboot"]) }
             ActionButton { icon: "⏻"; label: "Power"; tooltip: "Power menu"; onTriggered: root.togglePowerMenu() }
           }
 
@@ -3303,7 +3338,7 @@ ShellRoot {
     id: exitDialog
     visible: false
     implicitWidth: 460
-    implicitHeight: 260
+    implicitHeight: 320
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
@@ -3314,7 +3349,7 @@ ShellRoot {
 
       function confirmExit() { root.togglePowerMenu() }
       function power() { root.togglePowerMenu() }
-      function hide() { exitDialog.visible = false }
+      function hide() { root.hidePowerMenu() }
     }
 
     Rectangle {
@@ -3343,7 +3378,7 @@ ShellRoot {
         RowLayout {
           Layout.fillWidth: true
           spacing: 8
-          ActionButton { Layout.fillWidth: true; icon: "󰅖"; label: "Cancel"; tooltip: "Close this menu"; onTriggered: exitDialog.visible = false }
+          ActionButton { Layout.fillWidth: true; icon: "󰅖"; label: "Cancel"; tooltip: "Close this menu"; onTriggered: root.hidePowerMenu() }
           ActionButton { Layout.fillWidth: true; icon: "󰌾"; label: "Lock"; tooltip: "Lock session"; onTriggered: root.lockSession() }
           ActionButton { Layout.fillWidth: true; icon: "󰒲"; label: "Suspend"; tooltip: "Suspend system"; onTriggered: root.suspendSession() }
         }
@@ -3351,12 +3386,22 @@ ShellRoot {
         RowLayout {
           Layout.fillWidth: true
           spacing: 8
-          ActionButton { Layout.fillWidth: true; icon: "󰒓"; label: "Hibernate"; tooltip: "Hibernate system"; onTriggered: Quickshell.execDetached(["systemctl", "hibernate"]) }
-          ActionButton { Layout.fillWidth: true; icon: "󰜉"; label: "Reboot"; tooltip: "Reboot system"; onTriggered: Quickshell.execDetached(["systemctl", "reboot"]) }
-          ActionButton { Layout.fillWidth: true; icon: "⏻"; label: "Shutdown"; tooltip: "Power off system"; onTriggered: Quickshell.execDetached(["systemctl", "poweroff"]) }
+          ActionButton { Layout.fillWidth: true; icon: "󰒓"; label: "Hibernate"; tooltip: "Hibernate system"; onTriggered: root.setSessionConfirm("Hibernate", "󰒓", ["systemctl", "hibernate"]) }
+          ActionButton { Layout.fillWidth: true; icon: "󰜉"; label: "Reboot"; tooltip: "Reboot system"; onTriggered: root.setSessionConfirm("Reboot", "󰜉", ["systemctl", "reboot"]) }
+          ActionButton { Layout.fillWidth: true; icon: "⏻"; label: "Shutdown"; tooltip: "Power off system"; onTriggered: root.setSessionConfirm("Shutdown", "⏻", ["systemctl", "poweroff"]) }
         }
 
-        ActionButton { Layout.fillWidth: true; icon: "󰍃"; label: "Exit Hyprland"; tooltip: "Exit the current Hyprland session"; onTriggered: Quickshell.execDetached(["hyprctl", "dispatch", "exit"]) }
+        Text { Layout.fillWidth: true; visible: root.sessionConfirmLabel.length > 0; color: "#f9e2af"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: "Confirm " + root.sessionConfirmLabel + "?" }
+
+        RowLayout {
+          Layout.fillWidth: true
+          visible: root.sessionConfirmLabel.length > 0
+          spacing: 8
+          ActionButton { Layout.fillWidth: true; icon: "󰅖"; label: "Cancel"; tooltip: "Cancel pending session action"; onTriggered: root.clearSessionConfirm() }
+          ActionButton { Layout.fillWidth: true; active: true; icon: root.sessionConfirmIcon; label: "Confirm"; tooltip: "Run " + root.sessionConfirmLabel; onTriggered: root.runSessionConfirm() }
+        }
+
+        ActionButton { Layout.fillWidth: true; icon: "󰍃"; label: "Exit Hyprland"; tooltip: "Exit the current Hyprland session"; onTriggered: root.setSessionConfirm("Exit Hyprland", "󰍃", ["hyprctl", "dispatch", "exit"]) }
       }
     }
   }
