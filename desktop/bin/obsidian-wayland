@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-app_bin="${OBSIDIAN_BIN:-/usr/local/bin/obsidian}"
+app_bin="${OBSIDIAN_BIN:-/usr/bin/obsidian}"
 if [ ! -x "$app_bin" ]; then
   app_bin="$(command -v obsidian)"
 fi
