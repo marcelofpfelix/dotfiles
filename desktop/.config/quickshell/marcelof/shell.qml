@@ -2211,7 +2211,7 @@ ShellRoot {
       visible: root.wallpaperPanelOpen
       color: "transparent"
       implicitWidth: root.menuWidth
-      implicitHeight: root.menuHeight
+      implicitHeight: Math.min(root.compactMenuHeight, 88 + Math.max(1, wallpaperModel.count) * 39)
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2235,13 +2235,6 @@ ShellRoot {
             ActionButton { icon: "󰈔"; label: ""; minWidth: 34; tooltip: "Open folder"; onTriggered: Quickshell.execDetached(["/home/marcelof/bin/wallpaper-wayland", "open-dir"]) }
           }
 
-          Image {
-            Layout.fillWidth: true
-            Layout.preferredHeight: 130
-            source: root.wallpaperSource
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-          }
 
           ListView {
             id: wallpaperList
@@ -2287,7 +2280,7 @@ ShellRoot {
       visible: root.screenPanelOpen
       color: "transparent"
       implicitWidth: root.menuWidth
-      implicitHeight: root.menuHeight
+      implicitHeight: root.dashboardMenuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
