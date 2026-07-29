@@ -33,6 +33,7 @@ Dry-runs by default. Pass --execute to delete caches and run prune commands.
 
 Options:
   --execute                 actually delete/prune
+  --docker-only             only run Docker cleanup
   --gwt-root PATH           gwt root to scan (default: $HOME/gwt)
   --transfer-age-days N     delete transfer/download files older than N days (default: 365)
   --transfer-min-size SIZE  delete transfer/download files larger than SIZE (default: 100M)
@@ -170,6 +171,19 @@ parse_args() {
   while (($#)); do
     case "$1" in
       --execute) EXECUTE=1 ;;
+      --docker-only)
+        DO_BREW=0
+        DO_NPM=0
+        DO_JS_STORES=0
+        DO_PYTHON=0
+        DO_GO=0
+        DO_POETRY=0
+        DO_TRASH=0
+        DO_LOGS=0
+        DO_TRANSFER=0
+        DO_MAC=0
+        DO_GWT=0
+        ;;
       --gwt-root)
         shift
         [[ $# -gt 0 ]] || { log "missing value for --gwt-root" >&2; exit 2; }
