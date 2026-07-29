@@ -90,13 +90,13 @@ crop_panel_region() {
 
   convert "$file" -crop "$geometry" +repage "$monitor_after" >/dev/null 2>&1 || return 1
   case "$panel" in
-    launcher|launcher-script) width=900; height=680; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
-    clipboard) width=760; height=600; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
+    launcher|launcher-script) width=960; height=820; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
+    clipboard) width=800; height=660; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     websearch) width=820; height=340; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
-    controls) width=700; height=760; x=$((max_w - width)); y=0 ;;
-    calendar) width=700; height=760; x=$((max_w - width)); y=0 ;;
-    personal-dashboard) width=700; height=560; x=$((max_w - width)); y=0 ;;
-    *) width=700; height=600; x=$((max_w - width)); y=0 ;;
+    controls) width=760; height=840; x=$((max_w - width)); y=0 ;;
+    calendar) width=780; height=840; x=$((max_w - width)); y=0 ;;
+    personal-dashboard) width=720; height=620; x=$((max_w - width)); y=0 ;;
+    *) width=720; height=700; x=$((max_w - width)); y=0 ;;
   esac
   (( width > max_w )) && width=$max_w
   (( height > max_h )) && height=$max_h

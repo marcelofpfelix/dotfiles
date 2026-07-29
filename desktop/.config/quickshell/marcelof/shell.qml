@@ -2338,7 +2338,7 @@ ShellRoot {
             ActionButton { icon: root.recordingStatusText.indexOf("recording") === 0 ? "󰓛" : "󰐊"; label: root.recordingStatusText.indexOf("recording") === 0 ? "Stop" : "Start"; tooltip: "Start or stop area recording"; onTriggered: root.runScreenRecord("toggle") }
             ActionButton { icon: "󰈔"; label: "Open"; tooltip: "Open last recording"; onTriggered: root.runScreenRecord("open-last") }
             ActionButton { icon: "󰅇"; label: "Path"; tooltip: "Copy last recording path"; onTriggered: root.runScreenRecord("copy-path") }
-            ActionButton { icon: "󰑓"; label: "Refresh"; tooltip: "Refresh status"; onTriggered: root.refreshScreenState() }
+            ActionButton { icon: "󰑓"; label: ""; minWidth: 40; tooltip: "Refresh status"; onTriggered: root.refreshScreenState() }
           }
 
           Text { Layout.fillWidth: true; color: "#7f849c"; wrapMode: Text.Wrap; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.portalStatusText.length > 0 ? "Portal: " + root.portalStatusText : "Portal: --" }
@@ -2492,6 +2492,7 @@ ShellRoot {
           anchors.fill: parent
           anchors.margins: 10
           clip: true
+          ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
           ColumnLayout {
             id: controlsColumn
@@ -2645,6 +2646,8 @@ ShellRoot {
             Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰈐" }
             Text { Layout.fillWidth: true; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.fanStatusText }
           }
+
+          Item { Layout.fillWidth: true; implicitHeight: 12 }
           }
         }
       }
@@ -2785,7 +2788,7 @@ ShellRoot {
 
           Rectangle {
             Layout.fillWidth: true
-            implicitHeight: 108
+            implicitHeight: 100
             radius: 5
             color: "#1e1e2e"
 
@@ -2820,7 +2823,7 @@ ShellRoot {
 
           ScrollView {
             Layout.fillWidth: true
-            Layout.preferredHeight: 104
+            Layout.preferredHeight: 124
             clip: true
 
             Text {
@@ -2828,7 +2831,7 @@ ShellRoot {
               color: "#bac2de"
               font.family: "FiraCode Nerd Font"
               font.pixelSize: 12
-              lineHeight: 1.1
+              lineHeight: 1.2
               wrapMode: Text.Wrap
               text: root.timePanelText.length > 0 ? root.timePanelText : "Loading time data..."
             }
@@ -2840,7 +2843,7 @@ ShellRoot {
             Layout.fillWidth: true
             spacing: 8
             Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Agenda" }
-            ActionButton { icon: "󰑓"; label: "Refresh"; minWidth: 82; tooltip: "Refresh agenda"; onTriggered: agendaPanelRefresh.running = true }
+            ActionButton { icon: "󰑓"; label: ""; minWidth: 40; tooltip: "Refresh agenda"; onTriggered: agendaPanelRefresh.running = true }
           }
 
           Text {
@@ -2911,7 +2914,7 @@ ShellRoot {
             spacing: 8
             Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Work Inbox" }
             Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: root.workInboxSourceText.length > 0 ? root.workInboxSourceText : "idle" }
-            ActionButton { icon: "󰑓"; label: "Refresh"; minWidth: 82; tooltip: "Refresh work inbox counts"; onTriggered: workInboxRefresh.running = true }
+            ActionButton { icon: "󰑓"; label: ""; minWidth: 40; tooltip: "Refresh work inbox counts"; onTriggered: workInboxRefresh.running = true }
           }
 
           Rectangle { Layout.fillWidth: true; height: 1; color: "#313244" }
@@ -3007,7 +3010,7 @@ ShellRoot {
             Layout.fillWidth: true
             spacing: 8
             Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 13; text: "Personal" }
-            ActionButton { icon: "󰑓"; label: "Refresh"; minWidth: 82; tooltip: "Refresh board surface"; onTriggered: personalDashboardRefresh.running = true }
+            ActionButton { icon: "󰑓"; label: ""; minWidth: 40; tooltip: "Refresh board surface"; onTriggered: personalDashboardRefresh.running = true }
           }
 
           RowLayout {
@@ -3674,6 +3677,7 @@ ShellRoot {
           Layout.fillHeight: true
           clip: true
           spacing: 4
+          bottomMargin: 12
           model: launcherModel
           currentIndex: -1
 
@@ -4026,6 +4030,7 @@ ShellRoot {
                 Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: action }
               }
             }
+            Item { Layout.fillWidth: true; implicitHeight: 14 }
           }
         }
       }
