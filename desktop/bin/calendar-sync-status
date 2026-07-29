@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  printf 'use: calendar-sync-status [status|self-test]\n' >&2
+}
+
+status() {
+  printf 'calendar-sync\n'
+
+  if command -v khal >/dev/null 2>&1; then
+    printf '  khal: ok\n'
+  else
+    printf '  khal: missing\n'
+  fi
+
+  if command -v vdirsyncer >/dev/null 2>&1; then
+    printf '  sync: vdirsyncer'
+    [ -r "$HOME/.config/vdirsyncer/config" ] && printf ' config' || printf ' no-config'
+    printf '\n'
+  elif command -v gcalcli >/dev/null 2>&1; then
+    printf '  sync: gcalcli available\n'
+  else
+    printf '  sync: local-only\n'
+  fi
+}
+
+self_test() {
+  local tmp fakebin out
+  tmp=$(mktemp -d)
+  fakebin="$tmp/bin"
+  mkdir -p "$fakebin"
+  printf '#!/usr/bin/env bash\nexit 0\n' >"$fakebin/khal"
+  chmod +x "$fakebin/khal"
+  out=$(PATH="$fakebin:$PATH" HOME="$tmp" "$0" status)
+  grep -Fq 'khal: ok' <<<"$out"
+  grep -Fq 'sync: local-only' <<<"$out"
+  rm -rf "$tmp"
+  printf 'calendar-sync-status self-test: ok\n'
+}
+
+case "${1:-status}" in
+  status) status ;;
+  self-test|--self-test) self_test ;;
+  -h|--help) usage ;;
+  *) usage; exit 2 ;;
+esac

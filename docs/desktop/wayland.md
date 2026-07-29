@@ -17,6 +17,7 @@ For the short switch procedure, see
 - `desktop/bin/qs-menu-smoke`: visual smoke helper that opens, captures, closes, and checks Quickshell menu screenshots under local state.
 - `desktop/bin/desktop-reload`: validates, copies, and reloads the live Quickshell shell and board config.
 - `desktop/bin/desktop-notification-smoke`: notification toast, action capability, and center smoke test.
+- `desktop/bin/calendar-sync-status`: read-only calendar sync boundary check; Quickshell consumes local `khal` output and never owns Google/CalDAV credentials.
 - `desktop/bin/hypr-gdm`: installs the generated `/usr/share/wayland-sessions/hyprland.desktop` login-manager entry and GDM account defaults.
 - `desktop/bin/hypr-scratch`: helper-backed special workspace scratchpad.
 - `desktop/bin/hyprdrop`: parked Wayland dropdown experiment for the old archived `ddspawn` behavior; it is not bound by default.
@@ -89,6 +90,8 @@ Hyprland starts desktop entries through `dex --autostart --environment Hyprland`
 The default profile keeps movement, workspaces, launcher, terminal, monitor toggle, media keys, and screenshot bindings close to the X11 i3 config. Hyprland `dwindle` does not provide direct i3 stacking, tabbed containers, or focus-parent behavior, so native groups are the closest match: `Win+G` creates/toggles a group, `Win+Alt+Arrow` moves the focused window into a neighboring group direction, `Win+Alt+Tab` and `Win+Alt+Shift+Tab` switch grouped windows, and `Win+Alt+G` removes the focused window from the group. `Win+W` closes the focused window. `Win+U` toggles a floating Ghostty-backed tmux popup session through `hypr-term popup-tmux`. `Win+S` uses the helper-backed special workspace scratchpad and `Win+Alt+S` moves the active window there. Resize is exposed as `Win+Ctrl+h/j/k/l`.
 
 The local Quickshell shell has replaced the Polybar surface for workspace/status/tray coverage, the main `rofi` app launcher, `passmenu`, calendar, clipboard history, web search, keybinding help, notifications, and the power/session menu. `passmenu` is Quickshell-only in the active Wayland desktop profile. Secure locking is delegated to a real locker through Quickshell IPC, using `hyprlock`, `swaylock`, or `loginctl lock-session` when available. `dunst.service` is masked in the tracked user systemd config so Quickshell can own desktop notifications; `hypr-session smoke` also verifies the active D-Bus notification owner.
+
+Calendar account sync stays outside Quickshell. The shell reads `calendar-agenda-status`, which reads local `khal` output only. Use `calendar-sync-status` to verify whether the machine is still local-only or has a system-level sync tool such as `vdirsyncer` configured. Do not pass Google or CalDAV credentials through QML, launcher rows, or command argv.
 
 Reference ideas adapted locally: Omarchy quattro key behavior, Caelestia-style session panel actions and idle inhibitor, end-4-style `Super+/` keybinding discoverability and cliphist watcher updates, Noctalia-style compact popup/control surfaces, and cxOrz-style backend-only cliphist ownership. No upstream shell binaries or names are used by this repo.
 

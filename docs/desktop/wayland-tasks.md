@@ -372,10 +372,11 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Source: existing `khal` local calendar cache; future Google/CalDAV sync stays outside Quickshell.
   - Current behavior: `calendar-agenda-status` renders upcoming local agenda text from `khal list today 7d --notstarted`; the calendar popup shows it in a dedicated Agenda block and refreshes through the helper.
   - Validation: `calendar-agenda-status self-test`, `qmllint`, `qs-menu-smoke calendar`, and `desktop-doctor`.
-- [ ] Add Google Calendar sync credentials outside Quickshell if needed.
+- [x] Add a Google Calendar sync boundary outside Quickshell.
   - Current blocker: no tracked `gcalcli` or `vdirsyncer` setup is present; Quickshell only consumes local khal output.
   - Acceptance: external sync populates the local khal calendar cache without credentials entering QML or shell command argv.
   - Validation: `khal list today 7d --notstarted` shows synced events and `calendar-agenda-status` handles auth/offline states.
+  - Current behavior: `calendar-sync-status` records the boundary: this machine is local-khal-only until an external sync tool is installed/configured outside Quickshell. Quickshell and QML still never own calendar credentials.
 - [x] Redesign meeting/privacy awareness around DND.
   - Current behavior: the bar uses one DND-aware privacy indicator for mic, camera, screen share/recording, and DND; left click opens Screen details and right click toggles DND. Controls includes a compact privacy state block with refresh/details actions.
   - Constraint: this detects capture state, not a guaranteed Google Meet meeting identity, because Chrome/portal state does not expose enough app-specific call metadata locally.
