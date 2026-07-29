@@ -1778,6 +1778,7 @@ ShellRoot {
     function hide() { root.barHidden = true }
     function trayManage() { root.toggleTrayManage() }
     function controls() { root.toggleControlPanel() }
+    function controlsVisible(): string { return root.controlPanelOpen ? "visible" : "hidden" }
     function media() { root.toggleMediaPanel() }
     function screen() { root.toggleScreenPanel() }
     function wallpaper() { root.toggleWallpaperPanel() }
@@ -2492,6 +2493,37 @@ ShellRoot {
             width: controlsScroll.availableWidth
             spacing: 9
 
+          Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Display" }
+
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰃠" }
+            Slider { Layout.fillWidth: true; from: 1; to: 100; value: root.brightnessValue; onMoved: root.setBrightness(value) }
+            Text { width: 42; color: "#bac2de"; horizontalAlignment: Text.AlignRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.brightnessText }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            visible: root.externalBrightnessText.length > 0
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰍹" }
+            Slider { Layout.fillWidth: true; from: 0; to: 100; value: root.externalBrightnessValue; onMoved: root.setExternalBrightness(value) }
+            Text { width: 128; color: "#bac2de"; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.externalBrightnessText }
+            ActionButton { icon: "-"; label: ""; minWidth: 34; tooltip: "External brightness down"; onTriggered: root.runExternalBrightness("down") }
+            ActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "External brightness up"; onTriggered: root.runExternalBrightness("up") }
+          }
+
+          RowLayout {
+            Layout.fillWidth: true
+            visible: root.kbdBrightnessText.length > 0
+            spacing: 10
+            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰌌" }
+            Text { Layout.fillWidth: true; color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.kbdBrightnessText }
+            ActionButton { icon: "-"; label: ""; minWidth: 34; tooltip: "Keyboard brightness down"; onTriggered: root.runKbdBrightness("down") }
+            ActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "Keyboard brightness up"; onTriggered: root.runKbdBrightness("up") }
+          }
+
           Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: "Quick actions" }
 
           RowLayout {
@@ -2575,34 +2607,6 @@ ShellRoot {
             ActionButton { Layout.fillWidth: true; icon: "󱊖"; label: "Tray"; minWidth: 68; tooltip: "Tray manager"; onTriggered: root.toggleTrayManage() }
           }
 
-          RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
-            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰃠" }
-            Slider { Layout.fillWidth: true; from: 1; to: 100; value: root.brightnessValue; onMoved: root.setBrightness(value) }
-            Text { width: 42; color: "#bac2de"; horizontalAlignment: Text.AlignRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.brightnessText }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            visible: root.externalBrightnessText.length > 0
-            spacing: 10
-            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰍹" }
-            Slider { Layout.fillWidth: true; from: 0; to: 100; value: root.externalBrightnessValue; onMoved: root.setExternalBrightness(value) }
-            Text { width: 128; color: "#bac2de"; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.externalBrightnessText }
-            ActionButton { icon: "-"; label: ""; minWidth: 34; tooltip: "External brightness down"; onTriggered: root.runExternalBrightness("down") }
-            ActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "External brightness up"; onTriggered: root.runExternalBrightness("up") }
-          }
-
-          RowLayout {
-            Layout.fillWidth: true
-            visible: root.kbdBrightnessText.length > 0
-            spacing: 10
-            Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: "󰌌" }
-            Text { Layout.fillWidth: true; color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.kbdBrightnessText }
-            ActionButton { icon: "-"; label: ""; minWidth: 34; tooltip: "Keyboard brightness down"; onTriggered: root.runKbdBrightness("down") }
-            ActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "Keyboard brightness up"; onTriggered: root.runKbdBrightness("up") }
-          }
 
           RowLayout {
             Layout.fillWidth: true
