@@ -13,20 +13,35 @@ notify() {
     if command -v notify-send >/dev/null 2>&1; then
         notify-send "Launcher" "$1"
     else
-        printf '%s\n' "$1" >&2
+        printf "%s\n" "$1" >&2
     fi
 }
 
 launcher_action="${1:-open}"
 
 open_quickshell() {
-    "$qs_bin" ipc --path "$config_path" --any-display call launcher "$launcher_action" >>"$log_file" 2>&1
+    local output
+
+    if output=$("$qs_bin" ipc --path "$config_path" --any-display call launcher "$launcher_action" 2>&1); then
+        if grep -Fq "Not ready to accept queries yet." <<<"$output"; then
+            printf "%s\n" "$output" >>"$log_file"
+            return 1
+        fi
+        [ -z "$output" ] || printf "%s\n" "$output" >>"$log_file"
+        return 0
+    fi
+
+    printf "%s\n" "$output" >>"$log_file"
+    return 1
 }
 
 start_quickshell() {
     "$quickshell_bin" --path "$config_path" --no-duplicate --daemonize >>"$log_file" 2>&1 || true
 }
 
+restart_quickshell() {
+    qs-bar restart >>"$log_file" 2>&1 || true
+}
 
 : >"$log_file"
 if open_quickshell; then
@@ -39,6 +54,11 @@ if open_quickshell; then
     exit 0
 fi
 
+restart_quickshell
+sleep 0.8
+if open_quickshell; then
+    exit 0
+fi
 
 notify "Quickshell launcher is not available. See $log_file."
 exit 1
