@@ -2408,7 +2408,7 @@ ShellRoot {
               Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.defaultSinkAudio() && !root.defaultSinkAudio().muted ? "" : "󰝟" }
               Slider { Layout.fillWidth: true; from: 0; to: 1.5; value: root.defaultSinkAudio() ? root.defaultSinkAudio().volume : 0; onMoved: if (root.defaultSinkAudio()) root.defaultSinkAudio().volume = value }
               Text { color: "#bac2de"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: root.defaultSinkAudio() ? Math.round(root.defaultSinkAudio().volume * 100) + "%" : "--" }
-              IconButton { icon: "󰝟"; tooltip: "Mute output"; onTriggered: root.toggleMute() }
+              ActionButton { icon: "󰝟"; label: ""; minWidth: 40; tooltip: "Mute output"; onTriggered: root.toggleMute() }
             }
 
             Text { Layout.fillWidth: true; color: "#7f849c"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: audioStreams.count > 0 ? "Streams" : "No streams" }
@@ -2424,7 +2424,7 @@ ShellRoot {
                 required property string muted
 
                 Layout.fillWidth: true
-                implicitHeight: streamColumn.implicitHeight + 12
+                implicitHeight: streamColumn.implicitHeight + 8
                 radius: 6
                 color: "#1e1e2e"
                 border.color: "#313244"
@@ -2435,9 +2435,9 @@ ShellRoot {
                   anchors.left: parent.left
                   anchors.right: parent.right
                   anchors.verticalCenter: parent.verticalCenter
-                  anchors.leftMargin: 9
-                  anchors.rightMargin: 9
-                  spacing: 4
+                  anchors.leftMargin: 7
+                  anchors.rightMargin: 7
+                  spacing: 2
 
                   RowLayout {
                     Layout.fillWidth: true
@@ -2450,7 +2450,7 @@ ShellRoot {
                       Text { Layout.fillWidth: true; color: "#7f849c"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 10; text: app }
                     }
                     Text { color: "#9399b2"; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: volume }
-                    IconButton { icon: muted === "yes" ? "󰕾" : "󰝟"; tooltip: "Mute this stream"; onTriggered: root.runSinkInputAction(id, "mute") }
+                    ActionButton { icon: muted === "yes" ? "󰕾" : "󰝟"; label: ""; minWidth: 40; tooltip: "Mute this stream"; onTriggered: root.runSinkInputAction(id, "mute") }
                   }
 
                   Slider {
@@ -2474,7 +2474,7 @@ ShellRoot {
       visible: root.controlPanelOpen
       color: "transparent"
       implicitWidth: root.menuWidth
-      implicitHeight: root.menuHeight
+      implicitHeight: root.tallMenuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2529,8 +2529,8 @@ ShellRoot {
                 spacing: 8
                 Text { color: root.privacyBarColor(); font.family: "FiraCode Nerd Font"; font.pixelSize: 16; text: root.privacyBarText().length > 0 ? root.privacyBarText() : "󰍬" }
                 Text { Layout.fillWidth: true; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.styleName: "Retina"; font.pixelSize: 12; text: root.privacySummaryText() }
-                ActionButton { icon: "󰑓"; label: "Refresh"; minWidth: 78; tooltip: "Refresh privacy state"; onTriggered: privacyStatusRefresh.running = true }
-                ActionButton { icon: "󰍹"; label: "Details"; minWidth: 74; tooltip: "Open screen and capture details"; onTriggered: root.toggleScreenPanel() }
+                ActionButton { icon: "󰑓"; label: ""; minWidth: 40; tooltip: "Refresh privacy state"; onTriggered: privacyStatusRefresh.running = true }
+                ActionButton { icon: "󰍹"; label: ""; minWidth: 40; tooltip: "Open screen and capture details"; onTriggered: root.toggleScreenPanel() }
               }
               Text { Layout.fillWidth: true; color: "#9399b2"; wrapMode: Text.Wrap; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; maximumLineCount: 4; text: root.privacyStatusText.length > 0 ? root.privacyStatusText : "mic inactive\ncamera inactive\nshare inactive" }
             }
@@ -2550,35 +2550,35 @@ ShellRoot {
           RowLayout {
             Layout.fillWidth: true
             spacing: 7
-            ActionButton { icon: "󰀻"; label: "Apps"; minWidth: 68; tooltip: "App launcher"; onTriggered: { root.closeTransientPanels(); root.toggleLauncher() } }
-            ActionButton { icon: "󰇧"; label: "Web"; minWidth: 68; tooltip: "Web search"; onTriggered: root.toggleWebSearch("google") }
-            ActionButton { icon: "󰌌"; label: "Keys"; minWidth: 68; tooltip: "Keybindings"; onTriggered: root.toggleKeybindings() }
-            ActionButton { icon: "󰅇"; label: "Clip"; minWidth: 68; tooltip: "Clipboard history"; onTriggered: root.toggleClipboard() }
+            ActionButton { Layout.fillWidth: true; icon: "󰀻"; label: "Apps"; minWidth: 68; tooltip: "App launcher"; onTriggered: { root.closeTransientPanels(); root.toggleLauncher() } }
+            ActionButton { Layout.fillWidth: true; icon: "󰇧"; label: "Web"; minWidth: 68; tooltip: "Web search"; onTriggered: root.toggleWebSearch("google") }
+            ActionButton { Layout.fillWidth: true; icon: "󰌌"; label: "Keys"; minWidth: 68; tooltip: "Keybindings"; onTriggered: root.toggleKeybindings() }
+            ActionButton { Layout.fillWidth: true; icon: "󰅇"; label: "Clip"; minWidth: 68; tooltip: "Clipboard history"; onTriggered: root.toggleClipboard() }
           }
 
           RowLayout {
             Layout.fillWidth: true
             spacing: 7
-            ActionButton { icon: "󰸉"; label: "Wall"; minWidth: 68; tooltip: "Wallpaper"; onTriggered: root.toggleWallpaperPanel() }
-            ActionButton { icon: "󰍹"; label: "Screen"; minWidth: 68; tooltip: "Screen tools"; onTriggered: root.toggleScreenPanel() }
-            ActionButton { icon: "󰕾"; label: "Media"; minWidth: 68; tooltip: "Media controls"; onTriggered: root.toggleMediaPanel() }
-            ActionButton { icon: "󰖩"; label: "Net"; minWidth: 68; tooltip: "Network panel"; onTriggered: root.toggleNetworkPanel() }
+            ActionButton { Layout.fillWidth: true; icon: "󰸉"; label: "Wall"; minWidth: 68; tooltip: "Wallpaper"; onTriggered: root.toggleWallpaperPanel() }
+            ActionButton { Layout.fillWidth: true; icon: "󰍹"; label: "Screen"; minWidth: 68; tooltip: "Screen tools"; onTriggered: root.toggleScreenPanel() }
+            ActionButton { Layout.fillWidth: true; icon: "󰕾"; label: "Media"; minWidth: 68; tooltip: "Media controls"; onTriggered: root.toggleMediaPanel() }
+            ActionButton { Layout.fillWidth: true; icon: "󰖩"; label: "Net"; minWidth: 68; tooltip: "Network panel"; onTriggered: root.toggleNetworkPanel() }
           }
 
           RowLayout {
             Layout.fillWidth: true
             spacing: 7
-            ActionButton { icon: "󰥔"; label: "Time"; minWidth: 68; tooltip: "Calendar and time"; onTriggered: root.toggleCalendar() }
-            ActionButton { icon: "󰻞"; label: "Work"; minWidth: 68; tooltip: "Unread work inbox"; onTriggered: root.toggleWorkInbox() }
-            ActionButton { icon: "󰡨"; label: "Dash"; minWidth: 68; tooltip: "Personal dashboard"; onTriggered: root.togglePersonalDashboard() }
-            ActionButton { icon: "󰂚"; label: "Notes"; minWidth: 68; tooltip: "Notifications"; onTriggered: root.toggleNotifications() }
+            ActionButton { Layout.fillWidth: true; icon: "󰥔"; label: "Time"; minWidth: 68; tooltip: "Calendar and time"; onTriggered: root.toggleCalendar() }
+            ActionButton { Layout.fillWidth: true; icon: "󰻞"; label: "Work"; minWidth: 68; tooltip: "Unread work inbox"; onTriggered: root.toggleWorkInbox() }
+            ActionButton { Layout.fillWidth: true; icon: "󰡨"; label: "Dash"; minWidth: 68; tooltip: "Personal dashboard"; onTriggered: root.togglePersonalDashboard() }
+            ActionButton { Layout.fillWidth: true; icon: "󰂚"; label: "Notes"; minWidth: 68; tooltip: "Notifications"; onTriggered: root.toggleNotifications() }
           }
 
           RowLayout {
             Layout.fillWidth: true
             spacing: 7
-            ActionButton { icon: "󰒓"; label: "Set"; minWidth: 68; tooltip: "Shell settings"; onTriggered: root.toggleSettings() }
-            ActionButton { icon: "󱊖"; label: "Tray"; minWidth: 68; tooltip: "Tray manager"; onTriggered: root.toggleTrayManage() }
+            ActionButton { Layout.fillWidth: true; icon: "󰒓"; label: "Set"; minWidth: 68; tooltip: "Shell settings"; onTriggered: root.toggleSettings() }
+            ActionButton { Layout.fillWidth: true; icon: "󱊖"; label: "Tray"; minWidth: 68; tooltip: "Tray manager"; onTriggered: root.toggleTrayManage() }
           }
 
           RowLayout {
@@ -4193,7 +4193,7 @@ ShellRoot {
   PopupWindow {
     id: exitDialog
     visible: false
-    implicitWidth: root.menuWidth
+    implicitWidth: 460
     implicitHeight: root.compactMenuHeight
     color: "transparent"
     anchor.window: bar
@@ -4258,7 +4258,7 @@ ShellRoot {
           ActionButton { Layout.fillWidth: true; active: true; icon: root.sessionConfirmIcon; label: "Confirm"; tooltip: "Run " + root.sessionConfirmLabel; onTriggered: root.runSessionConfirm() }
         }
 
-        ActionButton { Layout.fillWidth: true; icon: "󰍃"; label: "Exit Hyprland"; tooltip: "Exit the current Hyprland session"; onTriggered: root.setSessionConfirm("Exit Hyprland", "󰍃", ["hyprctl", "dispatch", "exit"]) }
+        ActionButton { Layout.preferredWidth: 180; icon: "󰍃"; label: "Exit Hyprland"; tooltip: "Exit the current Hyprland session"; onTriggered: root.setSessionConfirm("Exit Hyprland", "󰍃", ["hyprctl", "dispatch", "exit"]) }
       }
     }
   }

@@ -438,6 +438,7 @@ Do these in this order; each task should leave one small validation command behi
    - Sources: Noctalia compact control-center layout, Caelestia settings/actions, cxOrz quick settings, end-4 smoke/utility polish.
    - Result: shared action buttons now keep a stable height and elide long labels instead of overflowing; the media popup width matches the other right-side dashboards; Controls menu rows no longer cram six actions into one row.
    - Follow-up: right-side Quickshell menus now use a shared 640px width, crowded panels use 560px height, compact panels use 360px height, calendar keeps a taller 720px surface, Work Inbox uses 420px, Personal uses 460px, Media uses the same medium height as Work Inbox, and default action buttons are wider so labels do not collapse to two letters, and menu smoke crops now match the wider right-side panels.
+   - Follow-up: current screenshot pass trims the Session menu to a compact width, makes Exit Hyprland secondary, gives Controls enough height for its bottom rows, expands Controls menu buttons to readable cells, makes Privacy action buttons icon-only, and tones down Media stream mute buttons.
    - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke controls media notifications clipboard network calendar`, and `desktop-doctor`.
 
 ## Automation helpers
