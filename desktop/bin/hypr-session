@@ -8,7 +8,11 @@ config="${HYPR_CONFIG:-$HOME/.config/hypr/init.lua}"
 shell_config="${QUICKSHELL_CONFIG:-marcelof}"
 profile="${HYPR_PROFILE:-default}"
 start_shell() {
-    QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}" "$HOME/.nix-profile/bin/quickshell" --path "$HOME/.config/quickshell/marcelof/shell.qml" --daemonize
+    if command -v qs-bar >/dev/null 2>&1; then
+        qs-bar start
+        return
+    fi
+    QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}" "$HOME/.nix-profile/bin/quickshell" --path "$HOME/.config/quickshell/marcelof/shell.qml" --no-duplicate --daemonize
 }
 
 need() {
@@ -396,7 +400,9 @@ start_session() {
 reload_session() {
     need hyprctl
     hyprctl reload
-    if command -v quickshell >/dev/null 2>&1; then
+    if command -v qs-bar >/dev/null 2>&1; then
+        qs-bar restart
+    elif command -v quickshell >/dev/null 2>&1; then
         pkill quickshell 2>/dev/null || true
         start_shell
     fi

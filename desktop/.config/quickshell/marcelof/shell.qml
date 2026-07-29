@@ -2050,6 +2050,7 @@ ShellRoot {
       }
 
 
+      IconButton { icon: "󰒓"; tooltip: "Controls"; onTriggered: root.toggleControlPanel() }
       StatusText { command: ["sh", "-c", "WEATHER_LOCATION=" + root.shellQuote(shellSettings.weatherLocation) + " /home/marcelof/bin/check-weather"]; interval: 900000 }
       StatusText { command: ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print \"󰃠 \" $4}' || printf '󰃠 --'"]; interval: 5000; leftClickCommand: ["/home/marcelof/bin/qs-bar", "controls"]; rightClickCommand: ["/home/marcelof/bin/qs-bar", "controls"]; wheelUpCommand: ["brightnessctl", "set", "+5%"]; wheelDownCommand: ["brightnessctl", "set", "5%-"] }
       StatusText { command: ["/home/marcelof/bin/network-status", "bar"]; interval: 10000; leftClickCommand: ["hypr-clean-env", "nm-connection-editor"]; rightClickCommand: ["hypr-clean-env", "nm-connection-editor"] }

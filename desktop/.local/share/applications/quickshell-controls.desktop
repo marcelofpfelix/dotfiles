@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Controls
+GenericName=Desktop controls
+Comment=Open Quickshell desktop controls
+Keywords=controls;settings;brightness;display;audio;system;quickshell;
+Exec=/home/marcelof/bin/qs-bar controls
+Icon=preferences-system
+Terminal=false
+Categories=Settings;
+StartupNotify=false
