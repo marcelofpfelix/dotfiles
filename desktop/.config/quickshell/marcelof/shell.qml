@@ -4052,7 +4052,7 @@ ShellRoot {
     screen: root.laptopScreen
     visible: root.webSearchOpen
     implicitWidth: 640
-    implicitHeight: 220
+    implicitHeight: 136
     color: "transparent"
 
     HyprlandFocusGrab {
