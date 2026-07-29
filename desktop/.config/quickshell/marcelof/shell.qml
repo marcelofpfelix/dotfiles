@@ -3206,18 +3206,26 @@ ShellRoot {
                       required property string modelData
                       required property int index
 
+                      Layout.fillWidth: true
+                      Layout.minimumWidth: 54
                       Layout.preferredHeight: 24
-                      Layout.preferredWidth: Math.max(64, actionLabel.implicitWidth + 18)
+                      Layout.preferredWidth: Math.min(128, Math.max(64, actionLabel.implicitWidth + 18))
+                      Layout.maximumWidth: 128
                       radius: 4
+                      clip: true
                       color: actionMouse.containsMouse ? "#45475a" : "#313244"
 
                       Text {
                         id: actionLabel
-                        anchors.centerIn: parent
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
                         color: "#cdd6f4"
                         elide: Text.ElideRight
                         font.family: "FiraCode Nerd Font"
                         font.pixelSize: 11
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                         text: modelData
                       }
 
