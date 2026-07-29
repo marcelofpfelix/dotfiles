@@ -182,7 +182,7 @@ inspect_contact_sheet() {
     return 1
   }
 
-  prompt='Inspect these Quickshell menu contact-sheet screenshots visually. The last image is the current run; earlier images are previous context if present. Do not run tools. Report whether you can see the images, then list concrete visible UI problems only: clipping, overlap, bad spacing, inconsistent sizing, unreadable text, huge empty areas, and regressions versus prior images. Keep it concise.'
+  prompt='Inspect these Quickshell menu contact-sheet screenshots visually. The last image is the current run; earlier images are previous context if present. Do not run tools. Report whether you can see the images, then list concrete visible defects inside the Quickshell popups only: clipped popup content, internal overlap, unreadable popup text, broken controls, huge empty areas inside a popup, and regressions versus prior popup content. Ignore desktop/browser/terminal content behind popups, crop framing, and background text unless it hides popup content. Keep it concise.'
   if [ -n "$previous_dir" ] && [ -s "$previous_dir/contact.png" ] && [ "$previous_dir/contact.png" != "$contact_sheet" ]; then
     images+=(--image "$previous_dir/contact.png")
   fi

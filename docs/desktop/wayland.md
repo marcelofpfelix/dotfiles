@@ -56,7 +56,7 @@ Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/`
 
 ### Codex image workaround
 
-`view_image` currently fails on this host with `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`, so the agent cannot directly open local PNGs through the built-in image viewer. Use `qs-menu-smoke --inspect` instead. It captures the menu PNGs with `grim`, builds `contact.png`, and pipes a prompt into `codex exec --ephemeral --sandbox read-only --image ...`; when a previous `latest/contact.png` exists, it passes both images so the nested Codex run can compare current and previous menu states.
+`view_image` currently fails on this host with `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`, so the agent cannot directly open local PNGs through the built-in image viewer. Use `qs-menu-smoke --inspect` instead. It captures the menu PNGs with `grim`, builds `contact.png`, and pipes a prompt into `codex exec --ephemeral --sandbox read-only --image ...`; when a previous `latest/contact.png` exists, it passes both images so the nested Codex run can compare current and previous menu states. The inspection prompt is scoped to defects inside Quickshell popups and intentionally ignores noisy desktop, browser, terminal, or crop-framing artifacts behind the popup.
 
 For a single screenshot, use the same pattern manually:
 
