@@ -3041,8 +3041,8 @@ ShellRoot {
       id: notificationCenterWindow
       visible: root.notificationCenterOpen
       color: "transparent"
-      implicitWidth: root.menuWidth
-      implicitHeight: root.menuHeight
+      implicitWidth: notificationHistory.count === 0 ? 360 : root.menuWidth
+      implicitHeight: notificationHistory.count === 0 ? 104 : root.menuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -3067,19 +3067,19 @@ ShellRoot {
             ActionButton {
               visible: root.selectedNotificationIndex >= 0
               icon: "󰅖"
-              label: "App"
-              minWidth: 58
+              label: ""
+              minWidth: 40
               tooltip: "Clear selected app notifications"
               onTriggered: root.clearNotificationsForApp(root.notificationAppAt(root.selectedNotificationIndex))
             }
             ActionButton {
               icon: "󰅖"
-              label: "All"
-              minWidth: 58
+              label: ""
+              minWidth: 40
               tooltip: "Clear all notifications"
               onTriggered: root.clearNotifications()
             }
-            ActionButton { icon: shellSettings.doNotDisturb ? "󰂛" : "󰂚"; label: "DND"; minWidth: 58; active: shellSettings.doNotDisturb; tooltip: shellSettings.doNotDisturb ? "Allow popups" : "Silence popups"; onTriggered: root.toggleDnd() }
+            ActionButton { icon: shellSettings.doNotDisturb ? "󰂛" : "󰂚"; label: ""; minWidth: 40; active: shellSettings.doNotDisturb; tooltip: shellSettings.doNotDisturb ? "Allow popups" : "Silence popups"; onTriggered: root.toggleDnd() }
           }
 
           Text {
