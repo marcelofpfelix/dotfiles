@@ -3567,7 +3567,7 @@ ShellRoot {
     screen: root.laptopScreen
     visible: false
     implicitWidth: 720
-    implicitHeight: shellSettings.denseUi ? 480 : 520
+    implicitHeight: shellSettings.denseUi ? 660 : 720
     color: "transparent"
 
     HyprlandFocusGrab {
@@ -3685,21 +3685,37 @@ ShellRoot {
             required property var modelData
             required property int index
             width: appList.width
-            height: 48
+            height: 54
             color: ListView.isCurrentItem ? "#313244" : "transparent"
             radius: 4
 
-            Text {
-              anchors.fill: parent
+            Column {
+              anchors.left: parent.left
               anchors.leftMargin: 44
+              anchors.right: parent.right
               anchors.rightMargin: 82
-              verticalAlignment: Text.AlignVCenter
-              color: "#cdd6f4"
-              elide: Text.ElideRight
-              font.family: "FiraCode Nerd Font"
-              font.styleName: "Retina"
-              font.pixelSize: 14
-              text: modelData.name + (modelData.subtext.length > 0 ? "  " + modelData.subtext : "")
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: 2
+
+              Text {
+                width: parent.width
+                color: "#cdd6f4"
+                elide: Text.ElideRight
+                font.family: "FiraCode Nerd Font"
+                font.styleName: "Retina"
+                font.pixelSize: 14
+                text: modelData.name
+              }
+
+              Text {
+                width: parent.width
+                visible: modelData.subtext.length > 0
+                color: "#9399b2"
+                elide: Text.ElideRight
+                font.family: "FiraCode Nerd Font"
+                font.pixelSize: 11
+                text: modelData.subtext
+              }
             }
 
             Image {
@@ -4116,7 +4132,7 @@ ShellRoot {
     id: networkPanel
     visible: false
     implicitWidth: root.menuWidth
-    implicitHeight: root.compactMenuHeight
+    implicitHeight: root.workMenuHeight
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
@@ -4178,8 +4194,8 @@ ShellRoot {
             font.family: "FiraCode Nerd Font"
             font.styleName: "Retina"
             font.pixelSize: 12
-            maximumLineCount: 8
-            wrapMode: Text.Wrap
+            maximumLineCount: 10
+            wrapMode: Text.NoWrap
             text: ""
           }
         }
@@ -4188,7 +4204,7 @@ ShellRoot {
 
     Process {
       id: networkRefresh
-      command: ["sh", "-c", "nmcli -t -f DEVICE,TYPE,STATE,CONNECTION dev status 2>/dev/null | sed 's/:/  /g' || ip -brief addr"]
+      command: ["/home/marcelof/bin/network-status", "devices"]
       stdout: StdioCollector {
         onStreamFinished: networkText.text = this.text.trim()
       }
