@@ -2166,13 +2166,13 @@ ShellRoot {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            spacing: 8
+            spacing: 6
             model: root.allTrayItems
 
             delegate: Rectangle {
               required property var modelData
               width: trayManageList.width
-              height: 44
+              height: 42
               radius: 6
               color: root.isTrayHidden(modelData) ? "#181825" : "#1e1e2e"
               border.color: "#313244"
@@ -2196,8 +2196,8 @@ ShellRoot {
                   text: root.trayItemText(modelData)
                 }
 
-                ActionButton { active: root.isTrayPinned(modelData); icon: "󰐃"; label: root.isTrayPinned(modelData) ? "Pinned" : "Pin"; minWidth: 76; tooltip: "Pin tray item"; onTriggered: root.toggleTrayPin(modelData) }
-                ActionButton { active: root.isTrayHidden(modelData); icon: "󰖭"; label: root.isTrayHidden(modelData) ? "Hidden" : "Hide"; minWidth: 76; tooltip: "Hide tray item"; onTriggered: root.toggleTrayHide(modelData) }
+                ActionButton { active: root.isTrayPinned(modelData); icon: "󰐃"; label: ""; minWidth: 40; tooltip: "Pin tray item"; onTriggered: root.toggleTrayPin(modelData) }
+                ActionButton { active: root.isTrayHidden(modelData); icon: "󰖭"; label: ""; minWidth: 40; tooltip: "Hide tray item"; onTriggered: root.toggleTrayHide(modelData) }
               }
             }
           }
@@ -3833,7 +3833,7 @@ ShellRoot {
             height: 40
             radius: 4
             color: ListView.isCurrentItem ? "#313244" : "transparent"
-            Text { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10; verticalAlignment: Text.AlignVCenter; color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: clipboardRow.preview }
+            Text { anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10; verticalAlignment: Text.AlignVCenter; color: "#bac2de"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 14; text: clipboardRow.preview }
             MouseArea { anchors.fill: parent; hoverEnabled: true; onEntered: clipList.currentIndex = index; onClicked: { clipList.currentIndex = index; root.pasteClipboardEntry() } }
           }
         }
@@ -4018,7 +4018,7 @@ ShellRoot {
           clip: true
           ColumnLayout {
             width: parent.width
-            spacing: 5
+            spacing: 7
             Repeater {
               model: keybindingModel
               RowLayout {
@@ -4026,8 +4026,8 @@ ShellRoot {
                 required property string action
                 Layout.fillWidth: true
                 spacing: 10
-                Text { width: 170; color: "#b4befe"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: shortcut }
-                Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: action }
+                Text { width: 190; color: "#b4befe"; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: shortcut }
+                Text { Layout.fillWidth: true; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: action }
               }
             }
             Item { Layout.fillWidth: true; implicitHeight: 14 }
@@ -4116,7 +4116,7 @@ ShellRoot {
     id: networkPanel
     visible: false
     implicitWidth: root.menuWidth
-    implicitHeight: root.menuHeight
+    implicitHeight: root.compactMenuHeight
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
