@@ -437,6 +437,7 @@ Do these in this order; each task should leave one small validation command behi
    - Task: normalize panel spacing, action row size, and empty states across launcher, clipboard, network, notifications, calendar, media, and controls using current local components.
    - Sources: Noctalia compact control-center layout, Caelestia settings/actions, cxOrz quick settings, end-4 smoke/utility polish.
    - Result: shared action buttons now keep a stable height and elide long labels instead of overflowing; the media popup width matches the other right-side dashboards; Controls menu rows no longer cram six actions into one row.
+  - Follow-up: right-side Quickshell menus now use a shared 560px width, crowded panels use 520px height, calendar keeps a taller 660px surface, Work Inbox uses 400px, Personal uses 430px, and default action buttons are wider so labels do not collapse to two letters.
    - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `qs-menu-smoke controls media notifications clipboard network calendar`, and `desktop-doctor`.
 
 ## Automation helpers

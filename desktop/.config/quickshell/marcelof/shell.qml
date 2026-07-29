@@ -16,6 +16,11 @@ ShellRoot {
   id: root
 
   property string launcherSmokeHiddenId: ""
+  readonly property int menuWidth: 560
+  readonly property int menuHeight: 520
+  readonly property int tallMenuHeight: 660
+  readonly property int workMenuHeight: 400
+  readonly property int dashboardMenuHeight: 430
 
   function toggleLauncher() {
     launcher.visible = !launcher.visible
@@ -1685,7 +1690,7 @@ ShellRoot {
     property string icon: ""
     property string label: ""
     property string tooltip: ""
-    property int minWidth: 76
+    property int minWidth: 92
     property bool active: false
     signal triggered()
     signal secondaryTriggered()
@@ -2121,8 +2126,8 @@ ShellRoot {
       id: trayManageWindow
       visible: root.trayManageOpen
       color: "transparent"
-      implicitWidth: 460
-      implicitHeight: 420
+      implicitWidth: root.menuWidth
+      implicitHeight: root.menuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2204,8 +2209,8 @@ ShellRoot {
       id: wallpaperPanelWindow
       visible: root.wallpaperPanelOpen
       color: "transparent"
-      implicitWidth: 460
-      implicitHeight: 420
+      implicitWidth: root.menuWidth
+      implicitHeight: root.menuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2280,8 +2285,8 @@ ShellRoot {
       id: screenPanelWindow
       visible: root.screenPanelOpen
       color: "transparent"
-      implicitWidth: 460
-      implicitHeight: 420
+      implicitWidth: root.menuWidth
+      implicitHeight: root.menuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2345,8 +2350,8 @@ ShellRoot {
       id: mediaPanelWindow
       visible: root.mediaPanelOpen
       color: "transparent"
-      implicitWidth: 460
-      implicitHeight: 420
+      implicitWidth: root.menuWidth
+      implicitHeight: root.menuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2467,8 +2472,8 @@ ShellRoot {
       id: controlPanelWindow
       visible: root.controlPanelOpen
       color: "transparent"
-      implicitWidth: 460
-      implicitHeight: 420
+      implicitWidth: root.menuWidth
+      implicitHeight: root.menuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2648,8 +2653,8 @@ ShellRoot {
       id: settingsWindow
       visible: root.settingsOpen
       color: "transparent"
-      implicitWidth: 460
-      implicitHeight: 420
+      implicitWidth: root.menuWidth
+      implicitHeight: root.menuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2691,8 +2696,8 @@ ShellRoot {
       id: calendarWindow
       visible: root.calendarOpen
       color: "transparent"
-      implicitWidth: 430
-      implicitHeight: 660
+      implicitWidth: root.menuWidth
+      implicitHeight: root.tallMenuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 72)
       anchor.rect.y: bar.height + 6
@@ -2882,8 +2887,8 @@ ShellRoot {
       id: workInboxWindow
       visible: root.workInboxOpen
       color: "transparent"
-      implicitWidth: 430
-      implicitHeight: 300
+      implicitWidth: root.menuWidth
+      implicitHeight: root.workMenuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2979,8 +2984,8 @@ ShellRoot {
       id: personalDashboardWindow
       visible: root.personalDashboardOpen
       color: "transparent"
-      implicitWidth: 500
-      implicitHeight: 430
+      implicitWidth: root.menuWidth
+      implicitHeight: root.dashboardMenuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -3039,8 +3044,8 @@ ShellRoot {
       id: notificationCenterWindow
       visible: root.notificationCenterOpen
       color: "transparent"
-      implicitWidth: 460
-      implicitHeight: 420
+      implicitWidth: root.menuWidth
+      implicitHeight: root.menuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -4104,8 +4109,8 @@ ShellRoot {
   PopupWindow {
     id: networkPanel
     visible: false
-    implicitWidth: 460
-    implicitHeight: 420
+    implicitWidth: root.menuWidth
+    implicitHeight: root.menuHeight
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
@@ -4187,8 +4192,8 @@ ShellRoot {
   PopupWindow {
     id: exitDialog
     visible: false
-    implicitWidth: 460
-    implicitHeight: 420
+    implicitWidth: root.menuWidth
+    implicitHeight: root.menuHeight
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
