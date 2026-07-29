@@ -93,9 +93,9 @@ crop_panel_region() {
     launcher|launcher-script) width=900; height=680; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     clipboard) width=760; height=600; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     websearch) width=820; height=340; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
-    calendar) width=560; height=660; x=$((max_w - width)); y=0 ;;
-    personal-dashboard) width=560; height=520; x=$((max_w - width)); y=0 ;;
-    *) width=560; height=520; x=$((max_w - width)); y=0 ;;
+    calendar) width=700; height=760; x=$((max_w - width)); y=0 ;;
+    personal-dashboard) width=700; height=560; x=$((max_w - width)); y=0 ;;
+    *) width=700; height=600; x=$((max_w - width)); y=0 ;;
   esac
   (( width > max_w )) && width=$max_w
   (( height > max_h )) && height=$max_h

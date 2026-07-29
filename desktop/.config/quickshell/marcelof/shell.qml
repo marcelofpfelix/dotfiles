@@ -16,11 +16,12 @@ ShellRoot {
   id: root
 
   property string launcherSmokeHiddenId: ""
-  readonly property int menuWidth: 560
-  readonly property int menuHeight: 520
-  readonly property int tallMenuHeight: 660
-  readonly property int workMenuHeight: 400
-  readonly property int dashboardMenuHeight: 430
+  readonly property int menuWidth: 640
+  readonly property int menuHeight: 560
+  readonly property int compactMenuHeight: 360
+  readonly property int tallMenuHeight: 720
+  readonly property int workMenuHeight: 420
+  readonly property int dashboardMenuHeight: 460
 
   function toggleLauncher() {
     launcher.visible = !launcher.visible
@@ -1690,12 +1691,12 @@ ShellRoot {
     property string icon: ""
     property string label: ""
     property string tooltip: ""
-    property int minWidth: 92
+    property int minWidth: 104
     property bool active: false
     signal triggered()
     signal secondaryTriggered()
 
-    implicitHeight: 32
+    implicitHeight: 36
     implicitWidth: Math.max(minWidth, actionRow.implicitWidth + 18)
     Layout.minimumHeight: implicitHeight
     Layout.preferredHeight: implicitHeight
@@ -1708,8 +1709,8 @@ ShellRoot {
       anchors.centerIn: parent
       spacing: 6
 
-      Text { color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 13; text: actionButtonRoot.icon }
-      Text { Layout.maximumWidth: Math.max(0, actionButtonRoot.width - actionButtonRoot.implicitHeight - 18); color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 11; text: actionButtonRoot.label }
+      Text { id: actionIcon; color: "#cdd6f4"; font.family: "FiraCode Nerd Font"; font.pixelSize: 14; text: actionButtonRoot.icon }
+      Text { Layout.maximumWidth: Math.max(0, actionButtonRoot.width - actionIcon.implicitWidth - 30); color: "#cdd6f4"; elide: Text.ElideRight; font.family: "FiraCode Nerd Font"; font.pixelSize: 12; text: actionButtonRoot.label }
     }
 
     MouseArea {
@@ -2127,7 +2128,7 @@ ShellRoot {
       visible: root.trayManageOpen
       color: "transparent"
       implicitWidth: root.menuWidth
-      implicitHeight: root.menuHeight
+      implicitHeight: root.workMenuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2351,7 +2352,7 @@ ShellRoot {
       visible: root.mediaPanelOpen
       color: "transparent"
       implicitWidth: root.menuWidth
-      implicitHeight: root.menuHeight
+      implicitHeight: root.workMenuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2654,7 +2655,7 @@ ShellRoot {
       visible: root.settingsOpen
       color: "transparent"
       implicitWidth: root.menuWidth
-      implicitHeight: root.menuHeight
+      implicitHeight: root.compactMenuHeight
       anchor.window: bar
       anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
       anchor.rect.y: bar.height + 6
@@ -2784,7 +2785,7 @@ ShellRoot {
 
           Rectangle {
             Layout.fillWidth: true
-            implicitHeight: 92
+            implicitHeight: 108
             radius: 5
             color: "#1e1e2e"
 
@@ -3988,8 +3989,8 @@ ShellRoot {
   PopupWindow {
     id: keybindingsPanel
     visible: root.keybindingsOpen
-    implicitWidth: 560
-    implicitHeight: 500
+    implicitWidth: root.menuWidth
+    implicitHeight: root.menuHeight
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
@@ -4193,7 +4194,7 @@ ShellRoot {
     id: exitDialog
     visible: false
     implicitWidth: root.menuWidth
-    implicitHeight: root.menuHeight
+    implicitHeight: root.compactMenuHeight
     color: "transparent"
     anchor.window: bar
     anchor.rect.x: Math.max(8, bar.width - implicitWidth - 10)
