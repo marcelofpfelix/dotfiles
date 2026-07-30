@@ -10,7 +10,8 @@ vim.opt.undofile = true                                 -- persistent undo acros
 vim.opt.ignorecase = true                               -- case-insensitive search by default
 vim.opt.smartcase = true                                -- BUT become case-sensitive with capitals
 vim.opt.signcolumn = "yes"                              -- always show sign column to avoid jump
-if vim.env.SSH_TTY then
+local has_local_clipboard = vim.env.WAYLAND_DISPLAY or vim.env.DISPLAY or vim.fn.executable("pbcopy") == 1
+if vim.env.SSH_TTY or vim.env.SSH_CONNECTION or vim.env.SSH_CLIENT or not has_local_clipboard then
   vim.g.clipboard = "osc52"                             -- allow OSC52 copy over SSH/tmux
   vim.opt.clipboard = ""                                -- keep plain p local; OSC52 paste waits on terminal reads
   vim.api.nvim_create_autocmd("TextYankPost", {
