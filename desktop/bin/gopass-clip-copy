@@ -2,19 +2,28 @@
 
 # Gopass clipboard copy helper.
 # Receives the entry name as $1 and the secret on stdin.
-# Hides the secret from clipboard manager history.
-#
-# Controlled by CLIP_BACKEND env var (gpaste or copyq).
+# Keeps gopass secrets out of cliphist by pausing its watchers until clear.
 
-BACKEND="${CLIP_BACKEND:-gpaste}"
+BACKEND="${CLIP_BACKEND:-wl}"
+[ "$BACKEND" = gpaste ] && BACKEND=wl
+
+stop_cliphist_watch() {
+    ps -eo pid=,comm=,args= | awk '
+        $2 == "wl-paste" && index($0, "cliphist store") { print $1 }
+        $2 == "bash" && index($0, "cliphist-menu watch") { print $1 }
+    ' | while IFS= read -r pid; do
+        [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+    done
+}
 
 case "$BACKEND" in
+    wl)
+        stop_cliphist_watch
+        wl-copy --type text/plain
+        ;;
     gpaste)
-        # gpaste-client add-password requires the secret in argv. Keep stdin-only
-        # handling here and pause GPaste tracking so the secret is not saved there.
-        gpaste-client stop 2>/dev/null || true
-        gpaste-client
-        gpaste-client start 2>/dev/null || true
+        echo "gopass-clip-copy: gpaste backend disabled because it breaks Wayland clipboard ownership" >&2
+        exit 1
         ;;
     copyq)
         echo "gopass-clip-copy: copyq backend cannot safely copy secrets without argv" >&2

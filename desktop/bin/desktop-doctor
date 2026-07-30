@@ -97,6 +97,16 @@ run_required() {
   fail "$label" "command failed: $*" "$*"
 }
 
+check_absent_process() {
+  local label=$1 pattern=$2 matches
+  matches=$(pgrep -af "$pattern" 2>/dev/null || true)
+  if [ -z "$matches" ]; then
+    ok "$label" absent
+    return 0
+  fi
+  fail "$label" "running: $(printf %s "$matches" | sed -n '1p')" "pkill -f $pattern"
+}
+
 current_profile() {
   local line tab
   tab=$(printf '\t')
@@ -382,6 +392,7 @@ check_notification_smoke_status
 
 section "clipboard"
 run_required cliphist-menu cliphist-menu status
+check_absent_process gpaste-daemon gpaste-daemon
 run_required passmenu-action-self-test passmenu-action --self-test
 
 section "screenshots"
