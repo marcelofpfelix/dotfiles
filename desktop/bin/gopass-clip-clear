@@ -2,29 +2,21 @@
 
 # Gopass clipboard clear helper.
 # Receives the entry name as $1 and the checksum on stdin.
-# Clears the Wayland clipboard and resumes cliphist after secret expiry.
+# Secret cleanup is intentionally disabled while debugging Wayland paste.
 
 BACKEND="${CLIP_BACKEND:-wl}"
 [ "$BACKEND" = gpaste ] && BACKEND=wl
 
-start_cliphist_watch() {
-    command -v cliphist-menu >/dev/null 2>&1 || return 0
-    pgrep -af "cliphist-menu watch" >/dev/null 2>&1 && return 0
-    setsid -f cliphist-menu watch >/dev/null 2>&1
-}
-
 case "$BACKEND" in
     wl)
-        wl-copy --clear
-        wl-copy --primary --clear
-        start_cliphist_watch
+        exit 0
         ;;
     gpaste)
         echo "gopass-clip-clear: gpaste backend disabled because it breaks Wayland clipboard ownership" >&2
         exit 1
         ;;
     copyq)
-        copyq copy -- ""
+        exit 0
         ;;
     *)
         echo "gopass-clip-clear: unknown CLIP_BACKEND: $BACKEND" >&2

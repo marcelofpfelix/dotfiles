@@ -2,23 +2,13 @@
 
 # Gopass clipboard copy helper.
 # Receives the entry name as $1 and the secret on stdin.
-# Keeps gopass secrets out of cliphist by pausing its watchers until clear.
+# Clipboard history is intentionally left alone while debugging Wayland paste.
 
 BACKEND="${CLIP_BACKEND:-wl}"
 [ "$BACKEND" = gpaste ] && BACKEND=wl
 
-stop_cliphist_watch() {
-    ps -eo pid=,comm=,args= | awk '
-        $2 == "wl-paste" && index($0, "cliphist store") { print $1 }
-        $2 == "bash" && index($0, "cliphist-menu watch") { print $1 }
-    ' | while IFS= read -r pid; do
-        [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
-    done
-}
-
 case "$BACKEND" in
     wl)
-        stop_cliphist_watch
         wl-copy --type text/plain
         ;;
     gpaste)
