@@ -16,6 +16,7 @@ start_cliphist_watch() {
 case "$BACKEND" in
     wl)
         wl-copy --clear
+        wl-copy --primary --clear
         start_cliphist_watch
         ;;
     gpaste)
