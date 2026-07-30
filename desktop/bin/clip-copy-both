@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+command -v wl-copy >/dev/null 2>&1 || {
+    printf 'clip-copy-both: missing wl-copy\n' >&2
+    exit 1
+}
+
+tee >(wl-copy --primary --type text/plain) | wl-copy --type text/plain

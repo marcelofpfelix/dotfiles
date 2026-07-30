@@ -43,9 +43,7 @@ case "${1:-menu}" in
         text_pid=$!
         wl-paste --type image --watch sh -c 'cliphist store && qs-bar clipboard-update >/dev/null 2>&1 || true' &
         image_pid=$!
-        wl-paste --type text --watch wl-copy --primary --type text/plain &
-        primary_pid=$!
-        trap 'kill "$text_pid" "$image_pid" "$primary_pid" 2>/dev/null || true' EXIT INT TERM
+        trap 'kill "$text_pid" "$image_pid" 2>/dev/null || true' EXIT INT TERM
         wait
         ;;
     menu)
