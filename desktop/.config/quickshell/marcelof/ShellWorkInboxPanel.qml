@@ -39,7 +39,7 @@ ShellPopup {
             ShellText { Layout.fillWidth: true; role: "strong"; elide: Text.ElideRight; text: "Slack" }
             Text { Layout.fillWidth: true; color: theme.textMuted; elide: Text.ElideRight; font.family: theme.fontFamily; font.pixelSize: theme.fontSm; text: workInboxPanel.shellRoot.workInboxSlackAvailable ? (workInboxPanel.shellRoot.workInboxSlackUnread + " unread, " + workInboxPanel.shellRoot.workInboxSlackMentions + " mentions") : workInboxPanel.shellRoot.workInboxSlackReason }
           }
-          ShellActionButton { icon: "󰍉"; label: workInboxPanel.shellConfig.labels.open; minWidth: 62; tooltip: "Open Slack"; tooltipState: workInboxPanel.shellRoot; onTriggered: Quickshell.execDetached(workInboxPanel.shellConfig.slack()) }
+          ShellActionButton { icon: "󰍉"; label: workInboxPanel.shellConfig.labels.open; minWidth: 78; tooltip: "Open Slack"; tooltipState: workInboxPanel.shellRoot; onTriggered: Quickshell.execDetached(workInboxPanel.shellConfig.slack()) }
         }
       }
 
@@ -56,7 +56,7 @@ ShellPopup {
             ShellText { Layout.fillWidth: true; role: "strong"; elide: Text.ElideRight; text: "GitHub" }
             Text { Layout.fillWidth: true; color: theme.textMuted; elide: Text.ElideRight; font.family: theme.fontFamily; font.pixelSize: theme.fontSm; text: workInboxPanel.shellRoot.workInboxGithubAvailable ? (workInboxPanel.shellRoot.workInboxGithubReviews + " review requests") : workInboxPanel.shellRoot.workInboxGithubReason }
           }
-          ShellActionButton { icon: "󰍉"; label: workInboxPanel.shellConfig.labels.open; minWidth: 62; tooltip: "Open GitHub review requests"; tooltipState: workInboxPanel.shellRoot; onTriggered: Quickshell.execDetached(workInboxPanel.shellConfig.browser("https://github.com/pulls/review-requested")) }
+          ShellActionButton { icon: "󰍉"; label: workInboxPanel.shellConfig.labels.open; minWidth: 78; tooltip: "Open GitHub review requests"; tooltipState: workInboxPanel.shellRoot; onTriggered: Quickshell.execDetached(workInboxPanel.shellConfig.browser("https://github.com/pulls/review-requested")) }
         }
       }
 
@@ -73,7 +73,7 @@ ShellPopup {
             ShellText { Layout.fillWidth: true; role: "strong"; elide: Text.ElideRight; text: "Linear" }
             Text { Layout.fillWidth: true; color: theme.textMuted; elide: Text.ElideRight; font.family: theme.fontFamily; font.pixelSize: theme.fontSm; text: workInboxPanel.shellRoot.workInboxLinearAvailable ? (workInboxPanel.shellRoot.workInboxLinearNotifications + " notifications") : workInboxPanel.shellRoot.workInboxLinearReason }
           }
-          ShellActionButton { icon: "󰍉"; label: workInboxPanel.shellConfig.labels.open; minWidth: 62; tooltip: "Open Linear inbox"; tooltipState: workInboxPanel.shellRoot; onTriggered: Quickshell.execDetached(workInboxPanel.shellConfig.browser("https://linear.app/inbox")) }
+          ShellActionButton { icon: "󰍉"; label: workInboxPanel.shellConfig.labels.open; minWidth: 78; tooltip: "Open Linear inbox"; tooltipState: workInboxPanel.shellRoot; onTriggered: Quickshell.execDetached(workInboxPanel.shellConfig.browser("https://linear.app/inbox")) }
         }
       }
 
