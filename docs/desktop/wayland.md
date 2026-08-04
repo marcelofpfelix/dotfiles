@@ -12,11 +12,11 @@ For the short switch procedure, see
 - `desktop/.config/hypr/profiles/omarchy.lua`: Omarchy-like Wayland profile implemented with generic Wayland tools.
 - `desktop/.config/quickshell/marcelof/shell.qml`: Quickshell wallpaper, bar, tray/status, launcher, password picker, clipboard picker, web-search popup, keybindings popup, screen tools popup, and session menu.
 - `desktop/bin/hypr-session`: status, smoke, test, reload, rollback helper.
-- `desktop/bin/desktop-doctor`: read-only desktop health wrapper around smoke, profile, shell, board, picker, audio, recording, and browser wrapper checks.
-- `desktop/bin/desktop-package-audit`: checks the active Wayland package intent against the sibling homelab install list.
-- `desktop/bin/qs-menu-smoke`: visual smoke helper that opens, captures, closes, and checks Quickshell menu screenshots under local state.
+- `desktop/tools/desktop-doctor`: read-only desktop health wrapper around smoke, profile, shell, board, picker, audio, recording, and browser wrapper checks.
+- `desktop/tools/desktop-package-audit`: checks the active Wayland package intent against the sibling homelab install list.
+- `desktop/tools/qs-menu-smoke`: visual smoke helper that opens, captures, closes, and checks Quickshell menu screenshots under local state.
 - `desktop/bin/desktop-reload`: validates, copies, and reloads the live Quickshell shell and board config.
-- `desktop/bin/desktop-notification-smoke`: notification toast, action capability, and center smoke test.
+- `desktop/tools/desktop-notification-smoke`: notification toast, action capability, and center smoke test.
 - `desktop/bin/calendar-sync-status`: read-only calendar sync boundary check; Quickshell consumes local `khal` output and never owns Google/CalDAV credentials.
 - `desktop/bin/hypr-gdm`: installs the generated `/usr/share/wayland-sessions/hyprland.desktop` login-manager entry and GDM account defaults.
 - `desktop/bin/hypr-scratch`: helper-backed special workspace scratchpad.
@@ -28,17 +28,17 @@ Copy the dotfiles locally, then run:
 
 ```console
 home -y
-desktop-doctor
-desktop-accept
+desktop/tools/desktop-doctor
+desktop/tools/desktop-accept
 desktop-startup-report
-qs-menu-smoke
+desktop/tools/qs-menu-smoke
 desktop-reload
 hypr-session smoke
 hypr-session test
 HYPR_PROFILE=omarchy hypr-session test
 ```
 
-`qs-menu-smoke` writes full screenshots, focused-monitor `*.monitor.png` files, menu-region `*.crop.png` contact-sheet inputs, `contact.png`, and `summary.tsv` under `~/.local/state/quickshell/menu-smoke/`, with `latest` pointing at the newest run. `desktop-doctor` treats that latest run as stale after 24 hours and after newer live Quickshell QML; set `QS_MENU_SMOKE_MAX_AGE_SECONDS=0` to skip only the age check.
+`desktop/tools/qs-menu-smoke` writes full screenshots, focused-monitor `*.monitor.png` files, menu-region `*.crop.png` contact-sheet inputs, `contact.png`, and `summary.tsv` under `~/.local/state/quickshell/menu-smoke/`, with `latest` pointing at the newest run. `desktop/tools/desktop-doctor` treats that latest run as stale after 24 hours and after newer live Quickshell QML; set `QS_MENU_SMOKE_MAX_AGE_SECONDS=0` to skip only the age check.
 
 Use `HYPR_PROFILE=default` for the current default profile and `HYPR_PROFILE=omarchy` for the Omarchy-like Wayland profile.
 
@@ -52,11 +52,11 @@ hypr-session reload
 
 ## Menu testing
 
-Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `qs-menu-smoke wallpaper media notifications` for targeted visual checks, `qs-menu-smoke` for the full popup set, `qs-menu-smoke --open` to capture and open the contact sheet, or `qs-menu-smoke --inspect` to send the current contact sheet plus the previous run when present to `codex exec --image` for visual comparison.
+Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `desktop/tools/qs-menu-smoke wallpaper media notifications` for targeted visual checks, `desktop/tools/qs-menu-smoke` for the full popup set, `desktop/tools/qs-menu-smoke --open` to capture and open the contact sheet, or `desktop/tools/qs-menu-smoke --inspect` to send the current contact sheet plus the previous run when present to `codex exec --image` for visual comparison.
 
 ### Codex image workaround
 
-`view_image` currently fails on this host with `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`, so the agent cannot directly open local PNGs through the built-in image viewer. Use `qs-menu-smoke --inspect` instead. It captures the menu PNGs with `grim`, builds `contact.png`, and pipes a prompt into `codex exec --ephemeral --sandbox read-only --image ...`; when a previous `latest/contact.png` exists, it passes both images so the nested Codex run can compare current and previous menu states. The inspection prompt is scoped to defects inside Quickshell popups and intentionally ignores noisy desktop, browser, terminal, or crop-framing artifacts behind the popup.
+`view_image` currently fails on this host with `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`, so the agent cannot directly open local PNGs through the built-in image viewer. Use `desktop/tools/qs-menu-smoke --inspect` instead. It captures the menu PNGs with `grim`, builds `contact.png`, and pipes a prompt into `codex exec --ephemeral --sandbox read-only --image ...`; when a previous `latest/contact.png` exists, it passes both images so the nested Codex run can compare current and previous menu states. The inspection prompt is scoped to defects inside Quickshell popups and intentionally ignores noisy desktop, browser, terminal, or crop-framing artifacts behind the popup.
 
 For a single screenshot, use the same pattern manually:
 
@@ -65,7 +65,7 @@ printf '%s\n' 'Inspect this screenshot visually. Do not run tools. List concrete
   codex exec --ephemeral --sandbox read-only --cd "$PWD" --image /path/to/screenshot.png -
 ```
 
-Only use this path for screenshots that are safe to send through Codex image input. Use `qs-menu-smoke --open` when the user only needs the contact sheet opened locally.
+Only use this path for screenshots that are safe to send through Codex image input. Use `desktop/tools/qs-menu-smoke --open` when the user only needs the contact sheet opened locally.
 
 ## X11 archive
 
@@ -95,13 +95,19 @@ The local Quickshell shell has replaced the Polybar surface for workspace/status
 
 Calendar account sync stays outside Quickshell. The shell reads `calendar-agenda-status`, which reads local `khal` output only. Use `calendar-sync-status` to verify whether the machine is still local-only or has a system-level sync tool such as `vdirsyncer` configured. Do not pass Google or CalDAV credentials through QML, launcher rows, or command argv.
 
-Reference ideas adapted locally: Omarchy quattro key behavior, Caelestia-style session panel actions and idle inhibitor, end-4-style `Super+/` keybinding discoverability and cliphist watcher updates, Noctalia-style compact popup/control surfaces, and cxOrz-style backend-only cliphist ownership. No upstream shell binaries or names are used by this repo.
+## Reference Import Rule
+
+Reuse reference repos for behavior, layout patterns, and small implementation ideas only. Do not import upstream-branded shell binaries, broad framework rewrites, distro update machinery, or assumptions that conflict with the local default i3-compatible profile.
+
+Adapted locally: Omarchy quattro key behavior, Caelestia-style session panel actions and idle inhibitor, end-4-style `Super+/` keybinding discoverability and cliphist watcher updates, Noctalia-style compact popup/control surfaces, and cxOrz-style backend-only cliphist ownership.
+
+Rejected locally: Omarchy-named runtime commands, upstream shell launchers, distro-level refresh/update jobs, and replacing the Marcelof Quickshell shell with a copied upstream shell.
 
 ## Switchable launchers
 
 Quickshell remains the default shell UI:
 
-- `qs-launcher` opens the Quickshell app launcher.
+- `archive/obsolete/desktop/bin/qs-launcher` is the retired launcher wrapper; active bindings use `qs-bar launcher`.
 - `websearch` with no arguments opens the Quickshell web search panel when Wayland/Quickshell are available.
 
 Script-friendly Walker/terminal alternatives are available in parallel:

@@ -8,27 +8,53 @@ qs_bin="${QS_BIN:-$HOME/.nix-profile/bin/qs}"
 quickshell_bin="${QUICKSHELL_BIN:-$HOME/.nix-profile/bin/quickshell}"
 config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
 log_file="${QS_BAR_LOG:-/tmp/qs-bar.log}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_lib="${script_dir%/bin}/lib/lib_qs_menus.sh"
+if [ -r "$repo_lib" ]; then
+  . "$repo_lib"
+else
+  . "${LIBS_DIR:-$HOME/lib}/lib_qs_menus.sh"
+fi
+
+quickshell_pids() {
+  ps -eo pid=,args= | awk -v cfg="$config_path" 'index($0, "quickshell") && index($0, "--path " cfg) { print $1 }'
+}
 
 list_instances() {
-  "$qs_bin" list --all
+  ps -eo pid=,args= | awk -v cfg="$config_path" 'index($0, "quickshell") && index($0, "--path " cfg) { pid=$1; $1=""; sub(/^ /, ""); printf "Process %s:%s\n", pid, $0 }'
 }
 
 usage() {
-  printf 'use: qs-bar [start|stop|restart|reload|status|toggle|show|hide|tray|controls|calendar|work-inbox|personal-dashboard|notifications|power|inhibit|keybindings|clipboard|clipboard-update|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
+  printf 'use: qs-bar [start|stop|restart|reload|status|runtime-prune|toggle|show|hide|tray|controls|calendar|work-inbox|personal-dashboard|notifications|power|inhibit|keybindings|clipboard|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
 }
 
 kill_all() {
-  local ids id
+  local pids
 
-  ids=$(list_instances | awk '/^Instance / {gsub(":", "", $2); print $2}')
-  if [ -z "$ids" ]; then
-    return 0
-  fi
+  pids=$(quickshell_pids || true)
+  [ -n "$pids" ] || return 0
+  kill $pids 2>/dev/null || true
+}
 
-  while IFS= read -r id; do
-    [ -n "$id" ] || continue
-    "$qs_bin" kill --id "$id" 2>/dev/null || true
-  done <<<"$ids"
+runtime_prune() {
+  local force root path found
+  force=0
+  [ "${1:-}" = "--force" ] && force=1
+  root="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/quickshell/by-path"
+  [ -d "$root" ] || return 0
+  found=0
+  for path in "$root"/*; do
+    [ -L "$path" ] || continue
+    [ ! -e "$path" ] || continue
+    found=1
+    if [ "$force" -eq 1 ]; then
+      unlink -- "$path"
+      printf "removed %s\n" "$path"
+    else
+      printf "would-remove %s\n" "$path"
+    fi
+  done
+  [ "$found" -eq 1 ] || printf "no stale quickshell by-path entries\n"
 }
 
 call_ipc() {
@@ -66,7 +92,7 @@ ipc_target() {
 }
 
 running() {
-  list_instances | grep -q '^Instance '
+  [ -n "$(quickshell_pids || true)" ]
 }
 
 start() {
@@ -84,6 +110,8 @@ case "${1:-status}" in
   stop) kill_all ;;
   restart|reload) restart_quickshell ;;
   status) list_instances ;;
+  runtime-prune|prune-runtime) runtime_prune "${2:-}" ;;
+  list-menus|menus) qs_menu_list ;;
   toggle|show|hide) ipc "$1" ;;
   launcher) ipc_target launcher open ;;
   tray|tray-manage) ipc trayManage ;;
@@ -110,6 +138,7 @@ case "${1:-status}" in
   keybindings|keys) ipc keybindings ;;
   clipboard) ipc clipboard ;;
   clipboard-update) ipc clipboardUpdate ;;
+  passmenu) ipc_target passmenu open copy username gopass ;;
   close-panels) ipc closePanels ;;
   *) usage; exit 2 ;;
 esac

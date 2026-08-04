@@ -1,0 +1,110 @@
+#!/usr/bin/env ruby
+# Fails on repeated literals worth moving into ShellTheme/ShellConfig cleanup.
+
+require "set"
+
+root = ARGV[0] || ENV["DOTFILES_ROOT"] || File.expand_path("~/gwt/marcelofpfelix/dotfiles/main")
+qml_dir = File.join(root, "desktop/.config/quickshell/marcelof")
+hypr_dir = File.join(root, "desktop/.config/hypr")
+
+abort "missing qml dir: #{qml_dir}" unless Dir.exist?(qml_dir)
+
+ALLOWLIST = {
+  "QML string literals" => Set[
+    '"Lisbon"',
+    '"Notification"',
+    '"Palmela, Portugal"',
+    '"Reboot"',
+    '"Stop"',
+    '"not loaded"',
+    '"recording"',
+    '"set"',
+    '"set-sink-input-volume"',
+    '"unknown"',
+  ],
+  "QML numeric UI literals" => Set[
+    "height: 1",
+    "width: 1",
+  ],
+  "Hyprland Lua string literals" => Set[
+    '" + SHIFT"',
+  ],
+}.freeze
+
+BLOCKED_EXIT = 1
+MIN_REPEATS = 3
+
+
+def shorten(value, limit = 120)
+  value.length > limit ? value[0, limit - 1] + "..." : value
+end
+
+def repeated_items(counts, min = MIN_REPEATS)
+  counts.select { |_value, count| count >= min }
+        .sort_by { |value, count| [-count, value] }
+        .first(20)
+end
+
+def print_repeats(title, counts, blockers, min = MIN_REPEATS)
+  allowed = ALLOWLIST.fetch(title, Set[])
+  repeats = repeated_items(counts, min)
+
+  puts "## #{title}"
+  if repeats.empty?
+    puts "      0 none"
+  else
+    repeats.each do |value, count|
+      state = allowed.include?(value) ? "allowed" : "BLOCK"
+      blockers << [title, value, count] if state == "BLOCK"
+      puts "%7d %-7s %s" % [count, state, shorten(value)]
+    end
+  end
+  puts
+end
+
+def qml_files(dir)
+  Dir.glob(File.join(dir, "*.qml")).reject { |file| File.basename(file) == "ShellConfigData.qml" }.sort
+end
+
+blockers = []
+strings = Hash.new(0)
+numbers = Hash.new(0)
+qml_files(qml_dir).each do |file|
+  text = File.read(file)
+  text.each_line do |line|
+    line.scan(/"(?:\\.|[^"\\])*"/).each do |literal|
+      next if literal.length < 5
+      next if line.match?(/\brole:\s*#{Regexp.escape(literal)}/)
+
+      strings[literal] += 1
+    end
+  end
+
+  text.each_line do |line|
+    line.scan(/\b(spacing|radius|width|height|implicitWidth|implicitHeight|anchors\.margins|anchors\.(?:left|right|top|bottom)Margin):\s*([0-9]+)/) do |prop, value|
+      numbers["#{prop}: #{value}"] += 1
+    end
+  end
+end
+
+print_repeats("QML string literals", strings, blockers)
+print_repeats("QML numeric UI literals", numbers, blockers)
+
+if Dir.exist?(hypr_dir)
+  hypr_strings = Hash.new(0)
+  Dir.glob(File.join(hypr_dir, "**/*.lua")).sort.each do |file|
+    File.read(file).scan(/"(?:\\.|[^"\\])*"/).each do |literal|
+      next if literal.length < 10
+
+      hypr_strings[literal] += 1
+    end
+  end
+  print_repeats("Hyprland Lua string literals", hypr_strings, blockers)
+end
+
+if blockers.any?
+  warn "repeat audit failed: #{blockers.length} non-allowlisted repeated literal(s)"
+  exit BLOCKED_EXIT
+end
+
+puts "repeat audit ok"

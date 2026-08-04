@@ -20,6 +20,13 @@ detect_profile() {
 profile="${1:-${HYPR_PROFILE:-$(detect_profile)}}"
 profile_dir="${HYPR_KEYS_PROFILE_DIR:-$HOME/.config/hypr/profiles}"
 file="$profile_dir/$profile.lua"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_lib="${script_dir%/bin}/lib/lib_qs_menus.sh"
+if [ -r "$repo_lib" ]; then
+    . "$repo_lib"
+elif [ -r "${LIBS_DIR:-$HOME/lib}/lib_qs_menus.sh" ]; then
+    . "${LIBS_DIR:-$HOME/lib}/lib_qs_menus.sh"
+fi
 
 if [ ! -r "$file" ] && [ -r "desktop/.config/hypr/profiles/$profile.lua" ]; then
     file="desktop/.config/hypr/profiles/$profile.lua"
@@ -61,11 +68,19 @@ pretty_key() {
 }
 
 pretty_action() {
-    local line=$1 action=$2
+    local line=$1 action=$2 menu
+    if declare -p qs_menu_panels >/dev/null 2>&1 && command -v qs_menu_label >/dev/null 2>&1; then
+        for menu in "${qs_menu_panels[@]}"; do
+            case "$line" in
+                *"qs-bar $menu"*|*"qs(\"$menu\")"*) qs_menu_label "$menu"; return ;;
+            esac
+        done
+    fi
     case "$line" in
         *'sh(terminal)'*) printf 'Terminal' ;;
         *'sh(launcher)'*) printf 'Apps' ;;
         *'qs-bar keybindings'*) printf 'Keybindings' ;;
+        *'common.actions.keybindings'*) printf 'Keybindings' ;;
         *'qs-bar power'*) printf 'Session menu' ;;
         *'qs-bar controls'*) printf 'Controls' ;;
         *'universal_paste'*) printf 'Paste' ;;
@@ -76,7 +91,13 @@ pretty_action() {
         *'qs-bar websearch'*) printf 'Web search' ;;
         *'qs-bar toggle'*) printf 'Toggle bar' ;;
         *'qs-bar lock'*) printf 'Lock' ;;
+        *'qs("power")'*) printf 'Session menu' ;;
+        *'qs("controls")'*) printf 'Controls' ;;
+        *'qs("toggle")'*) printf 'Toggle bar' ;;
+        *'qs("lock")'*) printf 'Lock' ;;
+        *'qs("websearch")'*) printf 'Web search' ;;
         *'screenshot-wayland edit'*) printf 'Screenshot' ;;
+        *'screenshot("edit")'*) printf 'Screenshot' ;;
         *'hyprpicker'*) printf 'Color picker' ;;
         *'hypr-scratch toggle'*) printf 'Scratchpad' ;;
         *'hypr-scratch move'*) printf 'Move window to scratchpad' ;;
@@ -104,6 +125,7 @@ pretty_action() {
         *'window.pseudo'*) printf 'Pseudo tile' ;;
         *'togglefloating; hyprctl dispatch pin'*) printf 'Toggle pinned floating' ;;
         *'hypr-session reload'*) printf 'Reload Hyprland' ;;
+        *'common.actions.hypr_reload'*) printf 'Reload Hyprland' ;;
         *'cyclenext prev'*) printf 'Previous window' ;;
         *'cyclenext'*) printf 'Next window' ;;
         *'focus parent has no dwindle equivalent'*) printf 'Focus parent unavailable' ;;
@@ -111,6 +133,7 @@ pretty_action() {
         *'monitor'*) printf 'Display settings' ;;
         *'gnome-calculator'*) printf 'Calculator' ;;
         *'hypr-term popup-tmux'*) printf 'Tmux popup' ;;
+        *'terminal .. " popup-tmux"'*) printf 'Tmux popup' ;;
         *'tmux list-keys'*) printf 'Tmux keys' ;;
         *'tmx'*) printf 'Tmux launcher' ;;
         *'about:blank'*) printf 'Browser' ;;
@@ -126,21 +149,36 @@ pretty_action() {
         *'obsidian'*) printf 'Obsidian' ;;
         *'typora'*) printf 'Typora' ;;
         *'desktop-osd volume'*) printf 'Volume' ;;
+        *'osd("volume-up")'*) printf 'Volume up' ;;
+        *'osd("volume-down")'*) printf 'Volume down' ;;
+        *'osd("volume-fine-up")'*) printf 'Fine volume up' ;;
+        *'osd("volume-fine-down")'*) printf 'Fine volume down' ;;
         *'desktop-osd mute'*) printf 'Mute volume' ;;
+        *'osd("mute")'*) printf 'Mute volume' ;;
         *'desktop-osd mic-mute'*) printf 'Mute mic' ;;
+        *'osd("mic-mute")'*) printf 'Mute mic' ;;
         *'desktop-osd kbd'*) printf 'Keyboard brightness' ;;
+        *'osd("kbd-up")'*) printf 'Keyboard brightness up' ;;
+        *'osd("kbd-down")'*) printf 'Keyboard brightness down' ;;
         *'desktop-osd brightness-fine-up'*) printf 'Screen brightness fine up' ;;
+        *'osd("brightness-fine-up")'*) printf 'Screen brightness fine up' ;;
         *'desktop-osd brightness-fine-down'*) printf 'Screen brightness fine down' ;;
+        *'osd("brightness-fine-down")'*) printf 'Screen brightness fine down' ;;
         *'desktop-osd brightness-up'*) printf 'Screen brightness up' ;;
+        *'osd("brightness-up")'*) printf 'Screen brightness up' ;;
         *'desktop-osd brightness-down'*) printf 'Screen brightness down' ;;
+        *'osd("brightness-down")'*) printf 'Screen brightness down' ;;
         *'desktop-osd brightness-max'*) printf 'Max brightness' ;;
+        *'osd("brightness-max")'*) printf 'Max brightness' ;;
         *'desktop-osd brightness-min'*) printf 'Min brightness' ;;
+        *'osd("brightness-min")'*) printf 'Min brightness' ;;
         *'pactl set-sink-volume'*) printf 'Volume' ;;
         *'set-sink-mute'*) printf 'Mute volume' ;;
         *'set-source-mute'*) printf 'Mute mic' ;;
         *'playerctl next'*) printf 'Next track' ;;
         *'playerctl previous'*) printf 'Previous track' ;;
         *'audioctl play-pause-all'*) printf 'Start/stop saved audio' ;;
+        *'common.actions.play_pause_all'*) printf 'Start/stop saved audio' ;;
         *'KbdBrightness'*) printf 'Keyboard brightness' ;;
         *'MonBrightness'*) printf 'Screen brightness' ;;
         *'bri +1'*) printf 'Screen brightness fine up' ;;

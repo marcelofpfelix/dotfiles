@@ -1,70 +1,87 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+tool_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$tool_dir:$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
 
 status=0
 FIXABLE=false
 
 case "${1:-}" in
   --fixable) FIXABLE=true; shift ;;
-  -h|--help) printf 'use: desktop-doctor [--fixable]\n'; exit 0 ;;
+  -h|--help) printf 'use: desktop-doctor [--fixable]
+'; exit 0 ;;
 esac
 
 if [ "$#" -gt 0 ]; then
-  printf 'use: desktop-doctor [--fixable]\n' >&2
+  printf 'use: desktop-doctor [--fixable]
+' >&2
   exit 2
 fi
 
 section() {
-  printf '\n%s\n' "$1"
+  printf '
+%s
+' "$1"
 }
 
 ok() {
-  printf 'ok   %-22s %s\n' "$1" "$2"
+  printf 'ok   %-22s %s
+' "$1" "$2"
 }
 
 warn() {
-  printf 'warn %-22s %s\n' "$1" "$2"
+  printf 'warn %-22s %s
+' "$1" "$2"
 }
 
 fix_hint() {
   local command=${3:-}
   if [ -n "$command" ]; then
-    printf 'fix  %-22s %s\n' "$1" "$command"
+    printf 'fix  %-22s %s
+' "$1" "$command"
     return
   fi
 
   case "$1" in
     hypr-session|hypr-keys|hypr-term|qs-bar|qs-menu-smoke|desktop-reload|desktop-notification-smoke|desktop-inhibit|desktop-accept|desktop-startup-report|audioctl|check-audio-streams|cliphist-menu|passmenu-action|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland|desktop-privacy-status|desktop-osd|external-brightness|media-now-playing|notification-focus-app|work-inbox-status|pomodoroctl|calendar-agenda-status|calendar-sync-status)
-      printf 'fix  %-22s home -y\n' "$1"
+      printf 'fix  %-22s home -y
+' "$1"
       ;;
     walker|gum|fzf|identify|compare|montage)
-      printf 'fix  %-22s track/install the missing package in homelab, then run home -y\n' "$1"
+      printf 'fix  %-22s track/install the missing package in homelab, then run home -y
+' "$1"
       ;;
     current-profile)
-      printf 'fix  %-22s hypr-session reload\n' "$1"
+      printf 'fix  %-22s hypr-session reload
+' "$1"
       ;;
     quickshell)
-      printf 'fix  %-22s hypr-session reload\n' "$1"
+      printf 'fix  %-22s hypr-session reload
+' "$1"
       ;;
     wayland-display|current-desktop|hyprctl-monitors)
-      printf 'fix  %-22s log into the Hyprland Wayland session\n' "$1"
+      printf 'fix  %-22s log into the Hyprland Wayland session
+' "$1"
       ;;
     xdg-desktop-portal-hyprland.service|xdg-desktop-portal.service)
-      printf 'fix  %-22s systemctl --user restart xdg-desktop-portal-hyprland.service xdg-desktop-portal.service xdg-desktop-portal-gtk.service\n' "$1"
+      printf 'fix  %-22s systemctl --user restart xdg-desktop-portal-hyprland.service xdg-desktop-portal.service xdg-desktop-portal-gtk.service
+' "$1"
       ;;
     hyprland-portal)
-      printf 'fix  %-22s home -y && sudo /home/marcelof/bin/xdph-install-system\n' "$1"
+      printf 'fix  %-22s home -y && sudo /home/marcelof/bin/xdph-install-system
+' "$1"
       ;;
     portal-xdg-data)
-      printf 'fix  %-22s systemctl --user daemon-reload && systemctl --user restart xdg-desktop-portal.service\n' "$1"
+      printf 'fix  %-22s systemctl --user daemon-reload && systemctl --user restart xdg-desktop-portal.service
+' "$1"
       ;;
   esac
 }
 
 fail() {
-  printf 'fail %-22s %s\n' "$1" "$2"
+  printf 'fail %-22s %s
+' "$1" "$2"
   status=1
   if [ "$FIXABLE" = true ]; then
     fix_hint "$1" "$2" "${3:-}"
@@ -313,25 +330,35 @@ check_board_status() {
   else
     fail board-render "quickshell-bar failed" "board --config $config render quickshell quickshell-bar"
   fi
+
+  if pgrep -fx "$HOME/bin/board --config $config run" >/dev/null 2>&1; then
+    ok board-run scheduler
+  else
+    fail board-run stopped "$HOME/bin/board --config $config run"
+  fi
 }
 
 check_audio_status() {
   local output
   if ! output=$(audioctl status 2>&1); then
     fail audioctl "status failed"
-    printf '%s\n' "$output"
+    printf '%s
+' "$output"
     return
   fi
 
   ok audioctl status
-  if printf '%s\n' "$output" | grep -q '^icon: '; then
+  if printf '%s
+' "$output" | grep -q '^icon: '; then
     ok audioctl-icon present
   else
     fail audioctl-icon missing
   fi
 
-  if printf '%s\n' "$output" | grep -q '^helper: running'; then
-    if printf '%s\n' "$output" | grep -q '^display: '; then
+  if printf '%s
+' "$output" | grep -q '^helper: running'; then
+    if printf '%s
+' "$output" | grep -q '^display: '; then
       ok audioctl-display present
     else
       fail audioctl-display "helper running without display"

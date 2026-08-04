@@ -196,7 +196,7 @@ keybinding_status() {
 
 quickshell_ipc_status() {
     local missing=0
-    local quickshell_file="${QUICKSHELL_FILE:-$HOME/.config/quickshell/$shell_config/shell.qml}"
+    local quickshell_dir="${QUICKSHELL_DIR:-$HOME/.config/quickshell/$shell_config}"
     local needles=(
         "target: \"bar\""
         "function controls()"
@@ -226,7 +226,7 @@ quickshell_ipc_status() {
     )
 
     for needle in "${needles[@]}"; do
-        if ! grep -Fq "$needle" "$quickshell_file" 2>/dev/null; then
+        if ! grep -R -Fq --include="*.qml" "$needle" "$quickshell_dir" 2>/dev/null; then
             printf "quickshell-ipc: missing %s\n" "$needle" >&2
             missing=1
         fi

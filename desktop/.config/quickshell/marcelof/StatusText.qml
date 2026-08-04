@@ -2,8 +2,10 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-Text {
+ShellText {
   id: root
+
+  readonly property QtObject theme: ShellTheme {}
 
   required property var command
   property int interval: 5000
@@ -15,10 +17,9 @@ Text {
   property var wheelUpCommand: []
   property var wheelDownCommand: []
 
-  color: "#9399b2"
-  font.family: "FiraCode Nerd Font"
-        font.styleName: "Retina"
-  font.pixelSize: 13
+  role: "large"
+  color: theme.textMuted
+  font.styleName: theme.fontStyle
   text: ""
   textFormat: root.rich ? Text.RichText : Text.PlainText
 
@@ -43,7 +44,8 @@ Text {
     running: root.watch
 
     stdout: SplitParser {
-      splitMarker: "\n"
+      splitMarker: "
+"
       onRead: data => root.text = String(data).trim()
     }
   }

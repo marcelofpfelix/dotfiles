@@ -258,8 +258,8 @@ gsync_dotfiles_desktop_gate() {
     [ "$REPO_ORG/$REPO_NAME" = "marcelofpfelix/dotfiles" ] || return 0
     git status --porcelain -- desktop .pre-commit-config.yaml default/bin/check-wayland-no-x11 | grep -q . || return 0
 
-    if [ -x "$REPO_PATH/desktop/bin/desktop-doctor" ]; then
-        "$REPO_PATH/desktop/bin/desktop-doctor"
+    if [ -x "$REPO_PATH/desktop/tools/desktop-doctor" ]; then
+        "$REPO_PATH/desktop/tools/desktop-doctor"
     elif command -v desktop-doctor >/dev/null 2>&1; then
         desktop-doctor
     else

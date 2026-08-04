@@ -1,11 +1,36 @@
 -- Hyprland 0.55+ Lua config.
 -- Keep this additive to the i3 config so X11 rollback stays trivial.
 
+local common = require("profiles.common")
 local mod = "SUPER"
-local terminal = "hypr-term"
-local launcher = "qs-launcher"
+local home = os.getenv("HOME") or "/home/marcelof"
+
+local function bin(name)
+  return home .. "/bin/" .. name
+end
+
+local terminal = bin("hypr-term")
+local launcher = bin("qs-bar") .. " launcher"
+local quickshell_cmd = "env QT_QUICK_BACKEND=software " .. home .. "/.nix-profile/bin/quickshell --path " .. home .. "/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize"
+local board_run_cmd = "pgrep -fx " .. string.format("%q", home .. "/bin/board --config " .. home .. "/.config/board/board.toml run") .. " >/dev/null 2>&1 || " .. home .. "/bin/board --config " .. home .. "/.config/board/board.toml run"
 local function sh(cmd)
   return hl.dsp.exec_cmd(cmd)
+end
+
+local function qs(action)
+  return sh(bin("qs-bar") .. " " .. action)
+end
+
+local function osd(action)
+  return sh(bin("desktop-osd") .. " " .. action)
+end
+
+local function audio(action)
+  return sh(bin("audioctl") .. " " .. action)
+end
+
+local function screenshot(action)
+  return sh(bin("screenshot-wayland") .. " " .. action)
 end
 
 local function note(message)
@@ -16,43 +41,16 @@ local function noop()
   return function() end
 end
 
-local function send_shortcut_once(mods, key)
-  return function()
-    hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = key, state = "down", window = "activewindow" }))
-    hl.timer(function()
-      hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = key, state = "up", window = "activewindow" }))
-    end, { timeout = 50, type = "oneshot" })
-  end
-end
-
-local terminal_classes = {
-  alacritty = true,
-  ["com.mitchellh.ghostty"] = true,
-  foot = true,
-  kitty = true,
-  wezterm = true,
-}
-
-local function active_window_is_terminal()
-  local window = hl.get_active_window()
-  if not window or not window.class then
-    return false
-  end
-
-  return terminal_classes[window.class:lower()] == true
-end
 
 local function universal_paste()
-  if active_window_is_terminal() then
-    send_shortcut_once("SHIFT", "Insert")()
+  if common.active_window_is_terminal() then
+    common.send_shortcut_once("SHIFT", "Insert")()
   else
-    send_shortcut_once("CTRL", "V")()
+    common.send_shortcut_once("CTRL", "V")()
   end
 end
 
-hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = 1 })
-hl.monitor({ output = "DP-2", mode = "preferred", position = "auto-right", scale = 1 })
-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
+common.apply_default_monitors()
 
 hl.config({
   input = {
@@ -69,31 +67,10 @@ hl.config({
     gaps_out = 12,
     border_size = 1,
     layout = "dwindle",
-    ["col.active_border"] = "rgba(b4befeff)",
-    ["col.inactive_border"] = "rgba(313244ff)",
+    ["col.active_border"] = common.colors.border_active,
+    ["col.inactive_border"] = common.colors.border_inactive,
   },
-  group = {
-    col = {
-      border_active = "rgba(b4befeff)",
-      border_inactive = "rgba(313244ff)",
-    },
-    groupbar = {
-      font_family = "FiraCode Nerd Font",
-      font_size = 12,
-      height = 22,
-      indicator_height = 2,
-      indicator_gap = 5,
-      gaps_in = 5,
-      gaps_out = 0,
-      text_color = "rgb(cdd6f4)",
-      text_color_inactive = "rgba(cdd6f490)",
-      col = {
-        active = "rgba(313244dd)",
-        inactive = "rgba(1e1e2edd)",
-      },
-    },
-  },
-
+  group = common.group_config(),
 
   decoration = {
     rounding = 10,
@@ -118,19 +95,12 @@ hl.config({
 
 hl.workspace_rule({ workspace = "3", monitor = "DP-2" })
 
-hl.window_rule({ match = { title = "hypr-floating" }, float = true, size = { 800, 600 }, center = true })
-hl.window_rule({ match = { title = "hypr-popup-tmux" }, float = true, size = { 800, 600 }, center = true })
-hl.window_rule({ match = { class = "floating" }, float = true, size = { 800, 600 }, center = true })
-hl.window_rule({ match = { title = "quickshell-launcher" }, float = true, size = { 720, 520 }, center = true })
-hl.window_rule({ match = { title = "quickshell-clipboard" }, float = true, size = { 720, 500 }, center = true })
-hl.window_rule({ match = { title = "quickshell-passmenu" }, float = true, size = { 720, 520 }, center = true })
-hl.window_rule({ match = { title = "quickshell-websearch" }, float = true, size = { 640, 220 }, center = true })
+common.apply_common_popup_rules()
 hl.window_rule({ match = { class = "Terminator" }, workspace = "4" })
 hl.window_rule({ match = { class = "Slack" }, workspace = "5" })
 hl.window_rule({ match = { class = "Spotify" }, workspace = "7" })
-hl.window_rule({ match = { class = "com.mitchellh.ghostty" }, border_size = 1 })
-hl.window_rule({ match = { title = "dropdown_tmuxa" }, float = true, pin = true, size = { 625, 450 }, center = true })
-hl.window_rule({ match = { class = "dropdown_tmuxa" }, workspace = "special:dropdown_tmuxa", float = true, pin = true, size = { 625, 450 }, center = true })
+hl.window_rule({ match = { class = common.classes.ghostty }, border_size = 1 })
+common.apply_dropdown_rules()
 
 hl.on("hyprland.start", function()
   hl.exec_cmd("systemctl --user import-environment DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE XAUTHORITY")
@@ -140,7 +110,8 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("gsettings set org.gnome.desktop.interface gtk-enable-primary-paste true")
   hl.exec_cmd("gsettings set org.gnome.desktop.interface color-scheme prefer-dark")
   hl.exec_cmd("gsettings set org.gnome.desktop.interface gtk-theme Yaru-dark")
-  hl.exec_cmd("env QT_QUICK_BACKEND=software /home/marcelof/.nix-profile/bin/quickshell --path /home/marcelof/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize")
+  hl.exec_cmd(quickshell_cmd)
+  hl.exec_cmd(board_run_cmd)
   hl.exec_cmd("dex --autostart --environment Hyprland")
   hl.exec_cmd("gnome-keyring-daemon --start --components=secrets")
   hl.exec_cmd("command -v chrome-wayland-fix-apps >/dev/null 2>&1 && chrome-wayland-fix-apps")
@@ -150,23 +121,10 @@ end)
 hl.bind(mod .. " + SHIFT + Q", hl.dsp.window.close())
 hl.bind(mod .. " + W", hl.dsp.window.close())
 
-hl.bind(mod .. " + H", hl.dsp.focus({ direction = "left" }))
-hl.bind(mod .. " + J", hl.dsp.focus({ direction = "down" }))
-hl.bind(mod .. " + K", hl.dsp.focus({ direction = "up" }))
-hl.bind(mod .. " + L", hl.dsp.focus({ direction = "right" }))
-hl.bind(mod .. " + LEFT", hl.dsp.focus({ direction = "left" }))
-hl.bind(mod .. " + DOWN", hl.dsp.focus({ direction = "down" }))
-hl.bind(mod .. " + UP", hl.dsp.focus({ direction = "up" }))
-hl.bind(mod .. " + RIGHT", hl.dsp.focus({ direction = "right" }))
-
-hl.bind(mod .. " + SHIFT + H", hl.dsp.window.move({ direction = "left" }))
-hl.bind(mod .. " + SHIFT + J", hl.dsp.window.move({ direction = "down" }))
-hl.bind(mod .. " + SHIFT + K", hl.dsp.window.move({ direction = "up" }))
-hl.bind(mod .. " + SHIFT + L", hl.dsp.window.move({ direction = "right" }))
-hl.bind(mod .. " + SHIFT + LEFT", hl.dsp.window.move({ direction = "left" }))
-hl.bind(mod .. " + SHIFT + DOWN", hl.dsp.window.move({ direction = "down" }))
-hl.bind(mod .. " + SHIFT + UP", hl.dsp.window.move({ direction = "up" }))
-hl.bind(mod .. " + SHIFT + RIGHT", hl.dsp.window.move({ direction = "right" }))
+common.bind_direction_keys(mod, common.vim_directions, hl.dsp.focus)
+common.bind_direction_keys(mod, common.arrow_directions, hl.dsp.focus)
+common.bind_direction_keys(mod .. " + SHIFT", common.vim_directions, hl.dsp.window.move)
+common.bind_direction_keys(mod .. " + SHIFT", common.arrow_directions, hl.dsp.window.move)
 
 hl.bind(mod .. " + Z", hl.dsp.layout("splith"))
 hl.bind(mod .. " + V", universal_paste)
@@ -196,44 +154,42 @@ hl.bind(mod .. " + TAB", hl.dsp.focus({ workspace = "m+1" }))
 hl.bind(mod .. " + SHIFT + TAB", hl.dsp.focus({ workspace = "m-1" }))
 hl.bind(mod .. " + SHIFT + PERIOD", hl.dsp.workspace.move({ monitor = "+1" }))
 
-for i = 1, 10 do
-  local key = i == 10 and "0" or tostring(i)
-  local workspace = tostring(i)
-  hl.bind(mod .. " + " .. key, hl.dsp.focus({ workspace = workspace }))
-  hl.bind(mod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = workspace }))
-end
+common.bind_workspace_numbers(mod, {
+  focus = function(workspace) return hl.dsp.focus({ workspace = workspace }) end,
+  move = function(workspace) return hl.dsp.window.move({ workspace = workspace }) end,
+})
 
-hl.bind(mod .. " + SHIFT + C", sh("hypr-session reload"))
-hl.bind(mod .. " + SHIFT + R", sh("hypr-session reload"))
-hl.bind(mod .. " + SHIFT + E", sh("/home/marcelof/bin/qs-bar power"))
-hl.bind(mod .. " + ESCAPE", sh("/home/marcelof/bin/qs-bar power"))
-hl.bind(mod .. " + SLASH", sh("/home/marcelof/bin/qs-bar keybindings"))
-hl.bind(mod .. " + CTRL + A", sh("/home/marcelof/bin/qs-bar controls"))
+hl.bind(mod .. " + SHIFT + C", sh(common.actions.hypr_reload))
+hl.bind(mod .. " + SHIFT + R", sh(common.actions.hypr_reload))
+hl.bind(mod .. " + SHIFT + E", qs("power"))
+hl.bind(mod .. " + ESCAPE", qs("power"))
+hl.bind(mod .. " + SLASH", qs(common.actions.keybindings))
+hl.bind(mod .. " + CTRL + A", qs("controls"))
 hl.bind(mod .. " + CTRL + V", noop())
 hl.bind(mod .. " + CTRL + W", noop())
-hl.bind(mod .. " + ALT + L", sh("/home/marcelof/bin/qs-bar lock"), { locked = true })
+hl.bind(mod .. " + ALT + L", qs("lock"), { locked = true })
 
 -- open terminal
 hl.bind(mod .. " + RETURN", sh(terminal))
-hl.bind(mod .. " + U", sh("/home/marcelof/bin/hypr-term popup-tmux"))
+hl.bind(mod .. " + U", sh(terminal .. " popup-tmux"))
 -- open app launcher
 hl.bind(mod .. " + D", sh(launcher))
 -- search the web
-hl.bind(mod .. " + comma", sh("/home/marcelof/bin/qs-bar websearch"))
+hl.bind(mod .. " + comma", qs("websearch"))
 hl.bind("XF86Display", sh("monitor"))
 hl.bind(mod .. " + P", sh("monitor"))
 -- open system monitor
 hl.bind(mod .. " + I", sh(terminal .. " htop"))
 
-hl.bind("XF86AudioRaiseVolume", sh("/home/marcelof/bin/desktop-osd volume-up"))
-hl.bind("XF86AudioLowerVolume", sh("/home/marcelof/bin/desktop-osd volume-down"))
-hl.bind("XF86AudioMute", sh("/home/marcelof/bin/desktop-osd mute"))
-hl.bind("XF86AudioMicMute", sh("/home/marcelof/bin/desktop-osd mic-mute"))
-hl.bind(mod .. " + M", sh("/home/marcelof/bin/audioctl play-pause-all"))
-hl.bind("XF86AudioPause", sh("/home/marcelof/bin/audioctl play-pause-all"))
-hl.bind("XF86AudioPlay", sh("/home/marcelof/bin/audioctl play-pause-all"))
-hl.bind("XF86KbdBrightnessUp", sh("/home/marcelof/bin/desktop-osd kbd-up"))
-hl.bind("XF86KbdBrightnessDown", sh("/home/marcelof/bin/desktop-osd kbd-down"))
-hl.bind("XF86MonBrightnessUp", sh("/home/marcelof/bin/desktop-osd brightness-up"))
-hl.bind("XF86MonBrightnessDown", sh("/home/marcelof/bin/desktop-osd brightness-down"))
-hl.bind("PRINT", sh("screenshot-wayland edit"))
+hl.bind("XF86AudioRaiseVolume", osd("volume-up"))
+hl.bind("XF86AudioLowerVolume", osd("volume-down"))
+hl.bind("XF86AudioMute", osd("mute"))
+hl.bind("XF86AudioMicMute", osd("mic-mute"))
+hl.bind(mod .. " + M", audio(common.actions.play_pause_all))
+hl.bind("XF86AudioPause", audio(common.actions.play_pause_all))
+hl.bind("XF86AudioPlay", audio(common.actions.play_pause_all))
+hl.bind("XF86KbdBrightnessUp", osd("kbd-up"))
+hl.bind("XF86KbdBrightnessDown", osd("kbd-down"))
+hl.bind("XF86MonBrightnessUp", osd("brightness-up"))
+hl.bind("XF86MonBrightnessDown", osd("brightness-down"))
+hl.bind("PRINT", screenshot("edit"))
