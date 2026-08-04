@@ -828,3 +828,9 @@ Task source: latest local review request. Priority is code repetition and simple
   - Acceptance: Network details are readable, controls remain intact, and the device list does not stretch into a large empty panel.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellNetworkPanel.qml desktop/.config/quickshell/marcelof/ShellConfigData.qml`, `desktop/tools/qs-menu-smoke --inspect network`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
   - Current behavior: Network popup height is compact, device details use larger wrapped text, the device section has a fixed useful minimum instead of filling dead space, and focused image inspection at `/home/marcelof/.local/state/quickshell/menu-smoke/20260804-200534` reported no visible defects or regressions.
+
+- [x] P1: Fix Wallpaper popup compact layout and screenshot coverage.
+  - Sources: `desktop/tools/qs-menu-smoke --inspect` reported a blank Wallpaper body, but `desktop/lib/lib_qs_menus.sh` cropped only the top 150px of a taller popup.
+  - Acceptance: Wallpaper visual inspection captures the preview and list area instead of only the header slice.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellWallpaperPanel.qml`, `bash -n desktop/lib/lib_qs_menus.sh desktop/tools/qs-menu-smoke desktop/bin/qs-bar`, `desktop/tools/qs-menu-smoke --inspect wallpaper`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
+  - Current behavior: the Wallpaper popup uses a compact current-wallpaper thumbnail row plus a content-sized list, and the smoke crop is 430px high so visual review includes the whole body. Focused image inspection at `/home/marcelof/.local/state/quickshell/menu-smoke/20260804-201610` reported no clipping, overlap, unreadable text, broken controls, huge empty area, or regression.

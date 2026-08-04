@@ -11,7 +11,7 @@ ShellPopup {
   required property var wallpapersModel
   property string hoveredPath: ""
   property int compactHeight: 360
-  implicitHeight: Math.min(compactHeight, 184 + Math.max(1, wallpapersModel.count) * 39)
+  panelHeight: Math.min(compactHeight, 134 + Math.max(1, wallpapersModel.count) * 39)
 
   ShellPanel {
     anchors.fill: parent
@@ -27,31 +27,35 @@ ShellPopup {
 
       Rectangle {
         Layout.fillWidth: true
-        implicitHeight: 92
+        implicitHeight: 42
         radius: theme.radiusSmall
         clip: true
         color: theme.surface
         border.color: theme.surfaceHigh
 
-        Image {
+        RowLayout {
           anchors.fill: parent
-          source: wallpaperPanel.hoveredPath.length > 0 ? wallpaperPanel.shellConfig.fileUrl(wallpaperPanel.hoveredPath) : wallpaperPanel.shellRoot.wallpaperSource
-          fillMode: Image.PreserveAspectCrop
-          asynchronous: true
-        }
+          anchors.margins: 7
+          spacing: theme.spacingMd
 
-        Rectangle {
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.bottom: parent.bottom
-          height: 26
-          color: theme.surfaceLow
-          opacity: 0.92
+          Rectangle {
+            Layout.preferredWidth: 28
+            Layout.preferredHeight: 28
+            radius: theme.radiusTiny
+            clip: true
+            color: theme.surfaceHigh
+
+            Image {
+              anchors.fill: parent
+              source: wallpaperPanel.hoveredPath.length > 0 ? wallpaperPanel.shellConfig.fileUrl(wallpaperPanel.hoveredPath) : wallpaperPanel.shellRoot.wallpaperSource
+              fillMode: Image.PreserveAspectCrop
+              asynchronous: true
+            }
+          }
+
           ShellText {
-            anchors.fill: parent
-            anchors.leftMargin: theme.paddingMd
-            anchors.rightMargin: theme.paddingMd
-            role: "muted"
+            Layout.fillWidth: true
+            role: "softStrong"
             elide: Text.ElideRight
             text: wallpaperPanel.hoveredPath.length > 0 ? wallpaperPanel.hoveredPath.split("/").pop() : "Current wallpaper"
           }
@@ -61,7 +65,7 @@ ShellPopup {
       ListView {
         id: wallpaperList
         Layout.fillWidth: true
-        Layout.fillHeight: true
+        Layout.preferredHeight: Math.min(180, Math.max(34, wallpaperList.contentHeight))
         clip: true
         spacing: theme.spacingSm
         model: wallpaperPanel.wallpapersModel
