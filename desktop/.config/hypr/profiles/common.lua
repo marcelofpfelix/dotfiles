@@ -98,7 +98,7 @@ function M.apply_common_popup_rules()
     { match = { class = "floating" }, size = { 800, 600 } },
     { match = { title = "quickshell-launcher" }, size = { 720, 520 } },
     { match = { title = "quickshell-clipboard" }, size = { 720, 500 } },
-    { match = { title = "quickshell-passmenu" }, size = { 720, 520 } },
+    { match = { title = "quickshell-passmenu" }, size = { 720, 544 } },
     { match = { title = "quickshell-websearch" }, size = { 640, 112 } },
   }
 
