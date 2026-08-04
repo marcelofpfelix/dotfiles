@@ -43,13 +43,14 @@ ShellFloatingPopup {
   ShellFrame {
     anchors.fill: parent
 
-    ColumnLayout {
+    Column {
       anchors.fill: parent
       anchors.margins: theme.panelMargin
-      spacing: theme.spacingXl
+      spacing: theme.spacingMd
 
       RowLayout {
-        Layout.fillWidth: true
+        width: parent.width
+        height: theme.chipHeight
         spacing: theme.spacingLg
         Repeater {
           model: shellRoot.webSearchSites
@@ -67,6 +68,7 @@ ShellFloatingPopup {
 
       ShellSearchBox {
         id: webSearchInput
+        width: parent.width
         inputHeight: theme.searchHeightLarge
         onEscapePressed: shellRoot.webSearchOpen = false
         onAccepted: webSearchPanel.runSearch()

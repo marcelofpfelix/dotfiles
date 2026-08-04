@@ -103,7 +103,7 @@ QtObject {
     launcher: { width: 720, height: 720, denseHeight: 660 },
     clipboard: { width: 640, height: 500, denseHeight: 480 },
     passmenu: { width: 640, height: 520, denseHeight: 480 },
-    websearch: { width: 640, height: 136 },
+    websearch: { width: 640, height: 112 },
     wallpaper: { width: 640, height: 560, compactHeight: 360 },
     screen: { width: 640, height: 460 },
     media: { width: 640, height: 260 },

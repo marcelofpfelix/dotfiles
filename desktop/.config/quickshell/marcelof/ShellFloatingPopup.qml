@@ -17,6 +17,8 @@ FloatingWindow {
 
   screen: shellRoot.laptopScreen
   visible: panelOpen
+  width: panelWidth
+  height: panelHeight
   implicitWidth: panelWidth
   implicitHeight: panelHeight
   color: theme.transparent

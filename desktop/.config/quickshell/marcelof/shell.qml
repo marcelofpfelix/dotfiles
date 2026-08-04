@@ -1470,6 +1470,7 @@ ShellRoot {
       shellConfig: shellConfig
       panelOpen: root.webSearchOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.websearch)
+      panelHeight: root.menuHeightFor(shellConfig.menuIds.websearch)
     }
 
     ShellNetworkPanel {

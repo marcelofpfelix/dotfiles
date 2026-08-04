@@ -16,6 +16,8 @@ Item {
   signal keyPressed(var event)
 
   Layout.fillWidth: true
+  Layout.preferredHeight: inputHeight
+  Layout.maximumHeight: inputHeight
   height: inputHeight
   implicitHeight: inputHeight
 
