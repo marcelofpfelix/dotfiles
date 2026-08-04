@@ -882,3 +882,35 @@ Task source: latest local review request. Priority is code repetition and simple
   - Acceptance: Calendar keeps all existing sections, but overflow uses the shared scrollable panel behavior instead of shrinking lower content into an unreadable stack.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellCalendarPanel.qml desktop/.config/quickshell/marcelof/ShellScrollPanel.qml desktop/.config/quickshell/marcelof/shell.qml`, `home -y`, `qs-bar restart`, `desktop/tools/qs-menu-smoke calendar`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
   - Current behavior: Calendar uses `ShellScrollPanel`, reusing the existing shared popup scrolling frame while keeping the month grid, Palmela weather, Pomodoro, timezone/timestamp, agenda, and ready-task sections intact. Full smoke passed at `/home/marcelof/.local/state/quickshell/menu-smoke/20260804-213303`.
+
+## 2026-08-04 Notification Follow-Up
+
+- [ ] P1: Render Android-like app icons and notification images.
+  - Sources: user request for Android-style notifications; Quickshell `Notification.appIcon`, `Notification.image`, `desktopEntry`, `hasActionIcons`, and current `ShellNotificationCenter` grouped rows.
+  - Acceptance: toast and notification-center rows show the sender app icon when available, fall back to desktop-entry/app initials when not, and show notification images as bounded thumbnails without stretching rows or clipping text.
+  - Dependencies: keep Quickshell as the notification server; no external daemon replacement.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellNotificationCenter.qml desktop/.config/quickshell/marcelof/ShellOverlays.qml desktop/.config/quickshell/marcelof/shell.qml`, send icon and image notifications with `notify-send`, `desktop/tools/qs-menu-smoke --inspect notifications`, and `desktop/tools/desktop-notification-smoke actions`.
+
+- [ ] P1: Add notification routing policy for neutral vs attention-worthy events.
+  - Sources: user request that neutral notifications go only to the main place; current DND and notification-history model.
+  - Acceptance: Quickshell records every non-transient notification in history, but only shows popup toasts for urgent notifications, configured important apps, or notifications with configured important actions/patterns. Neutral notifications increment the bar count and appear in the notification center only.
+  - Dependencies: add a small declarative policy map in `ShellConfigData.qml`; avoid per-app logic scattered through QML.
+  - Validation: `desktop/tools/desktop-notification-smoke` covers neutral and urgent notifications, `desktop/tools/qs-menu-smoke notifications controls`, and manual Slack/Chrome notification sanity check.
+
+- [ ] P1: Support sticky notifications until they are completed or dismissed.
+  - Sources: user request for permanent notifications until something is done; Quickshell `resident`, `expireTimeout`, `transient`, and notification actions.
+  - Acceptance: notifications marked resident, no-timeout, urgent, or matched by local policy stay visible in the notification center until dismissed/actioned; invoking an action only removes the card when the source notification is not resident or the local policy says the task is complete.
+  - Dependencies: live actions still require the Quickshell notification object; durable history cannot replay arbitrary D-Bus action callbacks after reload.
+  - Validation: `notify-send -t 0`, action smoke notification, reload with `qs-bar restart`, and `desktop/tools/qs-menu-smoke --inspect notifications`.
+
+- [ ] P1: Persist safe notification history to disk.
+  - Sources: user request for notification history; current in-memory `notificationHistory` capped at 50.
+  - Acceptance: new notifications append sanitized metadata to a JSONL file under Quickshell state, capped/rotated to a small bounded size; stored data includes app, summary, body, time, urgency, desktop entry, icon/image references when safe, and whether live actions are still available.
+  - Dependencies: do not store secrets from password helpers; keep body markup sanitized like the current QML text path.
+  - Validation: send notifications, restart Quickshell, verify history survives in the center or CLI, run `desktop/tools/desktop-doctor`, and inspect the JSONL for bounded size and no obvious markup leakage.
+
+- [ ] P2: Add `notificationctl` CLI/TUI backed by Quickshell history.
+  - Sources: user request for a terminal CLI/TUI; current `qs-bar notifications`, `notification-focus-app`, and existing terminal-first helpers.
+  - Acceptance: `notificationctl list`, `notificationctl open <id>`, `notificationctl clear <id|app|all>`, and `notificationctl tui` operate on the same persisted history; live notifications can still invoke actions through Quickshell IPC, while old entries can focus/open the source app.
+  - Dependencies: depends on persisted history and a minimal Quickshell IPC command surface for clear/open/action.
+  - Validation: `bash -n desktop/bin/notificationctl`, self-test with fake JSONL, manual `notificationctl tui`, and `desktop/tools/desktop-notification-smoke actions`.
