@@ -822,3 +822,9 @@ Task source: latest local review request. Priority is code repetition and simple
   - Acceptance: notification rows do not clip collapsed or expanded content, header actions are readable, and the empty-state panel stays compact.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellNotificationCenter.qml`, `desktop/tools/qs-menu-smoke --inspect notifications`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
   - Current behavior: notification group rows are 40px, collapsed rows are 76px, expanded rows use content height with padding, delegates clip their own content, and the header clear buttons have readable `App` and `All` labels. Focused image inspection at `/home/marcelof/.local/state/quickshell/menu-smoke/20260804-195814` reported no clipped popup content, overlap, unreadable text, or regression.
+
+- [x] P1: Fix Network popup readability and dead space from screenshot inspection.
+  - Sources: `desktop/tools/qs-menu-smoke --inspect` reported small Network status text and then oversized empty space in the device list.
+  - Acceptance: Network details are readable, controls remain intact, and the device list does not stretch into a large empty panel.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellNetworkPanel.qml desktop/.config/quickshell/marcelof/ShellConfigData.qml`, `desktop/tools/qs-menu-smoke --inspect network`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
+  - Current behavior: Network popup height is compact, device details use larger wrapped text, the device section has a fixed useful minimum instead of filling dead space, and focused image inspection at `/home/marcelof/.local/state/quickshell/menu-smoke/20260804-200534` reported no visible defects or regressions.

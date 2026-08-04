@@ -44,7 +44,7 @@ ShellPopup {
       }
 
       ShellSection {
-        fillHeight: true
+        minHeight: 132
         bordered: true
 
         Text {
@@ -52,12 +52,12 @@ ShellPopup {
           Layout.fillWidth: true
           Layout.fillHeight: true
           color: theme.textSoft
-          elide: Text.ElideRight
+          elide: Text.ElideNone
           font.family: theme.fontFamily
           font.styleName: theme.fontStyle
-          font.pixelSize: theme.fontMd
-          maximumLineCount: 10
-          wrapMode: Text.NoWrap
+          font.pixelSize: theme.fontLg
+          maximumLineCount: 12
+          wrapMode: Text.Wrap
           text: ""
         }
       }

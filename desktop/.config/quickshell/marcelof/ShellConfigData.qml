@@ -114,7 +114,7 @@ QtObject {
     "personal-dashboard": { width: 640, height: 460 },
     notifications: { width: 640, height: 560 },
     keybindings: { width: 640, height: 560 },
-    network: { width: 640, height: 420 },
+    network: { width: 640, height: 320 },
     power: { width: 640, height: 360 },
     tray: { width: 640, height: 420 }
   })
