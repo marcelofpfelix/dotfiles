@@ -106,7 +106,7 @@ QtObject {
     websearch: { width: 640, height: 136 },
     wallpaper: { width: 640, height: 560, compactHeight: 360 },
     screen: { width: 640, height: 460 },
-    media: { width: 640, height: 420 },
+    media: { width: 640, height: 260 },
     controls: { width: 640, height: 720 },
     settings: { width: 640, height: 420 },
     calendar: { width: 640, height: 720 },

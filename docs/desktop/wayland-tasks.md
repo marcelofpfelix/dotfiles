@@ -834,3 +834,9 @@ Task source: latest local review request. Priority is code repetition and simple
   - Acceptance: Wallpaper visual inspection captures the preview and list area instead of only the header slice.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellWallpaperPanel.qml`, `bash -n desktop/lib/lib_qs_menus.sh desktop/tools/qs-menu-smoke desktop/bin/qs-bar`, `desktop/tools/qs-menu-smoke --inspect wallpaper`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
   - Current behavior: the Wallpaper popup uses a compact current-wallpaper thumbnail row plus a content-sized list, and the smoke crop is 430px high so visual review includes the whole body. Focused image inspection at `/home/marcelof/.local/state/quickshell/menu-smoke/20260804-201610` reported no clipping, overlap, unreadable text, broken controls, huge empty area, or regression.
+
+- [x] P1: Compact Media popup empty area.
+  - Sources: `desktop/tools/qs-menu-smoke --inspect` reported a large unused area below Media playback controls when there are no active streams.
+  - Acceptance: Media keeps the existing controls and stream scroll behavior, but the no-stream popup no longer has a large blank lower body.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellConfigData.qml desktop/.config/quickshell/marcelof/ShellMediaPanel.qml`, `desktop/tools/qs-menu-smoke --inspect media`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
+  - Current behavior: Media popup height is 260px, keeping the controls visible while avoiding the previous no-stream dead area. Focused image inspection at `/home/marcelof/.local/state/quickshell/menu-smoke/20260804-202156` reported readable text, intact controls, no overlap, no clipped content, and no unusually huge empty area.
