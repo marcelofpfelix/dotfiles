@@ -37,7 +37,7 @@ ShellPopup {
     return day === calendarPanel.clock.date.getDate()
   }
 
-  ShellPanel {
+  ShellScrollPanel {
     anchors.fill: parent
     margin: 10
     gap: 8
