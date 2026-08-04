@@ -100,7 +100,7 @@ QtObject {
     tall: { width: 640, height: 720 },
     work: { width: 640, height: 420 },
     dashboard: { width: 640, height: 460 },
-    launcher: { width: 720, height: 720, denseHeight: 660 },
+    launcher: { width: 720, height: 714, denseHeight: 660 },
     clipboard: { width: 640, height: 500, denseHeight: 480 },
     passmenu: { width: 640, height: 544, denseHeight: 500 },
     websearch: { width: 640, height: 112 },
