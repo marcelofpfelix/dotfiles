@@ -21,7 +21,7 @@ ShellPopup {
         spacing: theme.spacingLg
         ShellText { Layout.fillWidth: true; role: "heading"; text: "Personal" }
         ShellActionButton { icon: "󰑓"; label: ""; minWidth: 40; tooltip: "Refresh board surface"; tooltipState: personalPanel.shellRoot; onTriggered: personalPanel.refresh.running = true }
-        ShellActionButton { icon: "󰑐"; label: "Fresh"; minWidth: 74; tooltip: "Run board action personal.refresh"; tooltipState: personalPanel.shellRoot; onTriggered: personalPanel.shellRoot.runPersonalDashboardAction("personal.refresh") }
+        ShellActionButton { icon: "󰑐"; label: "Run"; minWidth: 70; tooltip: "Run board action personal.refresh"; tooltipState: personalPanel.shellRoot; onTriggered: personalPanel.shellRoot.runPersonalDashboardAction("personal.refresh") }
       }
 
       RowLayout {
@@ -41,14 +41,17 @@ ShellPopup {
         clip: true
 
         Text {
+          readonly property bool systemSurface: personalPanel.shellRoot.personalDashboardSurface === personalPanel.shellConfig.boardQuickshellSurface
+          readonly property string plainText: String(personalPanel.shellRoot.personalDashboardText || "").trim()
+
           width: parent.width
           color: theme.textSoft
           font.family: theme.fontFamily
-          font.pixelSize: theme.fontMd
+          font.pixelSize: systemSurface ? theme.fontMd : theme.fontSm
           lineHeight: 1.15
-          wrapMode: Text.Wrap
-          textFormat: Text.RichText
-          text: personalPanel.shellRoot.personalDashboardRichText()
+          wrapMode: systemSurface ? Text.Wrap : Text.NoWrap
+          textFormat: systemSurface ? Text.RichText : Text.PlainText
+          text: systemSurface ? personalPanel.shellRoot.personalDashboardRichText() : (plainText.length > 0 ? plainText : "No board data")
         }
       }
   }

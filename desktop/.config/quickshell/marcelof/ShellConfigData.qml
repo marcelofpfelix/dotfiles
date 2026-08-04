@@ -111,7 +111,7 @@ QtObject {
     settings: { width: 640, height: 420 },
     calendar: { width: 640, height: 720 },
     "work-inbox": { width: 640, height: 420 },
-    "personal-dashboard": { width: 640, height: 460 },
+    "personal-dashboard": { width: 640, height: 240 },
     notifications: { width: 640, height: 560 },
     keybindings: { width: 640, height: 560 },
     network: { width: 640, height: 320 },

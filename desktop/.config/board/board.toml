@@ -144,6 +144,22 @@ name = "quickshell-panels"
 checks = ["time-panel", "todo-panel"]
 
 [[surface]]
+name = "personal.today"
+checks = ["todo-panel"]
+
+[[surface]]
+name = "personal.money"
+checks = []
+
+[[surface]]
+name = "personal.health"
+checks = []
+
+[[surface]]
+name = "personal.habits"
+checks = ["todo-panel"]
+
+[[surface]]
 name = "quickshell-weather"
 checks = ["weather"]
 
