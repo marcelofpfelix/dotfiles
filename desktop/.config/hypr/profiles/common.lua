@@ -96,7 +96,7 @@ function M.apply_common_popup_rules()
     { match = { title = "hypr-floating" }, size = { 800, 600 } },
     { match = { title = "hypr-popup-tmux" }, size = { 800, 600 } },
     { match = { class = "floating" }, size = { 800, 600 } },
-    { match = { title = "quickshell-launcher" }, size = { 720, 714 } },
+    { match = { title = "quickshell-launcher" }, size = { 720, 726 } },
     { match = { title = "quickshell-clipboard" }, size = { 720, 500 } },
     { match = { title = "quickshell-passmenu" }, size = { 720, 544 } },
     { match = { title = "quickshell-websearch" }, size = { 640, 112 } },

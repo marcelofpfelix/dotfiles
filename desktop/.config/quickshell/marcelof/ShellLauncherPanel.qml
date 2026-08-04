@@ -108,6 +108,7 @@ ShellFloatingPopup {
 
       ShellPickerList {
         id: appList
+        Layout.bottomMargin: theme.inputInset
         bottomMargin: theme.inputInset
         model: launcherPanel.launcherModel
 
