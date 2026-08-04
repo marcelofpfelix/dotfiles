@@ -29,16 +29,16 @@ ShellPopup {
         ShellActionButton {
           visible: notificationCenter.shellRoot.selectedNotificationIndex >= 0
           icon: "󰅖"
-          label: ""
-          minWidth: 40
+          label: "App"
+          minWidth: 76
           tooltip: "Clear selected app notifications"
           tooltipState: notificationCenter.shellRoot
           onTriggered: notificationCenter.shellRoot.clearNotificationsForApp(notificationCenter.shellRoot.notificationAppAt(notificationCenter.shellRoot.selectedNotificationIndex))
         }
         ShellActionButton {
           icon: "󰅖"
-          label: ""
-          minWidth: 40
+          label: "All"
+          minWidth: 76
           tooltip: "Clear all notifications"
           tooltipState: notificationCenter.shellRoot
           onTriggered: notificationCenter.shellRoot.clearNotifications()
@@ -77,8 +77,9 @@ ShellPopup {
           readonly property bool isGroup: kind === "group"
           readonly property bool expanded: !isGroup && notificationCenter.shellRoot.selectedNotificationIndex === notificationIndex
           width: ListView.view.width
-          height: isGroup ? 32 : (expanded ? Math.max(104, detailColumn.implicitHeight + 22) : 60)
+          height: isGroup ? 40 : (expanded ? Math.max(132, detailColumn.implicitHeight + theme.paddingMd * 2) : 76)
           radius: isGroup ? 0 : theme.radiusSmall
+          clip: true
           color: isGroup ? theme.transparent : (expanded ? theme.surfaceRaised : theme.surface)
           border.color: expanded ? notificationCenter.shellSettings.primaryColor : theme.transparent
           border.width: expanded ? 1 : 0

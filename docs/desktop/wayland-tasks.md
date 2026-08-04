@@ -814,3 +814,11 @@ Task source: latest local review request. Priority is code repetition and simple
   - Acceptance: battery remains Quickshell-native, but thresholds/colors/icons are easy to tune without editing logic; skip this if the current hardcoded four-rule policy stays stable.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellBar.qml desktop/.config/quickshell/marcelof/ShellConfigData.qml`.
   - Current behavior: `ShellConfigData.qml` owns `batteryPolicy` for full hiding, charge/full/discharge color roles, 15/30 percent critical/warning thresholds, and percent-to-icon mapping. `ShellBar.qml` only reads UPower and applies that policy.
+
+## 2026-08-04 Visual Follow-Up
+
+- [x] P1: Fix notification popup clipping from screenshot inspection.
+  - Sources: `desktop/tools/qs-menu-smoke --inspect` reported clipped notification rows and an unreadable header action label.
+  - Acceptance: notification rows do not clip collapsed or expanded content, header actions are readable, and the empty-state panel stays compact.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellNotificationCenter.qml`, `desktop/tools/qs-menu-smoke --inspect notifications`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
+  - Current behavior: notification group rows are 40px, collapsed rows are 76px, expanded rows use content height with padding, delegates clip their own content, and the header clear buttons have readable `App` and `All` labels. Focused image inspection at `/home/marcelof/.local/state/quickshell/menu-smoke/20260804-195814` reported no clipped popup content, overlap, unreadable text, or regression.
