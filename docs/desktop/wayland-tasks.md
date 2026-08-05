@@ -912,11 +912,12 @@ Task source: latest local review request. Priority is code repetition and simple
   - Validation: `notify-send -t 0`, action smoke notification, reload with `qs-bar restart`, and `desktop/tools/qs-menu-smoke --inspect notifications`.
   - Current behavior: resident, no-timeout, urgent, and locally important notifications are marked sticky in the live history; action clicks keep sticky cards unless the action label matches `completeActions`, while normal action cards still dismiss.
 
-- [ ] P1: Persist safe notification history to disk.
+- [x] P1: Persist safe notification history to disk.
   - Sources: user request for notification history; current in-memory `notificationHistory` capped at 50.
   - Acceptance: new notifications append sanitized metadata to a JSONL file under Quickshell state, capped/rotated to a small bounded size; stored data includes app, summary, body, time, urgency, desktop entry, icon/image references when safe, and whether live actions are still available.
   - Dependencies: do not store secrets from password helpers; keep body markup sanitized like the current QML text path.
   - Validation: send notifications, restart Quickshell, verify history survives in the center or CLI, run `desktop/tools/desktop-doctor`, and inspect the JSONL for bounded size and no obvious markup leakage.
+  - Current behavior: sanitized notification rows persist to `~/.local/state/quickshell/marcelof/notifications.jsonl`, capped at the same 50-entry live history; password-helper apps are skipped, unsafe URL/data image references are dropped, and restored rows hide dead action callbacks with `liveActions: false`.
 
 - [ ] P2: Add `notificationctl` CLI/TUI backed by Quickshell history.
   - Sources: user request for a terminal CLI/TUI; current `qs-bar notifications`, `notification-focus-app`, and existing terminal-first helpers.

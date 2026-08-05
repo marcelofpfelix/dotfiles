@@ -74,13 +74,14 @@ ShellPopup {
           required property string actionsText
           required property string desktopEntry
           required property string time
+          required property bool liveActions
 
           readonly property int notificationIndex: sourceIndex
           readonly property bool isGroup: kind === "group"
           readonly property bool expanded: !isGroup && notificationCenter.shellRoot.selectedNotificationIndex === notificationIndex
           readonly property string iconSource: notificationCenter.shellRoot.notificationImageSource(isGroup || image.length === 0 ? appIcon : image)
           width: ListView.view.width
-          height: isGroup ? 40 : (expanded ? Math.max(132, detailColumn.implicitHeight + theme.paddingMd * 2) : 82)
+          height: isGroup ? 40 : (expanded ? Math.max(112, detailColumn.implicitHeight + theme.paddingMd * 2) : 82)
           radius: isGroup ? 0 : theme.radiusSmall
           clip: true
           color: isGroup ? theme.transparent : (expanded ? theme.surfaceRaised : theme.surface)
@@ -220,7 +221,7 @@ ShellPopup {
               ShellActionButton { icon: "󰍉"; label: "App"; minWidth: 72; tooltip: "Focus source app"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.focusNotificationApp(notificationDelegate.notificationIndex) }
 
               Repeater {
-                model: actionsText.length > 0 ? actionsText.split(" | ") : []
+                model: liveActions && actionsText.length > 0 ? actionsText.split(" | ") : []
 
                 delegate: ShellActionButton {
                   required property string modelData

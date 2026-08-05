@@ -304,6 +304,7 @@ ShellRoot {
   property bool notificationToastOpen: false
   property int selectedNotificationIndex: -1
   property var notificationObjects: []
+  property bool notificationHistoryLoaded: false
   property string notificationToastApp: ""
   property string notificationToastAppIcon: ""
   property string notificationToastImage: ""
@@ -640,6 +641,7 @@ ShellRoot {
     notificationHistory.clear()
     notificationInboxModel.clear()
     root.selectedNotificationIndex = -1
+    root.scheduleNotificationHistorySave()
   }
 
   function notificationAppAt(index) {
@@ -678,12 +680,12 @@ ShellRoot {
     // ponytail: O(apps * notifications), capped at 50; index by app only if history grows.
     for (let appIndex = 0; appIndex < apps.length; appIndex++) {
       const app = apps[appIndex]
-      notificationInboxModel.append({ kind: "group", app: app, appIcon: appIcons[app] || "", image: "", count: counts[app], sourceIndex: -1, summary: "", body: "", text: "", actionsText: "", desktopEntry: "", time: "" })
+      notificationInboxModel.append({ kind: "group", app: app, appIcon: appIcons[app] || "", image: "", count: counts[app], sourceIndex: -1, summary: "", body: "", text: "", actionsText: "", desktopEntry: "", time: "", sticky: false, liveActions: false, urgency: 1, timestamp: 0 })
       for (let i = 0; i < notificationHistory.count; i++) {
         const row = notificationHistory.get(i)
         if (String(row.app || "Notification") !== app)
           continue
-        notificationInboxModel.append({ kind: "notification", app: row.app, appIcon: row.appIcon || "", image: row.image || "", count: counts[app], sourceIndex: i, summary: row.summary, body: row.body, text: row.text, actionsText: row.actionsText, desktopEntry: row.desktopEntry || "", time: row.time })
+        notificationInboxModel.append({ kind: "notification", app: row.app, appIcon: row.appIcon || "", image: row.image || "", count: counts[app], sourceIndex: i, summary: row.summary, body: row.body, text: row.text, actionsText: row.actionsText, desktopEntry: row.desktopEntry || "", time: row.time, sticky: !!row.sticky, liveActions: !!row.liveActions, urgency: Number(row.urgency || 1), timestamp: Number(row.timestamp || 0) })
       }
     }
   }
@@ -769,6 +771,79 @@ ShellRoot {
     return root.notificationMatchesAny(label, shellConfig.notificationToastPolicy.completeActions || [])
   }
 
+  function notificationPersistable(row) {
+    const text = String((row && row.app) || "") + "\n" + String((row && row.desktopEntry) || "")
+    return !root.notificationMatchesAny(text, ["gopass", "passmenu", "password", "secret", "1password"])
+  }
+
+  function safeNotificationReference(value) {
+    const ref = root.cleanNotificationText(value)
+    if (ref.indexOf("data:") === 0 || ref.indexOf("http://") === 0 || ref.indexOf("https://") === 0)
+      return ""
+    return ref
+  }
+
+  function persistedNotificationRow(row) {
+    const app = root.cleanNotificationText(row && row.app || "Notification")
+    const summary = root.cleanNotificationText(row && row.summary || "")
+    const body = root.cleanNotificationText(row && row.body || "")
+    return {
+      app: app,
+      appIcon: root.safeNotificationReference(row && row.appIcon || ""),
+      image: root.safeNotificationReference(row && row.image || ""),
+      summary: summary,
+      body: body,
+      text: root.notificationPreview(summary, body, app),
+      actionsText: root.cleanNotificationText(row && row.actionsText || ""),
+      sticky: !!(row && row.sticky),
+      liveActions: false,
+      urgency: Number(row && row.urgency || 1),
+      desktopEntry: root.cleanNotificationText(row && row.desktopEntry || ""),
+      time: root.cleanNotificationText(row && row.time || ""),
+      timestamp: Number(row && row.timestamp || Date.now())
+    }
+  }
+
+  function loadNotificationHistory(raw) {
+    if (root.notificationHistoryLoaded)
+      return
+
+    const lines = String(raw || "").trim().split(/\n+/)
+    const rows = []
+    for (let i = 0; i < lines.length; i++) {
+      try {
+        const row = root.persistedNotificationRow(JSON.parse(lines[i]))
+        if (root.notificationPersistable(row))
+          rows.push(row)
+      } catch (e) {
+      }
+    }
+    rows.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0))
+    for (let j = 0; j < Math.min(50, rows.length); j++) {
+      notificationHistory.append(rows[j])
+      root.notificationObjects.push(null)
+    }
+    if (notificationHistory.count > 0)
+      root.selectedNotificationIndex = 0
+    root.notificationHistoryLoaded = true
+    root.rebuildNotificationInbox()
+  }
+
+  function scheduleNotificationHistorySave() {
+    if (root.notificationHistoryLoaded)
+      notificationHistorySaveTimer.restart()
+  }
+
+  function saveNotificationHistory() {
+    const lines = []
+    for (let i = 0; i < Math.min(50, notificationHistory.count); i++) {
+      const row = root.persistedNotificationRow(notificationHistory.get(i))
+      if (root.notificationPersistable(row))
+        lines.push(JSON.stringify(row))
+    }
+    notificationHistoryFile.setText(lines.join("\n") + (lines.length > 0 ? "\n" : ""))
+  }
+
   function rememberNotification(notification) {
     if (!notification)
       return
@@ -778,6 +853,7 @@ ShellRoot {
     const body = root.cleanNotificationText(notification.body)
     const actionLabels = root.notificationActionLabelsFrom(notification)
     const sticky = root.isNotificationSticky(notification, app, summary, body, actionLabels)
+    const now = new Date()
 
     notificationHistory.insert(0, {
       app: app,
@@ -788,8 +864,11 @@ ShellRoot {
       text: root.notificationPreview(summary, body, app),
       actionsText: actionLabels.join(" | "),
       sticky: sticky,
+      liveActions: actionLabels.length > 0,
+      urgency: Number(notification.urgency || 1),
       desktopEntry: root.cleanNotificationText(notification.desktopEntry),
-      time: Qt.formatDateTime(new Date(), "HH:mm")
+      time: Qt.formatDateTime(now, "HH:mm"),
+      timestamp: now.getTime()
     })
     root.notificationObjects = [notification].concat(root.notificationObjects)
     root.selectedNotificationIndex = 0
@@ -811,6 +890,7 @@ ShellRoot {
       root.notificationObjects.pop()
     }
     root.rebuildNotificationInbox()
+    root.scheduleNotificationHistorySave()
   }
 
   function dismissNotification(index) {
@@ -832,6 +912,7 @@ ShellRoot {
       root.selectedNotificationIndex -= 1
     else if (root.selectedNotificationIndex >= notificationHistory.count)
       root.selectedNotificationIndex = notificationHistory.count - 1
+    root.scheduleNotificationHistorySave()
   }
 
 
@@ -1140,6 +1221,23 @@ ShellRoot {
     ShellSettings { id: shellSettings }
   }
 
+
+  FileView {
+    id: notificationHistoryFile
+    path: root.stateDir + "/notifications.jsonl"
+    watchChanges: false
+    atomicWrites: true
+    printErrors: false
+    onLoaded: root.loadNotificationHistory(text())
+    onLoadFailed: root.loadNotificationHistory("")
+  }
+
+  Timer {
+    id: notificationHistorySaveTimer
+    interval: 200
+    repeat: false
+    onTriggered: root.saveNotificationHistory()
+  }
   ListModel { id: notificationHistory }
   ListModel { id: notificationInboxModel }
   ListModel { id: audioStreams }
