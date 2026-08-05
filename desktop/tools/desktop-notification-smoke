@@ -33,6 +33,13 @@ send_routing_notifications() {
   printf "routing-log %s\n" "$log"
 }
 
+send_sticky_notification() {
+  local log="${XDG_RUNTIME_DIR:-/tmp}/desktop-notification-smoke.sticky"
+  notify-send -a desktop-sticky-smoke -A done=Done -t 0 "Desktop sticky smoke" "This no-timeout card should remain until dismissed or Done is clicked." >"$log" 2>/dev/null &
+  qs-bar notifications >/dev/null 2>&1 || true
+  printf "sticky-log %s\n" "$log"
+}
+
 case "${1:-run}" in
   --status|status)
     command -v notify-send >/dev/null 2>&1
@@ -41,7 +48,7 @@ case "${1:-run}" in
     actions_supported
     ;;
   -h|--help)
-    printf "use: desktop-notification-smoke [--status|actions|routing]\n"
+    printf "use: desktop-notification-smoke [--status|actions|routing|sticky]\n"
     ;;
   run|actions)
     owner
@@ -53,8 +60,13 @@ case "${1:-run}" in
     actions_supported
     send_routing_notifications
     ;;
+  sticky)
+    owner
+    actions_supported
+    send_sticky_notification
+    ;;
   *)
-    printf "use: desktop-notification-smoke [--status|actions|routing]\n" >&2
+    printf "use: desktop-notification-smoke [--status|actions|routing|sticky]\n" >&2
     exit 2
     ;;
 esac

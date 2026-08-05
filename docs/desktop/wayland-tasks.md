@@ -905,11 +905,12 @@ Task source: latest local review request. Priority is code repetition and simple
   - Validation: `desktop/tools/desktop-notification-smoke actions`, `desktop/tools/qs-menu-smoke --inspect notifications`, and manual action notification check.
   - Current behavior: source-app focusing is labeled `App`, while live D-Bus notification actions render as separate shared `ShellActionButton` controls with consistent label sizing and tooltips.
 
-- [ ] P1: Support sticky notifications until they are completed or dismissed.
+- [x] P1: Support sticky notifications until they are completed or dismissed.
   - Sources: user request for permanent notifications until something is done; Quickshell `resident`, `expireTimeout`, `transient`, and notification actions.
   - Acceptance: notifications marked resident, no-timeout, urgent, or matched by local policy stay visible in the notification center until dismissed/actioned; invoking an action only removes the card when the source notification is not resident or the local policy says the task is complete.
   - Dependencies: live actions still require the Quickshell notification object; durable history cannot replay arbitrary D-Bus action callbacks after reload.
   - Validation: `notify-send -t 0`, action smoke notification, reload with `qs-bar restart`, and `desktop/tools/qs-menu-smoke --inspect notifications`.
+  - Current behavior: resident, no-timeout, urgent, and locally important notifications are marked sticky in the live history; action clicks keep sticky cards unless the action label matches `completeActions`, while normal action cards still dismiss.
 
 - [ ] P1: Persist safe notification history to disk.
   - Sources: user request for notification history; current in-memory `notificationHistory` capped at 50.

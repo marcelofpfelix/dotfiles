@@ -754,6 +754,21 @@ ShellRoot {
     return root.notificationMatchesAny(summary + "\n" + body, policy.importantPatterns || [])
   }
 
+  function isNotificationSticky(notification, app, summary, body, actionLabels) {
+    if (!notification)
+      return false
+
+    const expireTimeout = Number(notification.expireTimeout)
+    if (notification.resident || (!isNaN(expireTimeout) && expireTimeout === 0))
+      return true
+
+    return root.shouldToastNotification(notification, app, summary, body, actionLabels)
+  }
+
+  function notificationActionCompletes(label) {
+    return root.notificationMatchesAny(label, shellConfig.notificationToastPolicy.completeActions || [])
+  }
+
   function rememberNotification(notification) {
     if (!notification)
       return
@@ -762,6 +777,7 @@ ShellRoot {
     const summary = root.cleanNotificationText(notification.summary)
     const body = root.cleanNotificationText(notification.body)
     const actionLabels = root.notificationActionLabelsFrom(notification)
+    const sticky = root.isNotificationSticky(notification, app, summary, body, actionLabels)
 
     notificationHistory.insert(0, {
       app: app,
@@ -771,6 +787,7 @@ ShellRoot {
       body: body,
       text: root.notificationPreview(summary, body, app),
       actionsText: actionLabels.join(" | "),
+      sticky: sticky,
       desktopEntry: root.cleanNotificationText(notification.desktopEntry),
       time: Qt.formatDateTime(new Date(), "HH:mm")
     })
@@ -835,8 +852,10 @@ ShellRoot {
     if (actionIndex < 0 || actionIndex >= actions.length)
       return
 
+    const row = index >= 0 && index < notificationHistory.count ? notificationHistory.get(index) : null
+    const actionLabel = String(actions[actionIndex].text || actions[actionIndex].identifier || "")
     actions[actionIndex].invoke()
-    if (!notification.resident)
+    if (!row || !row.sticky || root.notificationActionCompletes(actionLabel))
       root.dismissNotification(index)
   }
   function updateAudioStreams(output) {
