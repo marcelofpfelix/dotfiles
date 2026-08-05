@@ -7,6 +7,7 @@
 
 set -Eeuo pipefail
 
+# shellcheck disable=SC2034
 CLI="""
 use: gsync [NAME_OR_FILE]
 short: sync configured git repositories
@@ -36,6 +37,9 @@ flags:
     short: accepted for compatibility; gsync always runs the requested sync
     alias: f
     type: bool
+  - use: check
+    short: show target repos and status without pulling, committing, or pushing
+    type: bool
 """
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -47,7 +51,9 @@ else
     LIBS_DIR="${LIBS_DIR:-$HOME/lib}"
 fi
 
+# shellcheck source=/dev/null
 . "$LIBS_DIR/lib_utils.sh"
+# shellcheck source=/dev/null
 . "$LIBS_DIR/lib_config.sh"
 
 gsync_init() {
@@ -61,6 +67,7 @@ gsync_init() {
     DEFAULT_COMMIT_MSG="${GSYNC_COMMIT_MSG:-auto-update}"
     RUN_PRE_COMMIT="${GSYNC_PRE_COMMIT:-true}"
     GSYNC_VERBOSE="${GSYNC_VERBOSE:-false}"
+    GSYNC_CHECK="${GSYNC_CHECK:-false}"
 
     CONFIG_FILES=()
     REPO_LINES=()
@@ -291,7 +298,18 @@ gsync_sync_repo() {
     cd "$REPO_PATH" || return
 
     current_branch="$(git_current_branch)"
+    if git_bool "$GSYNC_CHECK"; then
+        printf 'CHECK %s/%s path=%s mode=%s branch=%s current=%s dirty=%s\n' \
+            "$REPO_ORG" "$REPO_NAME" "$REPO_PATH" "$REPO_MODE" "$REPO_BRANCH" "$current_branch" \
+            "$([ -z "$(git status --porcelain)" ] && printf false || printf true)"
+        return 0
+    fi
+
     if [ "$current_branch" != "$REPO_BRANCH" ]; then
+        if [ "$REPO_MODE" = "write" ]; then
+            printf 'FAIL %s/%s mode=%s branch=%s reason=branch-mismatch current=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_MODE" "$REPO_BRANCH" "$current_branch" >&2
+            return 1
+        fi
         printf 'OK %s/%s mode=%s branch=%s skipped=true reason=branch-mismatch current=%s\n' "$REPO_ORG" "$REPO_NAME" "$REPO_MODE" "$REPO_BRANCH" "$current_branch"
         return 0
     fi
@@ -340,9 +358,10 @@ gsync_parse_args() {
         case "$1" in
             --config|-c) CONFIG_FILES+=("${2:?--config requires a name or file}"); shift 2 ;;
             --repo|-r) gsync_add_repo_line "${2:?--repo requires a repo ref}"; shift 2 ;;
-            --write) DEFAULT_MODE=write; shift ;;
-            --read) DEFAULT_MODE=read; shift ;;
+            --write) DEFAULT_MODE="write"; shift ;;
+            --read) DEFAULT_MODE="read"; shift ;;
             --verbose|-v) GSYNC_VERBOSE=true; shift ;;
+            --check) GSYNC_CHECK=true; shift ;;
             --force|-f) shift ;;
             --help|-h) gsync_usage; exit 0 ;;
             *)
@@ -398,20 +417,24 @@ gsync_main() {
 
     if [ "${#FAILED_REPOS[@]}" -gt 0 ]; then
         printf 'FAIL completed=%s/%s failed=%s\n' "$SUCCESS" "$TOTAL" "${FAILED_REPOS[*]}" >&2
-        report_check_status \
-            "gsync" 1 "completed=${SUCCESS} total=${TOTAL} failed=${#FAILED_REPOS[@]}" \
-            "$(prometheus_check_metric "gsync" "repositories_total" "$TOTAL")" \
-            "$(prometheus_check_metric "gsync" "repositories_success" "$SUCCESS")" \
-            "$(prometheus_check_metric "gsync" "repositories_failed" "${#FAILED_REPOS[@]}")" || true
+        if ! git_bool "$GSYNC_CHECK"; then
+            report_check_status \
+                "gsync" 1 "completed=${SUCCESS} total=${TOTAL} failed=${#FAILED_REPOS[@]}" \
+                "$(prometheus_check_metric "gsync" "repositories_total" "$TOTAL")" \
+                "$(prometheus_check_metric "gsync" "repositories_success" "$SUCCESS")" \
+                "$(prometheus_check_metric "gsync" "repositories_failed" "${#FAILED_REPOS[@]}")" || true
+        fi
         exit 1
     fi
 
     printf 'DONE completed=%s/%s\n' "$SUCCESS" "$TOTAL"
-    report_check_status \
-        "gsync" 0 "completed=${SUCCESS} total=${TOTAL} failed=0" \
-        "$(prometheus_check_metric "gsync" "repositories_total" "$TOTAL")" \
-        "$(prometheus_check_metric "gsync" "repositories_success" "$SUCCESS")" \
-        "$(prometheus_check_metric "gsync" "repositories_failed" 0)" || true
+    if ! git_bool "$GSYNC_CHECK"; then
+        report_check_status \
+            "gsync" 0 "completed=${SUCCESS} total=${TOTAL} failed=0" \
+            "$(prometheus_check_metric "gsync" "repositories_total" "$TOTAL")" \
+            "$(prometheus_check_metric "gsync" "repositories_success" "$SUCCESS")" \
+            "$(prometheus_check_metric "gsync" "repositories_failed" 0)" || true
+    fi
 }
 
 gsync_main "$@"

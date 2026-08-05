@@ -3,6 +3,8 @@
 
 data.location=~/.task
 hooks.location=~/.task/hooks
+sync.local.server_dir=~/task-sync/taskchampion
+recurrence=on
 
 include ~/.config/task/themes/catppuccin-mocha.theme
 

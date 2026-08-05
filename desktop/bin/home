@@ -54,6 +54,40 @@ else
     homelab="$(git_repo_path marcelofpfelix homelab)"
 fi
 
+homelab_overlay=""
+homelab_run="$homelab"
+inventory_overlay=""
+
+cleanup_homelab_overlay() {
+    if [ -n "$homelab_overlay" ] && [ -d "$homelab_overlay" ]; then
+        rm -rf "$homelab_overlay"
+    fi
+    if [ -n "$inventory_overlay" ] && [ -f "$inventory_overlay" ]; then
+        rm -f "$inventory_overlay"
+    fi
+}
+
+prepare_homelab_overlay() {
+    private_homelab="${homework}/homelab"
+
+    if [ ! -d "$private_homelab" ]; then
+        homelab_run="$homelab"
+        return
+    fi
+
+    homelab_overlay="$(mktemp -d "${TMPDIR:-/tmp}/home-homelab.XXXXXX")" || exit
+    trap cleanup_homelab_overlay EXIT
+
+    rsync -a \
+        --exclude .git \
+        --exclude .venv \
+        --exclude .ansible \
+        --exclude .serena \
+        "${homelab}/" "$homelab_overlay/" || exit
+    rsync -a "${private_homelab}/" "$homelab_overlay/" || exit
+
+    homelab_run="$homelab_overlay"
+}
 
 local_copy() {
     # copy the dotfiles to the local directory
@@ -84,6 +118,7 @@ home() {
 
     println "Running cli" "home" "-t ${target}" "-y ${yesman}" "-w ${work}" "-f ${fast}" "-d ${dst}" n:b:c:b:c:c
 
+    prepare_homelab_overlay
     cd "$homelab" || exit
 
     # check if $work is true
@@ -114,8 +149,15 @@ home() {
         fi
     fi
 
-    log note "ansible-playbook home.yml -i $inventory -e \"target=$target\" -e \"home_src=$home_src\" $flags" # service=$service
-    uv run ansible-playbook home.yml -i $inventory -e "target=$target" -e "home_src=$home_src" $flags # service=$service
+    if [ "$target" != "localhost" ] && ssh_user=$(ssh -G "$target" 2>/dev/null | awk '$1 == "user" { print $2; exit }') && [ -n "$ssh_user" ]; then
+        inventory_overlay="$(mktemp "${TMPDIR:-/tmp}/home-inventory.XXXXXX")" || exit
+        cp "$inventory" "$inventory_overlay" || exit
+        printf '\n[home_ssh_resolved]\n%s ansible_user=%s\n' "$target" "$ssh_user" >> "$inventory_overlay"
+        inventory="$inventory_overlay"
+    fi
+
+    log note "ansible-playbook $homelab_run/home.yml -i $inventory -e \"target=$target\" -e \"home_src=$home_src\" -e \"dotfiles=$dotfiles\" -e \"homefiles=$homework\" -e \"workfiles=$workdir\" -e homelab_secret_scope=home $flags" # service=$service
+    uv run ansible-playbook "$homelab_run/home.yml" -i "$inventory" -e "target=$target" -e "home_src=$home_src" -e "dotfiles=$dotfiles" -e "homefiles=$homework" -e "workfiles=$workdir" -e homelab_secret_scope=home $flags # service=$service
 
 }
 

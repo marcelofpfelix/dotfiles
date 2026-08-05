@@ -58,7 +58,7 @@ require('mason').setup()
 -- Enable the following language servers
 -- Feel free to add/remove any LSPs that you want here. They will automatically be installed
 -- https://mason-registry.dev/registry
-local servers = { 'lua_ls', 'rust_analyzer', 'ruff', 'gopls'  }
+local servers = { 'lua_ls', 'rust_analyzer', 'ruff', 'gopls', 'bashls' }
 
 -- Ensure the servers above are installed
 require('mason-lspconfig').setup {
@@ -114,13 +114,3 @@ end
 
 -- Turn on lsp status information
 require('fidget').setup()
---
-vim.api.nvim_create_autocmd('FileType', {
-  pattern = 'sh',
-  callback = function()
-    vim.lsp.start({
-      name = 'bash-language-server',
-      cmd = { 'bash-language-server', 'start' },
-    })
-  end,
-})

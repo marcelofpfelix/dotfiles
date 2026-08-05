@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "${HERDR_PLUGIN_ROOT:?}/scripts/run-check.sh" check-gpg

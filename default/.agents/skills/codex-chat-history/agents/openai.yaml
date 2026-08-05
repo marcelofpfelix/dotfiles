@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Chat History"
+  short_description: "Explain Codex sessions, history, and transcripts"
+  default_prompt: "Use $codex-chat-history to explain where Codex stores chats and how to inspect, resume, archive, or delete sessions."
+
+policy:
+  allow_implicit_invocation: false

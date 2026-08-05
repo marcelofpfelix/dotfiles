@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# short docker ps across all docker contexts
+################################################################################
+
+set -Eeuo pipefail
+
+main() {
+  local filter="" show_errors=0
+  local context output error
+
+  while (($#)); do
+    case "$1" in
+      --errors)
+        show_errors=1
+        ;;
+      -h|--help)
+        printf 'Usage: dpsc [--errors] [filter]\n'
+        return 0
+        ;;
+      *)
+        filter="$1"
+        ;;
+    esac
+    shift
+  done
+
+  while IFS= read -r context; do
+    [[ -n "$context" ]] || continue
+
+    if output=$(docker --context "$context" ps -a --format "{{.CreatedAt}} {{.Names}} {{.State}} {{.Image}}" 2>&1); then
+      [[ -n "$output" ]] || continue
+
+      output=$(awk -v context="$context" '{ split($NF,a,":"); print context, $1 "_" $2, $5, $6, a[2] }' <<<"$output" | column -t)
+      output="${output//"running"/"🟢"}"
+      output="${output//"exited"/"🔴"}"
+    else
+      (( show_errors )) || continue
+      error=${output//$'\n'/ }
+      output=$(printf '%s  error  %s\n' "$context" "$error")
+    fi
+
+    if [[ -n "$filter" ]]; then
+      grep -- "$filter" <<<"$output" || true
+    else
+      printf '%s\n' "$output"
+    fi
+  done < <(docker context ls --format '{{.Name}}')
+}
+
+main "$@"

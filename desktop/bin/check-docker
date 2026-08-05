@@ -38,9 +38,24 @@ show_status() {
 
 main() {
   LIBS_DIR=${LIBS_DIR:="$HOME/lib"}
+  # shellcheck source=/dev/null
   . "$LIBS_DIR/lib_utils.sh"
+  # shellcheck source=/dev/null
   . "$LIBS_DIR/lib_icon.sh"
+  # shellcheck source=/dev/null
   . "$LIBS_DIR/lib_status.sh"
+
+  if ! command -v docker >/dev/null 2>&1; then
+    printc "$(icon docker)" r
+    printc "missing" r
+    printf "\n"
+    report_check_status \
+      "check-docker" 2 "docker command missing" \
+      "$(prometheus_check_metric "check-docker" "docker_running_containers" 0)" \
+      "$(prometheus_check_metric "check-docker" "docker_stopped_containers" 0)" \
+      "$(prometheus_check_metric "check-docker" "docker_expected_containers" "$DOCKER_EXPECTED")"
+    exit 2
+  fi
 
   if show_status; then
     code=0

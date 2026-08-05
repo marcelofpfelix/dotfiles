@@ -1,6 +1,10 @@
 
 -- Fixes Notify opacity issues
 vim.o.termguicolors = true
+vim.g.db_ui_icons = vim.tbl_deep_extend("force", {
+  expanded = vim.empty_dict(),
+  collapsed = vim.empty_dict(),
+}, vim.g.db_ui_icons or {})
 
 require('lazy').setup({
 
@@ -62,6 +66,8 @@ require('lazy').setup({
     },
     config = function()
       require("nvim-tree").setup {
+        hijack_netrw = false,
+        disable_netrw = true,
         git = {
           enable = true,
           ignore = false,

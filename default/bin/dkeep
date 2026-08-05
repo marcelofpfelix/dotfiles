@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+
+################################################################################
+#                                 FILE INFO
+# stop and remove Docker containers not listed in the local keep config
+################################################################################
+
+set -Eeuo pipefail
+
+CONFIG_FILE=${DKEEP_CONFIG:-"$HOME/.config/dkeep/containers.conf"}
+YES=0
+SHOW_ERRORS=0
+
+usage() {
+  cat <<'EOF'
+Usage: dkeep [-y] [--errors] [--config PATH]
+
+Stops and removes Docker containers that are not listed in the keep config.
+Shows the keep/remove plan and asks for confirmation before changing anything.
+Pass -y to skip confirmation.
+
+Config format:
+  <docker-context> <container-name>
+
+Default config:
+  ~/.config/dkeep/containers.conf
+EOF
+}
+
+load_keep_config() {
+  local line context name
+
+  [[ -f "$CONFIG_FILE" ]] || {
+    printf 'missing config: %s\n' "$CONFIG_FILE" >&2
+    return 1
+  }
+
+  while read -r context name _ || [[ -n "${context:-}" ]]; do
+    line="${context:-}"
+    [[ -n "${name:-}" ]] && line="$line $name"
+    line="${line%%#*}"
+    [[ -n "${line//[[:space:]]/}" ]] || continue
+
+    read -r context name _ <<<"$line"
+    if [[ -z "${context:-}" || -z "${name:-}" ]]; then
+      printf 'invalid config line: %s\n' "$line" >&2
+      return 1
+    fi
+
+    KEEP["$context/$name"]=1
+  done < "$CONFIG_FILE"
+}
+
+parse_args() {
+  while (($#)); do
+    case "$1" in
+      -y)
+        YES=1
+        ;;
+      --errors)
+        SHOW_ERRORS=1
+        ;;
+      --config)
+        shift
+        [[ $# -gt 0 ]] || {
+          printf 'missing value for --config\n' >&2
+          return 2
+        }
+        CONFIG_FILE=$1
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        printf 'unknown argument: %s\n' "$1" >&2
+        usage >&2
+        return 2
+        ;;
+    esac
+    shift
+  done
+}
+
+remove_container() {
+  local context=$1
+  local name=$2
+  local state=$3
+
+  if [[ "$state" == "running" ]]; then
+    docker --context "$context" stop "$name"
+  fi
+  docker --context "$context" rm "$name"
+}
+
+collect_context() {
+  local context=$1
+  local output name state
+
+  if ! output=$(docker --context "$context" ps -a --format '{{.Names}} {{.State}}' 2>&1); then
+    (( SHOW_ERRORS )) && printf 'skip error    %-20s %s\n' "$context" "${output//$'\n'/ }"
+    return 0
+  fi
+
+  while read -r name state _; do
+    [[ -n "${name:-}" ]] || continue
+    if [[ -n "${KEEP["$context/$name"]:-}" ]]; then
+      KEEP_LINES+=("$(printf 'keep         %-20s %-40s %s' "$context" "$name" "$state")")
+    else
+      REMOVE_LINES+=("$(printf 'remove       %-20s %-40s %s' "$context" "$name" "$state")")
+      REMOVE_CONTEXTS+=("$context")
+      REMOVE_NAMES+=("$name")
+      REMOVE_STATES+=("$state")
+    fi
+  done <<<"$output"
+}
+
+print_plan() {
+  printf 'will keep:\n'
+  if ((${#KEEP_LINES[@]})); then
+    printf '%s\n' "${KEEP_LINES[@]}"
+  else
+    printf '  none\n'
+  fi
+
+  printf '\nwill remove:\n'
+  if ((${#REMOVE_LINES[@]})); then
+    printf '%s\n' "${REMOVE_LINES[@]}"
+  else
+    printf '  none\n'
+  fi
+}
+
+confirm() {
+  local answer
+
+  ((${#REMOVE_LINES[@]})) || return 1
+  (( YES )) && return 0
+
+  printf '\nStop and remove %d containers? [y/N] ' "${#REMOVE_LINES[@]}"
+  read -r answer
+  [[ "$answer" == "y" ]]
+}
+
+remove_planned_containers() {
+  local i
+
+  for i in "${!REMOVE_CONTEXTS[@]}"; do
+    remove_container "${REMOVE_CONTEXTS[$i]}" "${REMOVE_NAMES[$i]}" "${REMOVE_STATES[$i]}"
+  done
+}
+
+main() {
+  local context
+
+  declare -gA KEEP=()
+  declare -ga KEEP_LINES=()
+  declare -ga REMOVE_LINES=()
+  declare -ga REMOVE_CONTEXTS=()
+  declare -ga REMOVE_NAMES=()
+  declare -ga REMOVE_STATES=()
+
+  parse_args "$@"
+  load_keep_config
+
+  while IFS= read -r context; do
+    [[ -n "$context" ]] || continue
+    collect_context "$context"
+  done < <(docker context ls --format '{{.Name}}')
+
+  print_plan
+
+  if confirm; then
+    remove_planned_containers
+  else
+    printf '\nno containers removed\n'
+  fi
+}
+
+main "$@"

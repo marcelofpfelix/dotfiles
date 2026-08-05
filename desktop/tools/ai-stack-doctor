@@ -3,14 +3,30 @@
 set -Eeuo pipefail
 
 check_cmd() {
-  local name="$1" required="${2:-yes}" path
+  local name="$1" required="${2:-yes}" formula="${3:-$1}" path brew_bin
   if path="$(command -v "$name" 2>/dev/null)"; then
     printf 'ok      %-24s %s\n' "$name" "$path"
+  elif brew_bin="$(brew_bin_path "$name" 2>/dev/null)" && [[ -L "$brew_bin" && ! -e "$brew_bin" ]]; then
+    printf 'broken  %-24s %s -> %s\n' "$name" "$brew_bin" "$(readlink "$brew_bin")"
+    printf 'repair  %-24s brew link --overwrite %s\n' "$name" "$formula"
+  elif brew_formula_installed "$formula"; then
+    printf 'unlinked %-24s installed by Homebrew\n' "$name"
+    printf 'repair  %-24s brew link %s\n' "$name" "$formula"
   elif [[ "$required" == "yes" ]]; then
     printf 'missing %-24s required\n' "$name"
   else
     printf 'optional %-24s not installed\n' "$name"
   fi
+}
+
+brew_formula_installed() {
+  command -v brew >/dev/null 2>&1 || return 1
+  brew list --formula "$1" >/dev/null 2>&1
+}
+
+brew_bin_path() {
+  command -v brew >/dev/null 2>&1 || return 1
+  printf '%s/bin/%s\n' "$(brew --prefix)" "$1"
 }
 
 section() {

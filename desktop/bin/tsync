@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+secret_path="${TASKWARRIOR_SYNC_SECRET_GOPASS_PATH:-taskwarrior/sync/encryption-secret}"
+
+if ! secret="$(env gopass show -o "$secret_path")" || [ -z "$secret" ]; then
+  printf 'missing Taskwarrior sync secret at gopass path %s\n' "$secret_path" >&2
+  exit 1
+fi
+
+exec task rc.verbose=nothing rc.sync.encryption_secret:"$secret" sync "$@"

@@ -90,6 +90,7 @@ compact_path() {
       rel=${path#"$root"/}
       ;;
     "$HOME"/*)
+      # shellcheck disable=SC2088
       rel="~/${path#"$HOME"/}"
       ;;
     *)
@@ -245,6 +246,17 @@ cleanup_brew() {
   log "== homebrew =="
   run brew autoremove
   run brew cleanup --prune=all --scrub
+  repair_brew_link docker docker
+}
+
+repair_brew_link() {
+  local formula=$1
+  local binary=${2:-$formula}
+
+  have "$binary" && return 0
+  brew list --formula "$formula" >/dev/null 2>&1 || return 0
+
+  run brew link "$formula"
 }
 
 cleanup_npm() {
