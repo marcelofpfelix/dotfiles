@@ -26,13 +26,14 @@ PROCESS_TABLE=""
 
 usage() {
   cat <<'EOF'
-use: agent-tmux [status|group|bar|bar-plain|window-icon|focus|switch|open|restart|keys|notify|notify-test|notify-debug|why|events|events-clear|doctor|cache-clear|watch]
+use: agent-tmux [status|group|bar|bar-plain|check|window-icon|focus|switch|open|restart|keys|notify|notify-test|notify-debug|why|events|events-clear|doctor|cache-clear|watch]
 
 commands:
   status   list agent panes with state, location, and current command
   group    summarize by session or repo: agent-tmux group session|repo
   bar      compact tmux status-bar output with tmux colors
   bar-plain compact status text without tmux formatting
+  check    notify once, then print bar-plain output for board/tbar
   window-icon print a Nerd Font status icon for a tmux window
   focus    switch tmux client to a pane id, for example %91
   switch   choose an agent pane with fzf/gum and focus it
@@ -1125,6 +1126,7 @@ main() {
     group) group_rows "${1:-session}" <<<"$(scan_panes || true)" ;;
     bar) bar "$@" ;;
     bar-plain) bar_plain "$@" ;;
+    check) notify; bar_plain "$@" ;;
     window-icon) window_icon "$@" ;;
     focus) focus "$@" ;;
     switch) switch_pane "$@" ;;

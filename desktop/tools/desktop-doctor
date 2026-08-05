@@ -407,7 +407,11 @@ check_qs_menu_smoke_latest
 
 section "audio"
 check_audio_status
-run_required audioctl-self-test audioctl self-test
+if audio_status=$(audioctl status 2>/dev/null) && grep -q '^helper: running' <<<"$audio_status"; then
+  ok audioctl-self-test "skipped while helper audio running"
+else
+  run_required audioctl-self-test audioctl self-test
+fi
 run_required media-now-playing media-now-playing
 run_required desktop-osd-self-test desktop-osd self-test
 if command -v check-audio-streams >/dev/null 2>&1; then

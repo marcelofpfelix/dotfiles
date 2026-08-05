@@ -82,7 +82,7 @@ agent-tmux why %91  # explain classification for a pane id
 agent-tmux doctor   # check dependencies and command availability
 agent-tmux cache-clear # clear cached scan and pane state
 agent-tmux watch    # repeated notification loop
-check-agents        # tbar/polybar-compatible wrapper
+agent-tmux check   # board/tbar-compatible status check
 ```
 
 `why` redacts bearer-style tokens from process arguments before printing them.

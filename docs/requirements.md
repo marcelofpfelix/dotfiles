@@ -103,5 +103,5 @@ On-demand binaries and services:
 - Hindsight local daemon with `uvx hindsight-embed`, after explicit memory-pilot
   approval
 
-Run `ai-stack-doctor` to check what is installed and which on-demand pieces are
+Run `desktop/tools/ai-stack-doctor` to check what is installed and which on-demand pieces are
 ready to enable.

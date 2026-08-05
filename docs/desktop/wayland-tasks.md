@@ -914,3 +914,12 @@ Task source: latest local review request. Priority is code repetition and simple
   - Acceptance: `notificationctl list`, `notificationctl open <id>`, `notificationctl clear <id|app|all>`, and `notificationctl tui` operate on the same persisted history; live notifications can still invoke actions through Quickshell IPC, while old entries can focus/open the source app.
   - Dependencies: depends on persisted history and a minimal Quickshell IPC command surface for clear/open/action.
   - Validation: `bash -n desktop/bin/notificationctl`, self-test with fake JSONL, manual `notificationctl tui`, and `desktop/tools/desktop-notification-smoke actions`.
+
+
+## 2026-08-05 Reliability Follow-Up
+
+- [x] P0: Make desktop-doctor trustworthy before more UI work.
+  - Sources: user request to prioritize reliable acceptance, plus recent false failures from active helper audio and stale board agent cache.
+  - Acceptance: validation and agent-only helpers do not live in user-facing `desktop/bin`, duplicate wrappers are merged where practical, board uses a direct supported command for agent status, and `desktop-doctor` does not run `audioctl self-test` while helper-owned noise/music are active.
+  - Validation: `bash -n desktop/bin/agent-tmux desktop/tools/ai-stack-doctor desktop/tools/desktop-doctor desktop/tools/desktop-accept`, `agent-tmux check`, `board --config ~/.config/board/board.toml once`, full `desktop/tools/qs-menu-smoke`, and full `desktop/tools/desktop-doctor`.
+  - Current behavior: `ai-stack-doctor` lives under `desktop/tools`, `check-agents` is merged into `agent-tmux check`, live stale `~/bin/check-agents` and `~/bin/ai-stack-doctor` were archived out of PATH, board scheduler was restarted with the updated config, and full `desktop-doctor` passes while skipping the audio self-test during active helper playback.
