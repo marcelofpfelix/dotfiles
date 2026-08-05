@@ -892,11 +892,17 @@ Task source: latest local review request. Priority is code repetition and simple
   - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellNotificationCenter.qml desktop/.config/quickshell/marcelof/ShellOverlays.qml desktop/.config/quickshell/marcelof/shell.qml`, send icon and image notifications with `notify-send`, `desktop/tools/qs-menu-smoke --inspect notifications`, and `desktop/tools/desktop-notification-smoke actions`.
   - Current behavior: notification history stores `appIcon` and `image`; toasts and notification-center rows render app icons via `Quickshell.iconPath`, pass through `file://` and `image://` payloads, fall back to app initials for grouped rows, and show expanded notification images as bounded thumbnails.
 
-- [ ] P1: Add notification routing policy for neutral vs attention-worthy events.
+- [x] P1: Add notification routing policy for neutral vs attention-worthy events.
   - Sources: user request that neutral notifications go only to the main place; current DND and notification-history model.
   - Acceptance: Quickshell records every non-transient notification in history, but only shows popup toasts for urgent notifications, configured important apps, or notifications with configured important actions/patterns. Neutral notifications increment the bar count and appear in the notification center only.
   - Dependencies: add a small declarative policy map in `ShellConfigData.qml`; avoid per-app logic scattered through QML.
-  - Validation: `desktop/tools/desktop-notification-smoke` covers neutral and urgent notifications, `desktop/tools/qs-menu-smoke notifications controls`, and manual Slack/Chrome notification sanity check.
+  - Validation: `desktop/tools/desktop-notification-smoke routing` covers neutral and urgent notifications, `desktop/tools/qs-menu-smoke notifications controls`, and manual Slack/Chrome notification sanity check.
+  - Current behavior: notification history still records every notification, but popup toasts are limited to critical urgency, configured important apps, configured action labels, or configured text patterns in `ShellConfigData.qml`; neutral notifications update the bar count and notification center only.
+
+- [ ] P1: Make notification action buttons visually reliable.
+  - Sources: `desktop/tools/qs-menu-smoke --inspect notifications` reported that the action-smoke card promises `Open` and `Done`, but only the generic `Open` focus button is visible.
+  - Acceptance: notification cards clearly separate the source-app `Open` button from live notification actions, and action labels fit without truncation or disappearing.
+  - Validation: `desktop/tools/desktop-notification-smoke actions`, `desktop/tools/qs-menu-smoke --inspect notifications`, and manual action notification check.
 
 - [ ] P1: Support sticky notifications until they are completed or dismissed.
   - Sources: user request for permanent notifications until something is done; Quickshell `resident`, `expireTimeout`, `transient`, and notification actions.

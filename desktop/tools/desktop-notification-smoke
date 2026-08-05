@@ -24,6 +24,15 @@ send_action_notification() {
   printf "action-log %s\n" "$log"
 }
 
+send_routing_notifications() {
+  local log="${XDG_RUNTIME_DIR:-/tmp}/desktop-notification-smoke.routing"
+  : >"$log"
+  notify-send -a desktop-neutral-smoke "Desktop neutral smoke" "This should be stored in history without a popup toast." >>"$log" 2>&1 || true
+  notify-send -a desktop-critical-smoke -u critical "Desktop critical smoke" "This should still show a popup toast." >>"$log" 2>&1 || true
+  qs-bar notifications >/dev/null 2>&1 || true
+  printf "routing-log %s\n" "$log"
+}
+
 case "${1:-run}" in
   --status|status)
     command -v notify-send >/dev/null 2>&1
@@ -32,15 +41,20 @@ case "${1:-run}" in
     actions_supported
     ;;
   -h|--help)
-    printf "use: desktop-notification-smoke [--status|actions]\n"
+    printf "use: desktop-notification-smoke [--status|actions|routing]\n"
     ;;
   run|actions)
     owner
     actions_supported
     send_action_notification
     ;;
+  routing)
+    owner
+    actions_supported
+    send_routing_notifications
+    ;;
   *)
-    printf "use: desktop-notification-smoke [--status|actions]\n" >&2
+    printf "use: desktop-notification-smoke [--status|actions|routing]\n" >&2
     exit 2
     ;;
 esac

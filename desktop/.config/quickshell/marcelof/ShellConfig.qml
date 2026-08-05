@@ -19,6 +19,7 @@ QtObject {
   readonly property var networkTrayKeywords: configData.networkTrayKeywords
   readonly property var webSearchSites: configData.webSearchSites
   readonly property var batteryPolicy: configData.batteryPolicy
+  readonly property var notificationToastPolicy: configData.notificationToastPolicy
   readonly property var menuIds: configData.menuIds
   readonly property var labels: configData.labels
   readonly property var actions: configData.actions

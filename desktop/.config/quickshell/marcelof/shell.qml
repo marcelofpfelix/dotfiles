@@ -722,6 +722,28 @@ ShellRoot {
     return Quickshell.iconPath(source, true)
   }
 
+  function notificationMatchesAny(text, values) {
+    const haystack = String(text || "").toLowerCase()
+    for (let i = 0; i < values.length; i++) {
+      const needle = String(values[i] || "").toLowerCase()
+      if (needle.length > 0 && haystack.indexOf(needle) !== -1)
+        return true
+    }
+    return false
+  }
+
+  function shouldToastNotification(notification, app, summary, body, actionLabels) {
+    const policy = shellConfig.notificationToastPolicy
+    const urgency = Number(notification && notification.urgency || 0)
+    if (urgency >= Number(policy.criticalUrgency || 2))
+      return true
+    if (root.notificationMatchesAny(app + "\n" + String(notification.desktopEntry || "") + "\n" + String(notification.appIcon || ""), policy.importantApps || []))
+      return true
+    if (root.notificationMatchesAny(actionLabels.join("\n"), policy.importantActions || []))
+      return true
+    return root.notificationMatchesAny(summary + "\n" + body, policy.importantPatterns || [])
+  }
+
   function rememberNotification(notification) {
     if (!notification)
       return
@@ -750,7 +772,7 @@ ShellRoot {
     root.notificationToastSummary = summary.length > 0 ? summary : app
     root.notificationToastBody = body
     root.notificationToastSerial += 1
-    if (!shellSettings.doNotDisturb) {
+    if (!shellSettings.doNotDisturb && root.shouldToastNotification(notification, app, summary, body, actionLabels)) {
       root.notificationToastOpen = false
       Qt.callLater(() => {
         root.notificationToastOpen = true

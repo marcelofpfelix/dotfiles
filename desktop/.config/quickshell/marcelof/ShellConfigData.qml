@@ -17,6 +17,13 @@ QtObject {
   readonly property string networkWifiToggleAction: "wifi-toggle"
   readonly property var networkTrayKeywords: ["nm-applet", "network"]
 
+  readonly property var notificationToastPolicy: ({
+    criticalUrgency: 2,
+    importantApps: ["Slack", "Google Chrome", "Brave", "Calendar", "Meet", "Zoom"],
+    importantActions: ["Accept", "Answer", "Join", "Approve", "Review", "Done"],
+    importantPatterns: ["urgent", "critical", "failed", "failure", "error", "incident", "meeting", "call", "mention", "review requested"]
+  })
+
   readonly property var batteryPolicy: ({
     hideFull: true,
     fullPercent: 100,
