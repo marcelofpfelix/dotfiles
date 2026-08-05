@@ -44,7 +44,7 @@ fix_hint() {
   fi
 
   case "$1" in
-    hypr-session|hypr-keys|hypr-term|qs-bar|qs-menu-smoke|desktop-reload|desktop-notification-smoke|desktop-inhibit|desktop-accept|desktop-startup-report|audioctl|check-audio-streams|cliphist-menu|passmenu-action|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland|desktop-privacy-status|desktop-osd|external-brightness|media-now-playing|notification-focus-app|work-inbox-status|pomodoroctl|calendar-agenda-status|calendar-sync-status)
+    hypr-session|hypr-keys|hypr-term|xdph|qs-bar|qs-menu-smoke|desktop-reload|desktop-notification-smoke|desktop-inhibit|desktop-accept|desktop-startup-report|audioctl|check-audio-streams|cliphist-menu|passmenu-action|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland|desktop-privacy-status|desktop-osd|external-brightness|media-now-playing|notification-focus-app|work-inbox-status|pomodoroctl|calendar-agenda-status|calendar-sync-status)
       printf 'fix  %-22s home -y
 ' "$1"
       ;;
@@ -252,6 +252,17 @@ check_screen_share() {
     *"$HOME/.local/share"*) ok portal-xdg-data "$HOME/.local/share" ;;
     *) fail portal-xdg-data "missing $HOME/.local/share" ;;
   esac
+
+  path=$(command -v xdph 2>/dev/null || true)
+  if [ -z "$path" ]; then
+    fail xdph missing
+  elif grep -Fq "exec nixGL" "$path" 2>/dev/null; then
+    fail xdph "wraps portal with nixGL"
+  elif grep -Fq "hypr-clean-env" "$path" 2>/dev/null; then
+    ok xdph hypr-clean-env
+  else
+    fail xdph "missing hypr-clean-env"
+  fi
 
   for wrapper in chrome-wayland brave-wayland; do
     path=$(command -v "$wrapper" 2>/dev/null || true)
