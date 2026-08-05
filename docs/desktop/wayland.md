@@ -81,6 +81,30 @@ Stale live X11 files removed from `$HOME` during migration are preserved under
 
 Track package intent in `/home/marcelof/gwt/marcelofpfelix/homelab/main/vars/install/desktop.yml`. The minimum Wayland set is Hyprland, hyprctl, Quickshell, and the backend tools used by the selected profile. Both profiles use the local Marcelof Quickshell shell; the `omarchy` profile changes Hyprland behavior, not the shell runtime. Keep only backend tools here. `board` is tracked as a local CLI/runtime dependency for Quickshell and tmux status rendering. Backend tools include screenshot and recording helpers (`grim`, `slurp`, `swappy`, `imagemagick-6.q16`, `wf-recorder`, `tesseract`), `brightnessctl`, `ddcutil`, `wl-clipboard`, `cliphist`, `playerctl`, `pavucontrol`, `mpv`, `ffmpeg`, `hyprlock`, `swaylock`, `hyprpicker`, `jq`, `libnotify-bin`, `network-manager`, `network-manager-gnome`, `pulseaudio-utils`, `lm-sensors`, `upower`, `power-profiles-daemon`, `bluez`, `wireplumber`, `xdg-utils`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk`, `nixGL` for Nix Hyprland on Ubuntu, and the existing autostart backend (`dex`). `hypr-session status` checks these runtime commands directly, with `hyprpicker` reported as optional and locking accepted through `hyprlock`, `swaylock`, or `loginctl`.
 
+### Screen sharing portal
+
+`desktop/bin/xdph` intentionally runs `xdg-desktop-portal-hyprland` through `hypr-clean-env`, not `nixGL`. Keep it that way by default: Google Meet screen sharing crashed Hyprland 0.55.4 in the DMA-BUF copy path while the live portal process had NixGL-injected EGL, GBM, GL, and `LD_LIBRARY_PATH` variables. Browser wrappers still own Chrome/Brave WebGL and Meet effects; this note only covers the Hyprland portal process used for screen/window sharing.
+
+To temporarily re-enable the old NixGL portal wrapper for a controlled test, restore the removed branch in `desktop/bin/xdph` before the final `exec hypr-clean-env`:
+
+```bash
+local real_bin
+real_bin="$(readlink -f "$bin" 2>/dev/null || printf "%s\n" "$bin")"
+
+if [[ "$real_bin" == /nix/store/* ]] && command -v nixGL >/dev/null 2>&1; then
+    exec nixGL "$bin" "$@"
+fi
+```
+
+Then apply and restart only the portal services:
+
+```console
+home -y
+systemctl --user restart xdg-desktop-portal-hyprland.service xdg-desktop-portal.service xdg-desktop-portal-gtk.service
+```
+
+Revert the test by deleting that branch again, running the same `home -y` and portal restart commands, then checking `desktop/tools/desktop-doctor`. Do not leave the NixGL branch enabled unless a future Hyprland or `xdg-desktop-portal-hyprland` update proves it no longer crashes screen sharing on this machine.
+
 ## Autostart notes
 
 Hyprland starts desktop entries through `dex --autostart --environment Hyprland`. Repo-tracked user masks under `desktop/.config/autostart` suppress noisy Ubuntu/GNOME helpers that are not part of the Quickshell session: Evolution alarm, Geoclue demo agent, DejaDup monitor, PulseAudio X11 bridge, Ubuntu Advantage, Ubuntu report, and update-notifier. Use `desktop-startup-report` to see the effective Dex list and `bgsvc status recommended` to inspect managed optional services and autostart masks.
