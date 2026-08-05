@@ -288,7 +288,7 @@ PanelWindow {
 
       ShellIconButton { tooltipState: barRoot; icon: "󰒓"; tooltip: "Controls"; onTriggered: barRoot.toggleControlPanel() }
       StatusText { command: barConfig.weather(barSettings.weatherLocation); interval: 900000 }
-      StatusText { command: barConfig.brightnessBar(); interval: 5000; leftClickCommand: barConfig.qs(barConfig.menuIds.controls); rightClickCommand: barConfig.qs(barConfig.menuIds.controls); wheelUpCommand: barConfig.brightnessSet("+5%"); wheelDownCommand: barConfig.brightnessSet("5%-") }
+      StatusText { visible: text.length > 0 && text.indexOf("100%") < 0; command: barConfig.brightnessBar(); interval: 5000; leftClickCommand: barConfig.qs(barConfig.menuIds.controls); rightClickCommand: barConfig.qs(barConfig.menuIds.controls); wheelUpCommand: barConfig.brightnessSet("+5%"); wheelDownCommand: barConfig.brightnessSet("5%-") }
       StatusText { command: barConfig.network("bar"); interval: 10000; leftClickCommand: barConfig.networkEditor(); rightClickCommand: barConfig.networkEditor() }
 
       Text {
