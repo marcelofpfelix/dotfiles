@@ -692,13 +692,23 @@ ShellRoot {
     return String(value || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim()
   }
 
-  function notificationActionLabelsFrom(notification) {
+  function notificationActionsFrom(notification) {
     if (!notification || !notification.actions)
       return []
+    if (notification.actions.map)
+      return notification.actions.map(action => action)
 
+    const actions = []
+    for (let i = 0; i < notification.actions.length; i++)
+      actions.push(notification.actions[i])
+    return actions
+  }
+
+  function notificationActionLabelsFrom(notification) {
+    const actions = root.notificationActionsFrom(notification)
     const labels = []
-    for (let i = 0; i < notification.actions.length; i++) {
-      const text = root.cleanNotificationText(notification.actions[i].text)
+    for (let i = 0; i < actions.length; i++) {
+      const text = root.cleanNotificationText(actions[i].text || actions[i].identifier)
       if (text.length > 0)
         labels.push(text)
     }
@@ -821,10 +831,11 @@ ShellRoot {
 
   function invokeNotificationAction(index, actionIndex) {
     const notification = root.notificationObjects[index]
-    if (!notification || !notification.actions || actionIndex < 0 || actionIndex >= notification.actions.length)
+    const actions = root.notificationActionsFrom(notification)
+    if (actionIndex < 0 || actionIndex >= actions.length)
       return
 
-    notification.actions[actionIndex].invoke()
+    actions[actionIndex].invoke()
     if (!notification.resident)
       root.dismissNotification(index)
   }

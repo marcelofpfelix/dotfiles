@@ -899,10 +899,11 @@ Task source: latest local review request. Priority is code repetition and simple
   - Validation: `desktop/tools/desktop-notification-smoke routing` covers neutral and urgent notifications, `desktop/tools/qs-menu-smoke notifications controls`, and manual Slack/Chrome notification sanity check.
   - Current behavior: notification history still records every notification, but popup toasts are limited to critical urgency, configured important apps, configured action labels, or configured text patterns in `ShellConfigData.qml`; neutral notifications update the bar count and notification center only.
 
-- [ ] P1: Make notification action buttons visually reliable.
+- [x] P1: Make notification action buttons visually reliable.
   - Sources: `desktop/tools/qs-menu-smoke --inspect notifications` reported that the action-smoke card promises `Open` and `Done`, but only the generic `Open` focus button is visible.
   - Acceptance: notification cards clearly separate the source-app `Open` button from live notification actions, and action labels fit without truncation or disappearing.
   - Validation: `desktop/tools/desktop-notification-smoke actions`, `desktop/tools/qs-menu-smoke --inspect notifications`, and manual action notification check.
+  - Current behavior: source-app focusing is labeled `App`, while live D-Bus notification actions render as separate shared `ShellActionButton` controls with consistent label sizing and tooltips.
 
 - [ ] P1: Support sticky notifications until they are completed or dismissed.
   - Sources: user request for permanent notifications until something is done; Quickshell `resident`, `expireTimeout`, `transient`, and notification actions.

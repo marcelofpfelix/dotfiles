@@ -217,48 +217,22 @@ ShellPopup {
               visible: notificationDelegate.expanded && (actionsText.length > 0 || desktopEntry.length > 0 || app.length > 0)
               spacing: theme.spacingMd
 
-              ShellActionButton { icon: "󰍉"; label: "Open"; minWidth: 82; tooltip: "Focus source app"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.focusNotificationApp(notificationDelegate.notificationIndex) }
+              ShellActionButton { icon: "󰍉"; label: "App"; minWidth: 72; tooltip: "Focus source app"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.focusNotificationApp(notificationDelegate.notificationIndex) }
 
               Repeater {
-                model: notificationCenter.shellRoot.notificationActionLabels(notificationDelegate.notificationIndex)
+                model: actionsText.length > 0 ? actionsText.split(" | ") : []
 
-                delegate: Rectangle {
+                delegate: ShellActionButton {
                   required property string modelData
                   required property int index
 
-                  Layout.fillWidth: true
-                  Layout.minimumWidth: 54
-                  Layout.preferredHeight: 24
-                  Layout.preferredWidth: Math.min(128, Math.max(64, actionLabel.implicitWidth + theme.actionHorizontalPadding))
-                  Layout.maximumWidth: 128
-                  radius: theme.radiusTiny
-                  clip: true
-                  color: actionMouse.containsMouse ? theme.border : theme.surfaceHigh
-
-                  Text {
-                    id: actionLabel
-                    anchors.fill: parent
-                    anchors.leftMargin: theme.paddingSm
-                    anchors.rightMargin: theme.paddingSm
-                    color: theme.text
-                    elide: Text.ElideRight
-                    font.family: theme.fontFamily
-                    font.pixelSize: theme.fontSm
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: modelData
-                  }
-
-                  MouseArea {
-                    id: actionMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: mouse => {
-                      mouse.accepted = true
-                      notificationCenter.shellRoot.invokeNotificationAction(notificationDelegate.notificationIndex, index)
-                    }
-                  }
+                  icon: "󰐊"
+                  label: modelData
+                  minWidth: 88
+                  Layout.maximumWidth: 150
+                  tooltip: "Run notification action: " + modelData
+                  tooltipState: notificationCenter.shellRoot
+                  onTriggered: notificationCenter.shellRoot.invokeNotificationAction(notificationDelegate.notificationIndex, index)
                 }
               }
             }
