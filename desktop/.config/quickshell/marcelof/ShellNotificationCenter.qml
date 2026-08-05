@@ -64,6 +64,8 @@ ShellPopup {
 
           required property string kind
           required property string app
+          required property string appIcon
+          required property string image
           required property int count
           required property int sourceIndex
           required property string summary
@@ -76,8 +78,9 @@ ShellPopup {
           readonly property int notificationIndex: sourceIndex
           readonly property bool isGroup: kind === "group"
           readonly property bool expanded: !isGroup && notificationCenter.shellRoot.selectedNotificationIndex === notificationIndex
+          readonly property string iconSource: notificationCenter.shellRoot.notificationImageSource(isGroup || image.length === 0 ? appIcon : image)
           width: ListView.view.width
-          height: isGroup ? 40 : (expanded ? Math.max(132, detailColumn.implicitHeight + theme.paddingMd * 2) : 76)
+          height: isGroup ? 40 : (expanded ? Math.max(132, detailColumn.implicitHeight + theme.paddingMd * 2) : 82)
           radius: isGroup ? 0 : theme.radiusSmall
           clip: true
           color: isGroup ? theme.transparent : (expanded ? theme.surfaceRaised : theme.surface)
@@ -105,9 +108,32 @@ ShellPopup {
             anchors.rightMargin: 2
             visible: notificationDelegate.isGroup
             spacing: theme.spacingLg
+            Item {
+              Layout.preferredWidth: 24
+              Layout.preferredHeight: 24
+
+              Image {
+                id: groupIconImage
+                anchors.fill: parent
+                source: notificationDelegate.iconSource
+                fillMode: Image.PreserveAspectFit
+                asynchronous: true
+                smooth: true
+                visible: source.length > 0 && status !== Image.Error
+              }
+
+              Text {
+                anchors.centerIn: parent
+                visible: groupIconImage.status !== Image.Ready
+                color: theme.warning
+                font.family: theme.fontFamily
+                font.pixelSize: theme.fontMd
+                text: app.length > 0 ? app.charAt(0).toUpperCase() : "N"
+              }
+            }
             Text { Layout.fillWidth: true; color: theme.warning; elide: Text.ElideRight; font.family: theme.fontFamily; font.styleName: theme.fontStyle; font.pixelSize: theme.fontMd; text: app }
             ShellText { role: "muted"; text: count + "" }
-            ShellActionButton { icon: "󰅖"; label: "App"; minWidth: 58; tooltip: "Clear app notifications"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.clearNotificationsForApp(app) }
+            ShellActionButton { icon: "󰅖"; label: "App"; minWidth: 72; tooltip: "Clear app notifications"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.clearNotificationsForApp(app) }
           }
 
           ColumnLayout {
@@ -122,6 +148,22 @@ ShellPopup {
             RowLayout {
               Layout.fillWidth: true
               spacing: theme.spacingLg
+              Item {
+                Layout.preferredWidth: notificationDelegate.iconSource.length > 0 ? 34 : 0
+                Layout.preferredHeight: notificationDelegate.iconSource.length > 0 ? 34 : 0
+                visible: notificationDelegate.iconSource.length > 0
+
+                Image {
+                  anchors.fill: parent
+                  source: notificationDelegate.iconSource
+                  sourceSize.width: 34 * Screen.devicePixelRatio
+                  sourceSize.height: 34 * Screen.devicePixelRatio
+                  fillMode: Image.PreserveAspectFit
+                  asynchronous: true
+                  smooth: true
+                  visible: status !== Image.Error
+                }
+              }
               ShellText { Layout.fillWidth: true; role: "strong"; elide: Text.ElideRight; text: summary.length > 0 ? summary : text }
               ShellText { role: "subtle"; text: time }
               Rectangle {
@@ -158,12 +200,24 @@ ShellPopup {
               text: notificationDelegate.expanded ? (body.length > 0 ? body : text) : body
             }
 
+            Image {
+              Layout.preferredWidth: 96
+              Layout.preferredHeight: 64
+              Layout.maximumWidth: 96
+              Layout.maximumHeight: 64
+              visible: notificationDelegate.expanded && image.length > 0 && status !== Image.Error
+              source: notificationCenter.shellRoot.notificationImageSource(image)
+              fillMode: Image.PreserveAspectFit
+              asynchronous: true
+              smooth: true
+            }
+
             RowLayout {
               Layout.fillWidth: true
               visible: notificationDelegate.expanded && (actionsText.length > 0 || desktopEntry.length > 0 || app.length > 0)
               spacing: theme.spacingMd
 
-              ShellActionButton { icon: "󰍉"; label: "Open"; minWidth: 58; tooltip: "Focus source app"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.focusNotificationApp(notificationDelegate.notificationIndex) }
+              ShellActionButton { icon: "󰍉"; label: "Open"; minWidth: 82; tooltip: "Focus source app"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.focusNotificationApp(notificationDelegate.notificationIndex) }
 
               Repeater {
                 model: notificationCenter.shellRoot.notificationActionLabels(notificationDelegate.notificationIndex)

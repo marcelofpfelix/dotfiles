@@ -305,6 +305,8 @@ ShellRoot {
   property int selectedNotificationIndex: -1
   property var notificationObjects: []
   property string notificationToastApp: ""
+  property string notificationToastAppIcon: ""
+  property string notificationToastImage: ""
   property string notificationToastSummary: ""
   property string notificationToastBody: ""
   property int notificationToastSerial: 0
@@ -659,25 +661,29 @@ ShellRoot {
   function rebuildNotificationInbox() {
     const apps = []
     const counts = ({})
+    const appIcons = ({})
     for (let i = 0; i < notificationHistory.count; i++) {
-      const app = String(notificationHistory.get(i).app || "Notification")
+      const row = notificationHistory.get(i)
+      const app = String(row.app || "Notification")
       if (!counts[app]) {
         counts[app] = 0
         apps.push(app)
       }
       counts[app] += 1
+      if (!appIcons[app])
+        appIcons[app] = String(row.appIcon || "")
     }
 
     notificationInboxModel.clear()
     // ponytail: O(apps * notifications), capped at 50; index by app only if history grows.
     for (let appIndex = 0; appIndex < apps.length; appIndex++) {
       const app = apps[appIndex]
-      notificationInboxModel.append({ kind: "group", app: app, count: counts[app], sourceIndex: -1, summary: "", body: "", text: "", actionsText: "", desktopEntry: "", time: "" })
+      notificationInboxModel.append({ kind: "group", app: app, appIcon: appIcons[app] || "", image: "", count: counts[app], sourceIndex: -1, summary: "", body: "", text: "", actionsText: "", desktopEntry: "", time: "" })
       for (let i = 0; i < notificationHistory.count; i++) {
         const row = notificationHistory.get(i)
         if (String(row.app || "Notification") !== app)
           continue
-        notificationInboxModel.append({ kind: "notification", app: row.app, count: counts[app], sourceIndex: i, summary: row.summary, body: row.body, text: row.text, actionsText: row.actionsText, desktopEntry: row.desktopEntry || "", time: row.time })
+        notificationInboxModel.append({ kind: "notification", app: row.app, appIcon: row.appIcon || "", image: row.image || "", count: counts[app], sourceIndex: i, summary: row.summary, body: row.body, text: row.text, actionsText: row.actionsText, desktopEntry: row.desktopEntry || "", time: row.time })
       }
     }
   }
@@ -705,6 +711,17 @@ ShellRoot {
     return summary.length > 0 ? summary : (body.length > 0 ? body : app)
   }
 
+  function notificationImageSource(value) {
+    const source = String(value || "")
+    if (source.length === 0)
+      return ""
+    if (source.indexOf("file://") === 0 || source.indexOf("image://") === 0)
+      return source
+    if (source.charAt(0) === "/")
+      return "file://" + source
+    return Quickshell.iconPath(source, true)
+  }
+
   function rememberNotification(notification) {
     if (!notification)
       return
@@ -716,6 +733,8 @@ ShellRoot {
 
     notificationHistory.insert(0, {
       app: app,
+      appIcon: root.cleanNotificationText(notification.appIcon),
+      image: root.cleanNotificationText(notification.image),
       summary: summary,
       body: body,
       text: root.notificationPreview(summary, body, app),
@@ -726,6 +745,8 @@ ShellRoot {
     root.notificationObjects = [notification].concat(root.notificationObjects)
     root.selectedNotificationIndex = 0
     root.notificationToastApp = app
+    root.notificationToastAppIcon = root.cleanNotificationText(notification.appIcon)
+    root.notificationToastImage = root.cleanNotificationText(notification.image)
     root.notificationToastSummary = summary.length > 0 ? summary : app
     root.notificationToastBody = body
     root.notificationToastSerial += 1

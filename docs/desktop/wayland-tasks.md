@@ -885,11 +885,12 @@ Task source: latest local review request. Priority is code repetition and simple
 
 ## 2026-08-04 Notification Follow-Up
 
-- [ ] P1: Render Android-like app icons and notification images.
+- [x] P1: Render Android-like app icons and notification images.
   - Sources: user request for Android-style notifications; Quickshell `Notification.appIcon`, `Notification.image`, `desktopEntry`, `hasActionIcons`, and current `ShellNotificationCenter` grouped rows.
   - Acceptance: toast and notification-center rows show the sender app icon when available, fall back to desktop-entry/app initials when not, and show notification images as bounded thumbnails without stretching rows or clipping text.
   - Dependencies: keep Quickshell as the notification server; no external daemon replacement.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellNotificationCenter.qml desktop/.config/quickshell/marcelof/ShellOverlays.qml desktop/.config/quickshell/marcelof/shell.qml`, send icon and image notifications with `notify-send`, `desktop/tools/qs-menu-smoke --inspect notifications`, and `desktop/tools/desktop-notification-smoke actions`.
+  - Current behavior: notification history stores `appIcon` and `image`; toasts and notification-center rows render app icons via `Quickshell.iconPath`, pass through `file://` and `image://` payloads, fall back to app initials for grouped rows, and show expanded notification images as bounded thumbnails.
 
 - [ ] P1: Add notification routing policy for neutral vs attention-worthy events.
   - Sources: user request that neutral notifications go only to the main place; current DND and notification-history model.

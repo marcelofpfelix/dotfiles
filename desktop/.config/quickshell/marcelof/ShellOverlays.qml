@@ -135,7 +135,24 @@ Item {
         RowLayout {
           Layout.fillWidth: true
           spacing: theme.spacingLg
-          Text { color: theme.warning; font.family: theme.fontFamily; font.pixelSize: theme.fontXl; text: "󰂚" }
+          Item {
+            Layout.preferredWidth: 34
+            Layout.preferredHeight: 34
+
+            Image {
+              id: toastIconImage
+              anchors.fill: parent
+              source: overlays.shellRoot.notificationImageSource(overlays.shellRoot.notificationToastImage.length > 0 ? overlays.shellRoot.notificationToastImage : overlays.shellRoot.notificationToastAppIcon)
+              sourceSize.width: 34 * Screen.devicePixelRatio
+              sourceSize.height: 34 * Screen.devicePixelRatio
+              fillMode: Image.PreserveAspectFit
+              asynchronous: true
+              smooth: true
+              visible: source.length > 0 && status !== Image.Error
+            }
+
+            Text { anchors.centerIn: parent; visible: toastIconImage.status !== Image.Ready; color: theme.warning; font.family: theme.fontFamily; font.pixelSize: theme.fontXl; text: "󰂚" }
+          }
           ShellText { Layout.fillWidth: true; role: "strong"; elide: Text.ElideRight; text: overlays.shellRoot.notificationToastApp }
           ShellText { role: "subtle"; text: "now" }
         }
