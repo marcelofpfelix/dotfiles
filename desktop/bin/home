@@ -91,15 +91,15 @@ prepare_homelab_overlay() {
 
 local_copy() {
     # copy the dotfiles to the local directory
-    cp -R "${dotfiles}/default/." "$HOME/"
-    cp -R "${dotfiles}/desktop/." "$HOME/"
+    rsync -a --keep-dirlinks "${dotfiles}/default/" "$HOME/"
+    rsync -a --keep-dirlinks "${dotfiles}/desktop/" "$HOME/"
 
     # GnuPG refuses group/world-accessible homedirs.
     chmod 700 ~/.gnupg 2>/dev/null || true
     find ~/.gnupg -type f -name '*.conf' -exec chmod 600 {} + 2>/dev/null || true
-    cp -R "${homework}/workdesk/." "$HOME/"
-    cp -R "${workdir}/laptop/." "$HOME/"
-    cp -R "${workdir}/tanker/." "$HOME/"
+    rsync -a --keep-dirlinks "${homework}/workdesk/" "$HOME/"
+    rsync -a --keep-dirlinks "${workdir}/laptop/" "$HOME/"
+    rsync -a --keep-dirlinks "${workdir}/tanker/" "$HOME/"
 
     # ignore jinja2 templates
     rm -f ~/.ssh/config.d/work.j2
