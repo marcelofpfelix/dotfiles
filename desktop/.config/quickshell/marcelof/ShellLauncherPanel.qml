@@ -23,8 +23,6 @@ ShellFloatingPopup {
   function positionCurrent() {
     appList.positionCurrent()
   }
-  onFocusCleared: launcherPanel.shellRoot.hideLauncher()
-
   IpcHandler {
     target: "launcher"
 
@@ -36,7 +34,7 @@ ShellFloatingPopup {
       launcherPanel.focusSearch()
     }
     function show() { open() }
-    function hide() { launcherPanel.shellRoot.hideLauncher() }
+    function hide() { launcherPanel.close() }
     function state(): string { return launcherPanel.panelOpen ? "open" : "closed" }
     function visibleById(entryId: string): string {
       const previousSearch = launcherPanel.searchText

@@ -81,11 +81,7 @@ ShellRoot {
   }
 
   function toggleKeybindings() {
-    const next = !root.keybindingsOpen
-    root.closeTransientPanels()
-    root.keybindingsOpen = next
-    if (next)
-      menuDataService.refreshKeybindings()
+    root.toggleTransientPanel("keybindingsOpen", function() { menuDataService.refreshKeybindings() })
   }
 
   function clipboardScore(entry, query) {
@@ -493,40 +489,179 @@ ShellRoot {
     root.powerMenuOpen = false
   }
 
-  function togglePowerMenu() {
-    const next = !root.powerMenuOpen
+  function toggleTransientPanel(openProperty, onOpen) {
+    const next = !root[openProperty]
     root.closeTransientPanels()
-    root.powerMenuOpen = next
+    root[openProperty] = next
+    if (next && onOpen)
+      onOpen()
   }
 
-  function toggleTrayManage() {
-    const next = !root.trayManageOpen
-    root.closeTransientPanels()
-    root.trayManageOpen = next
+  function shellMenuId(id) {
+    return String(id || "").replace(/^omarchy[.-]/, "").replace(/_/g, "-")
   }
+
+  function shellMenuOpen(id) {
+    const menu = root.shellMenuId(id)
+    switch (menu) {
+    case "bar": return !root.barHidden
+    case "launcher":
+    case "apps": return launcher.panelOpen
+    case "clipboard":
+    case "clip": return root.clipboardOpen
+    case "passmenu":
+    case "passwords": return root.passMenuOpen
+    case "websearch":
+    case "web": return root.webSearchOpen
+    case "keybindings":
+    case "keys": return root.keybindingsOpen
+    case "tray":
+    case "tray-manage": return root.trayManageOpen
+    case "controls": return root.controlPanelOpen
+    case "media":
+    case "audio": return root.mediaPanelOpen
+    case "screen": return root.screenPanelOpen
+    case "wallpaper":
+    case "wall": return root.wallpaperPanelOpen
+    case "calendar":
+    case "time": return root.calendarOpen
+    case "work-inbox":
+    case "workInbox":
+    case "work": return root.workInboxOpen
+    case "personal-dashboard":
+    case "personalDashboard":
+    case "dashboard":
+    case "personal": return root.personalDashboardOpen
+    case "settings": return root.settingsOpen
+    case "notifications": return root.notificationCenterOpen
+    case "network":
+    case "net": return root.networkPanelOpen
+    case "power":
+    case "session": return root.powerMenuOpen
+    default: return false
+    }
+  }
+
+  function hideShellMenu(id) {
+    const menu = root.shellMenuId(id)
+    switch (menu) {
+    case "all":
+    case "panels": root.closeTransientPanels(); return true
+    case "bar": root.barHidden = true; return true
+    case "launcher":
+    case "apps": root.hideLauncher(); return true
+    case "clipboard":
+    case "clip": root.clipboardOpen = false; return true
+    case "passmenu":
+    case "passwords": root.passMenuOpen = false; return true
+    case "websearch":
+    case "web": root.webSearchOpen = false; return true
+    case "keybindings":
+    case "keys": root.keybindingsOpen = false; return true
+    case "tray":
+    case "tray-manage": root.trayManageOpen = false; return true
+    case "controls": root.controlPanelOpen = false; return true
+    case "media":
+    case "audio": root.mediaPanelOpen = false; return true
+    case "screen": root.screenPanelOpen = false; return true
+    case "wallpaper":
+    case "wall": root.wallpaperPanelOpen = false; return true
+    case "calendar":
+    case "time": root.calendarOpen = false; return true
+    case "work-inbox":
+    case "workInbox":
+    case "work": root.workInboxOpen = false; return true
+    case "personal-dashboard":
+    case "personalDashboard":
+    case "dashboard":
+    case "personal": root.personalDashboardOpen = false; return true
+    case "settings": root.settingsOpen = false; return true
+    case "notifications": root.notificationCenterOpen = false; return true
+    case "network":
+    case "net": root.networkPanelOpen = false; return true
+    case "power":
+    case "session": root.hidePowerMenu(); return true
+    default: return false
+    }
+  }
+
+  function toggleShellMenu(id, payloadJson) {
+    const menu = root.shellMenuId(id)
+    switch (menu) {
+    case "bar": root.barHidden = !root.barHidden; return true
+    case "launcher":
+    case "apps": root.toggleLauncher(); return true
+    case "clipboard":
+    case "clip": root.toggleClipboard(); return true
+    case "passmenu":
+    case "passwords":
+      if (root.passMenuOpen)
+        root.passMenuOpen = false
+      else
+        root.openPassmenu(shellConfig.actions.copy, "username", "gopass")
+      return true
+    case "websearch":
+    case "web": root.toggleWebSearch(shellConfig.defaultWebSearchSite); return true
+    case "keybindings":
+    case "keys": root.toggleKeybindings(); return true
+    case "tray":
+    case "tray-manage": root.toggleTrayManage(); return true
+    case "controls": root.toggleControlPanel(); return true
+    case "media":
+    case "audio": root.toggleMediaPanel(); return true
+    case "screen": root.toggleScreenPanel(); return true
+    case "wallpaper":
+    case "wall": root.toggleWallpaperPanel(); return true
+    case "calendar":
+    case "time": root.toggleCalendar(); return true
+    case "work-inbox":
+    case "workInbox":
+    case "work": root.toggleWorkInbox(); return true
+    case "personal-dashboard":
+    case "personalDashboard":
+    case "dashboard":
+    case "personal": root.togglePersonalDashboard(); return true
+    case "settings": root.toggleSettings(); return true
+    case "notifications": root.toggleNotifications(); return true
+    case "network":
+    case "net": root.toggleNetworkPanel(); return true
+    case "power":
+    case "session": root.togglePowerMenu(); return true
+    case "dnd": root.toggleDnd(); return true
+    case "inhibit":
+    case "stay-awake": root.toggleIdleInhibit(); return true
+    default: return false
+    }
+  }
+
+  function openShellMenu(id, payloadJson) {
+    const menu = root.shellMenuId(id)
+    if (menu === "bar") {
+      root.barHidden = false
+      return true
+    }
+    if (root.shellMenuOpen(menu)) {
+      if (menu === "launcher" || menu === "apps")
+        launcher.focusSearch()
+      return true
+    }
+    return root.toggleShellMenu(menu, payloadJson)
+  }
+
+  function togglePowerMenu() { root.toggleTransientPanel("powerMenuOpen") }
+
+  function toggleTrayManage() { root.toggleTransientPanel("trayManageOpen") }
 
   function toggleControlPanel() {
-    const next = !root.controlPanelOpen
-    root.closeTransientPanels()
-    root.controlPanelOpen = next
-    if (next)
-      systemStatusService.refreshControls()
+    root.toggleTransientPanel("controlPanelOpen", function() { systemStatusService.refreshControls() })
   }
 
   function toggleNetworkPanel() {
-    const next = !root.networkPanelOpen
-    root.closeTransientPanels()
-    root.networkPanelOpen = next
-    if (next)
-      systemStatusService.refreshNetwork()
+    root.toggleTransientPanel("networkPanelOpen", function() { systemStatusService.refreshNetwork() })
   }
 
   function toggleMediaPanel() {
-    const next = !root.mediaPanelOpen
-    root.closeTransientPanels()
-    root.mediaPanelOpen = next
-    if (next)
-      root.refreshAudioState()
+    root.toggleTransientPanel("mediaPanelOpen", function() { root.refreshAudioState() })
   }
 
   function refreshScreenState() {
@@ -535,11 +670,7 @@ ShellRoot {
   }
 
   function toggleScreenPanel() {
-    const next = !root.screenPanelOpen
-    root.closeTransientPanels()
-    root.screenPanelOpen = next
-    if (next)
-      root.refreshScreenState()
+    root.toggleTransientPanel("screenPanelOpen", function() { root.refreshScreenState() })
   }
 
   function runScreenRecord(action) {
@@ -561,11 +692,7 @@ ShellRoot {
   }
 
   function toggleWallpaperPanel() {
-    const next = !root.wallpaperPanelOpen
-    root.closeTransientPanels()
-    root.wallpaperPanelOpen = next
-    if (next)
-      root.refreshWallpapers()
+    root.toggleTransientPanel("wallpaperPanelOpen", function() { root.refreshWallpapers() })
   }
 
   function setWallpaper(path) {
@@ -575,28 +702,15 @@ ShellRoot {
   }
 
   function toggleCalendar() {
-    const next = !root.calendarOpen
-    root.closeTransientPanels()
-    root.calendarOpen = next
-    if (next) {
-      calendarService.refreshAll()
-    }
+    root.toggleTransientPanel("calendarOpen", function() { calendarService.refreshAll() })
   }
 
   function toggleWorkInbox() {
-    const next = !root.workInboxOpen
-    root.closeTransientPanels()
-    root.workInboxOpen = next
-    if (next)
-      dashboardService.refreshWorkInbox()
+    root.toggleTransientPanel("workInboxOpen", function() { dashboardService.refreshWorkInbox() })
   }
 
   function togglePersonalDashboard() {
-    const next = !root.personalDashboardOpen
-    root.closeTransientPanels()
-    root.personalDashboardOpen = next
-    if (next)
-      dashboardService.refreshPersonalDashboard()
+    root.toggleTransientPanel("personalDashboardOpen", function() { dashboardService.refreshPersonalDashboard() })
   }
 
   function setPersonalDashboardSurface(surface) {
@@ -613,11 +727,7 @@ ShellRoot {
     return text.length > 0 ? text.replace(/\n/g, "<br/>") : "No board data"
   }
 
-  function toggleSettings() {
-    const next = !root.settingsOpen
-    root.closeTransientPanels()
-    root.settingsOpen = next
-  }
+  function toggleSettings() { root.toggleTransientPanel("settingsOpen") }
 
   function toggleDnd() {
     shellSettings.doNotDisturb = !shellSettings.doNotDisturb
@@ -625,11 +735,7 @@ ShellRoot {
       root.notificationToastOpen = false
   }
 
-  function toggleNotifications() {
-    const next = !root.notificationCenterOpen
-    root.closeTransientPanels()
-    root.notificationCenterOpen = next
-  }
+  function toggleNotifications() { root.toggleTransientPanel("notificationCenterOpen") }
 
   function clearNotifications() {
     for (let i = 0; i < root.notificationObjects.length; i++) {
@@ -1377,6 +1483,17 @@ ShellRoot {
   component TrayButton: ShellTrayButton { shellRoot: root }
 
   IpcHandler {
+    target: "shell"
+
+    function ping(): string { return "ok" }
+    function listMenus(): string { return JSON.stringify(shellConfig.menuIds) }
+    function toggle(id: string, payloadJson: string): string { return root.toggleShellMenu(id, payloadJson) ? "ok" : "unknown" }
+    function hide(id: string): string { return root.hideShellMenu(id) ? "ok" : "unknown" }
+    function summon(id: string, payloadJson: string): string { return root.openShellMenu(id, payloadJson) ? "ok" : "unknown" }
+    function closePanels() { root.closeTransientPanels() }
+  }
+
+  IpcHandler {
 
     target: "bar"
 
@@ -1594,6 +1711,7 @@ ShellRoot {
     id: launcher
     shellRoot: root
     launcherModel: launcherModel
+    closeAction: function() { root.hideShellMenu(shellConfig.menuIds.launcher) }
     panelHeight: root.menuHeightFor(shellConfig.menuIds.launcher)
   }
 
@@ -1610,6 +1728,7 @@ ShellRoot {
     id: clipboardPanel
     shellRoot: root
     clipboardModel: clipboardModel
+    closeAction: function() { root.hideShellMenu(shellConfig.menuIds.clipboard) }
     panelOpen: root.clipboardOpen
     refreshRunning: menuDataService.clipboardRunning
     panelWidth: root.menuWidthFor(shellConfig.menuIds.clipboard)
@@ -1620,6 +1739,7 @@ ShellRoot {
     id: passMenuPanel
     shellRoot: root
     passModel: passModel
+    closeAction: function() { root.hideShellMenu(shellConfig.menuIds.passmenu) }
     panelOpen: root.passMenuOpen
     refreshRunning: menuDataService.passRunning
     panelWidth: root.menuWidthFor(shellConfig.menuIds.passmenu)
@@ -1639,6 +1759,7 @@ ShellRoot {
       id: webSearchPanel
       shellRoot: root
       shellConfig: shellConfig
+      closeAction: function() { root.hideShellMenu(shellConfig.menuIds.websearch) }
       panelOpen: root.webSearchOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.websearch)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.websearch)

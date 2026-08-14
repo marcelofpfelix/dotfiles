@@ -15,6 +15,15 @@ This shell stays small by keeping ownership boring and visible.
 - `desktop/bin/qs-bar` owns Quickshell lifecycle and IPC entrypoints.
 - `desktop/tools/*` owns validation, screenshots, smoke tests, and agent-only checks.
 
+## IPC Direction
+
+The current shell is Quickshell-owned and scriptable through `qs-bar`, but its
+canonical control target is still mostly `bar` plus a few panel-specific IPC
+targets. The next improvement is a small local `shell` IPC target that routes
+`ping`, `toggle`, `hide`, and `summon` to existing menus. Do not copy a full
+third-party plugin manager until local built-in menu/widget routing is too
+large to keep declarative.
+
 ## Boundaries
 
 QML panel files should render state and call named helpers. They should not embed shell command arrays, app paths, menu geometry, static action rows, theme colors, or user-tunable values.

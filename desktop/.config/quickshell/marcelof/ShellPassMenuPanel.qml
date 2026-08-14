@@ -24,12 +24,10 @@ ShellFloatingPopup {
   function positionCurrent() {
     passList.positionCurrent()
   }
-  onFocusCleared: passMenuPanel.shellRoot.passMenuOpen = false
-
   IpcHandler {
     target: "passmenu"
     function open(mode: string, userKey: string, backend: string) { passMenuPanel.shellRoot.openPassmenu(mode, userKey, backend) }
-    function hide() { passMenuPanel.shellRoot.passMenuOpen = false }
+    function hide() { passMenuPanel.close() }
   }
 
   ShellFrame {
@@ -50,7 +48,7 @@ ShellFloatingPopup {
         id: passSearch
         placeholder: "Search passwords"
         onTextChanged: passMenuPanel.shellRoot.rebuildPassModel()
-        onEscapePressed: passMenuPanel.shellRoot.passMenuOpen = false
+        onEscapePressed: passMenuPanel.close()
         onDownPressed: { passList.selectRelative(1) }
         onUpPressed: { passList.selectRelative(-1) }
         onAccepted: passMenuPanel.shellRoot.runPassEntry()

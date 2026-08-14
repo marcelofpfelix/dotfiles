@@ -80,8 +80,9 @@ ShellPopup {
           readonly property bool isGroup: kind === "group"
           readonly property bool expanded: !isGroup && notificationCenter.shellRoot.selectedNotificationIndex === notificationIndex
           readonly property string iconSource: notificationCenter.shellRoot.notificationImageSource(isGroup || image.length === 0 ? appIcon : image)
+          readonly property int contentHeight: Math.ceil(detailColumn.implicitHeight + theme.paddingMd * 2)
           width: ListView.view.width
-          height: isGroup ? 40 : (expanded ? Math.max(112, detailColumn.implicitHeight + theme.paddingMd * 2) : 82)
+          height: isGroup ? 40 : Math.max(expanded ? 112 : 88, contentHeight)
           radius: isGroup ? 0 : theme.radiusSmall
           clip: true
           color: isGroup ? theme.transparent : (expanded ? theme.surfaceRaised : theme.surface)

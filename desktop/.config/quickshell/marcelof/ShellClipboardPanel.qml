@@ -23,8 +23,6 @@ ShellFloatingPopup {
   function positionCurrent() {
     clipList.positionCurrent()
   }
-  onFocusCleared: clipboardPanel.shellRoot.clipboardOpen = false
-
   ShellFrame {
     anchors.fill: parent
 
@@ -43,7 +41,7 @@ ShellFloatingPopup {
         id: clipSearch
         placeholder: "Search clipboard"
         onTextChanged: clipboardPanel.shellRoot.rebuildClipboardModel()
-        onEscapePressed: clipboardPanel.shellRoot.clipboardOpen = false
+        onEscapePressed: clipboardPanel.close()
         onDownPressed: { clipList.selectRelative(1) }
         onUpPressed: { clipList.selectRelative(-1) }
         onAccepted: clipboardPanel.shellRoot.pasteClipboardEntry()
