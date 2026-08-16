@@ -1005,3 +1005,90 @@ Claim rule: complete one task at a time, keep `default` i3-compatible behavior i
   - Acceptance: `docs/desktop/wayland.md` or `quickshell-architecture.md` states that small copied snippets from MIT references must keep attribution when substantial, while behavior-only rewrites need only a source note in tasks.
   - Dependencies: none.
   - Validation: docs-only review and `rg -n "Omarchy|MIT|Reference Rule|attribution" docs/desktop`.
+
+## 2026-08-15 Omarchy Manual Compatibility Follow-Up
+
+Source review:
+
+- Current manual fetched from `https://omarchy.org/manual/` into `/tmp/omarchy-manual-review`; 51 chapters were reviewed.
+- Relevant manual chapters: Navigation, The Top Bar, Themes, Hotkeys, Unified Clipboard & History, Reminders, Notices, Text Extraction & Dictation, Screenshots & Recording, Toggles/Idle/Screensaver, Monitors, Keyboard/Mouse/Trackpad, Networking, System sleep, Fonts, Backgrounds, Branding, Common tweaks, Troubleshooting, FAQ, Security.
+- Copy rule: copy behavior, component structure, and small layout ideas whenever they fit the local stack. Do not copy `omarchy-*` command names, Arch package/update flows, installer/reset/snapshot machinery, or distro security defaults into dotfiles.
+- Local boundary: user-facing Wayland/Quickshell work belongs in this file and `docs/desktop/wayland.md`; system security/service changes belong in homelab tasks.
+
+Claim rule: complete one task at a time. Keep `default` i3-compatible, keep `omarchy` profile Omarchy-like, validate each task before marking done, and archive old code instead of deleting it.
+
+- [ ] P0: Finish notification history CLI/TUI parity.
+  - Sources: manual Notices and Hotkeys chapters; existing persisted `~/.local/state/quickshell/marcelof/notifications.jsonl`; current `notification-focus-app`; existing pending `notificationctl` task.
+  - Acceptance: `notificationctl list`, `notificationctl open <id>`, `notificationctl clear <id|app|all>`, and `notificationctl tui` operate on the same safe persisted history. Live notifications can still invoke Quickshell actions; restored entries can focus/open their source app but do not pretend old D-Bus callbacks are live.
+  - Dependencies: reuse the existing notification JSONL and Quickshell IPC; do not add a second notification daemon.
+  - Validation: `bash -n desktop/bin/notificationctl`, `notificationctl self-test` with fake state, `desktop/tools/desktop-notification-smoke actions routing`, and `desktop/tools/qs-menu-smoke notifications`.
+  - Stop conditions: stop if action replay would require storing unsafe callback state; list and focus old entries instead.
+
+- [ ] P0: Audit and complete bar click/scroll behavior against the manual.
+  - Sources: manual Top Bar chapter; current `ShellBar.qml`, `ShellControlPanel.qml`, `ShellMediaPanel.qml`, `ShellNetworkPanel.qml`, `ShellPowerMenu.qml`, and `ShellCalendarPanel.qml`.
+  - Acceptance: each visible bar item has documented left, right, middle, and scroll behavior where useful. Audio, mic, display/brightness, clock, network, notifications, power, tray, workspaces, privacy indicators, and launcher/menu affordances either match Omarchy behavior or document the local difference.
+  - Dependencies: reuse existing panels and helpers; do not add new one-off scripts for click actions.
+  - Validation: `docs/desktop/wayland.md` behavior table or bullet list, `qmllint desktop/.config/quickshell/marcelof/ShellBar.qml`, `desktop/tools/qs-menu-smoke controls media notifications calendar network power`, and manual scroll checks for audio/brightness.
+  - Stop conditions: do not bind destructive actions to scroll/middle click; keep power actions behind confirmation.
+
+- [ ] P1: Add local notice commands for time, weather, and battery.
+  - Sources: manual Notices chapter; current `check-time-panel`, `check-weather`, UPower state in Quickshell, and `desktop-osd`/notification toast surfaces.
+  - Acceptance: generic local commands or `qs-bar shell` actions show time, weather, and battery notices as Quickshell notifications or OSDs. Add matching menu rows under Controls or Settings only if they reuse existing rows.
+  - Dependencies: reuse existing time/weather/battery data; no polling daemon and no upstream command names.
+  - Validation: `qs-bar shell ...` or helper self-tests, `desktop/tools/desktop-notification-smoke`, `desktop/tools/qs-menu-smoke controls calendar power`, and `desktop/tools/desktop-doctor`.
+  - Stop conditions: if battery data is already clearer in the power panel, expose only time/weather notices.
+
+- [ ] P1: Add a small reminder workflow.
+  - Sources: manual Reminders chapter; current Pomodoro/Timewarrior notes and notification history.
+  - Acceptance: `reminderctl add <duration> <message>`, `reminderctl list`, and `reminderctl clear` store local reminders, trigger Quickshell notifications, and expose a compact panel/list in Controls or Calendar. Keep countdown reminders separate from Pomodoro.
+  - Dependencies: local state under `~/.local/state/quickshell/marcelof`; use systemd user timers only if a sleeping shell process is not enough.
+  - Validation: `bash -n desktop/bin/reminderctl`, `reminderctl self-test`, manual short reminder, `desktop/tools/desktop-notification-smoke`, and `desktop/tools/qs-menu-smoke calendar controls`.
+  - Stop conditions: do not integrate Google Calendar or Taskwarrior in this task.
+
+- [ ] P1: Improve NetworkManager panel toward manual parity.
+  - Sources: manual Networking and FAQ chapters; current `network-status`, `ShellNetworkPanel.qml`, `nm-applet`, and `nmtui` fallback.
+  - Acceptance: network popup shows connection state, Wi-Fi signal/band where `nmcli` exposes it, local IP, on-demand public IP, DNS summary, and safe actions for Wi-Fi toggle and reconnect. Optional follow-up rows for DNS presets and speed test are task-gated.
+  - Dependencies: NetworkManager/nmcli only; secrets must not be displayed unless explicitly requested by a separate command.
+  - Validation: `network-status bar`, `NETWORK_STATUS_PUBLIC_IP=0 network-status details`, `qmllint desktop/.config/quickshell/marcelof/ShellNetworkPanel.qml`, and `desktop/tools/qs-menu-smoke network controls`.
+  - Stop conditions: no password reveal in Quickshell; no firewall or SSH daemon changes in dotfiles.
+
+- [ ] P1: Improve display and power panel parity.
+  - Sources: manual Top Bar, Monitors, System sleep, Common tweaks, and FAQ chapters; current `external-brightness`, `power-status`, `monitor`, `ShellControlPanel.qml`, and `ShellPowerMenu.qml`.
+  - Acceptance: display/power surfaces expose screen brightness, external brightness, battery health, AC/battery power profile state, text scale or monitor scale status where practical, suspend/hibernate visibility, and clear current monitor identity. Persist separate AC/battery profile preference only if `powerprofilesctl` supports the local hardware cleanly.
+  - Dependencies: reuse `brightnessctl`, `ddcutil`, `powerprofilesctl`, `monitor`, and existing session menu confirmation.
+  - Validation: `external-brightness self-test`, `power-status status`, `desktop/tools/qs-menu-smoke controls power screen`, and `desktop/tools/desktop-doctor`.
+  - Stop conditions: do not change monitor layout automatically in this task; do not enable hibernate without explicit user approval.
+
+- [ ] P1: Add a minimal local theme compatibility model without a full theme engine.
+  - Sources: manual Themes, Fonts, Backgrounds, Branding, and Making your own theme chapters; current `ShellTheme.qml`, `ShellConfigData.qml`, Settings primary-color swatches, Ghostty/GTK dark settings, and wallpaper picker.
+  - Acceptance: one local theme state file records primary color, dark/light preference, font token, and wallpaper path; Quickshell reads it through existing settings/state paths; Settings can edit only values already supported. Document how this maps to Omarchy theme concepts.
+  - Dependencies: no generated app-wide templates unless a current app already has a tracked config path and validation.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellTheme.qml desktop/.config/quickshell/marcelof/ShellSettings.qml desktop/.config/quickshell/marcelof/ShellSettingsPanel.qml`, `desktop/tools/qs-menu-smoke settings wallpaper`, and `desktop/tools/desktop-doctor`.
+  - Stop conditions: skip boot unlock, Plymouth, broad app templating, and theme marketplace support.
+
+- [ ] P1: Compare current hotkeys to Omarchy manual categories and close useful gaps.
+  - Sources: manual Hotkeys and Navigation chapters; current `desktop/bin/hypr-keys`, `profiles/default.lua`, and `profiles/omarchy.lua`.
+  - Acceptance: a generated comparison lists manual category, current default behavior, current `omarchy` profile behavior, and decision. Add free, useful bindings to the `omarchy` profile first; only change `default` when it improves i3-compatible behavior without conflict.
+  - Dependencies: reuse `hypr-keys`; no manually maintained duplicate key list.
+  - Validation: `hypr-keys default`, `hypr-keys omarchy`, `luac -p desktop/.config/hypr/profiles/default.lua desktop/.config/hypr/profiles/omarchy.lua`, `hypr-session test`, and `HYPR_PROFILE=omarchy hypr-session test`.
+  - Stop conditions: do not break `Win+D`, `Win+Enter`, `Win+V`, `Win+W`, or existing i3-parity expectations.
+
+- [ ] P2: Review shell-owned lock, idle, and polkit against manual Quickshell ownership.
+  - Sources: manual Toggles/Idle/Screensaver, Hardware authentication, and Top Bar chapters; existing task for shell-owned lock/idle/polkit review.
+  - Acceptance: document what stays delegated (`hyprlock`, `swaylock`, `loginctl`, system polkit) and what, if anything, should move into Quickshell. Implement only changes that reduce real bugs or duplicated runtime state.
+  - Dependencies: keep secure lock handled by a real locker unless there is a proven secure replacement.
+  - Validation: `hypr-session smoke`, manual lock/unlock, manual idle inhibit, and polkit prompt manual test if changed.
+  - Stop conditions: no fake QML lock screen for security; no fingerprint/Fido setup in dotfiles.
+
+- [ ] P2: Split distro/system compatibility into homelab tasks.
+  - Sources: manual Security, Networking, System snapshots, Updates, System sleep, Hardware authentication, and Unattended installs chapters.
+  - Acceptance: create or document homelab-owned tasks for firewall/LocalSend exception, SSHD enablement policy, Docker exposure lockdown, time sync repair, package update workflow, hibernation, snapshots/backups, fingerprint/Fido setup, and Tailscale. Dotfiles should only link to those tasks.
+  - Dependencies: homelab repo owns system changes; dotfiles can only validate or document.
+  - Validation: docs-only in dotfiles plus homelab syntax checks when homelab tasks are created.
+  - Stop conditions: do not run firewall, SSH, hibernation, or system reset commands from the home role.
+
+- [ ] P2: Add upstream snippet attribution policy.
+  - Sources: manual review, Omarchy MIT license, and current reference-import rule.
+  - Acceptance: docs state that substantial copied QML/shell snippets from Omarchy or other MIT references keep attribution near the adapted code or in the task entry; behavior-only rewrites need a source note but not copied branding.
+  - Dependencies: none.
+  - Validation: `rg -n "Reference|MIT|attribution|Omarchy" docs/desktop`.
