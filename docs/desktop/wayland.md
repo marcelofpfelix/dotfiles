@@ -29,6 +29,7 @@ Copy the dotfiles locally, then run:
 ```console
 home -y
 desktop/tools/desktop-doctor
+desktop/tools/quickshell-repeat-audit
 desktop/tools/desktop-accept
 desktop-startup-report
 desktop/tools/qs-menu-smoke
