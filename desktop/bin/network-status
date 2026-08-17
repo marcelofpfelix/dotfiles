@@ -39,8 +39,36 @@ wifi_icon() {
     fi
 }
 
+wifi_channel() {
+    nmcli -t -f ACTIVE,CHAN dev wifi 2>/dev/null | awk -F: '$1 == "yes" { print $2; found = 1; exit } END { if (!found) print "" }'
+}
+
+wifi_band() {
+    local channel=${1:-}
+    [ -n "$channel" ] || return 0
+    if [ "$channel" -le 14 ] 2>/dev/null; then
+        printf '2.4GHz ch%s\n' "$channel"
+    elif [ "$channel" -ge 36 ] 2>/dev/null; then
+        printf '5/6GHz ch%s\n' "$channel"
+    else
+        printf 'ch%s\n' "$channel"
+    fi
+}
+
 local_ip() {
     ip -4 route get 1.1.1.1 2>/dev/null | awk '{ for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit } }'
+}
+
+dns_summary() {
+    if command -v resolvectl >/dev/null 2>&1; then
+        resolvectl dns 2>/dev/null | awk -F: 'NF > 1 { gsub(/^ +| +$/, "", $2); if ($2 != "") { print $2; exit } }'
+    else
+        awk '/^nameserver / { print $2 }' /etc/resolv.conf 2>/dev/null | paste -sd' ' -
+    fi
+}
+
+primary_device() {
+    nmcli -t -f DEVICE,TYPE,STATE dev status 2>/dev/null | awk -F: '$3 ~ /^connected/ && ($2 == "wifi" || $2 == "ethernet") { print $1; exit }'
 }
 
 public_ip() {
@@ -96,18 +124,27 @@ case "${1:-status}" in
         ;;
     details)
         signal=$(wifi_signal)
+        channel=$(wifi_channel)
+        band=$(wifi_band "$channel")
         printf '%s\n' "$(primary_connection)"
         printf 'Wi-Fi: %s' "$(wifi_state)"
         [ -n "$signal" ] && printf ' • %s %s%%' "$(wifi_icon "$signal")" "$signal"
+        [ -n "$band" ] && printf ' • %s' "$band"
         printf '\n'
         ip_addr=$(local_ip)
         if [ -n "$ip_addr" ]; then
             printf 'Local IP: %s\n' "$ip_addr"
         fi
+        dns=$(dns_summary || true)
+        if [ -n "$dns" ]; then
+            printf 'DNS: %s\n' "$dns"
+        fi
         pub_ip=$(public_ip)
         if [ -n "$pub_ip" ]; then
             printf 'Public IP: %s\n' "$pub_ip"
         fi
+        printf '\nDevices:\n'
+        devices
         ;;
     devices)
         devices
@@ -119,8 +156,14 @@ case "${1:-status}" in
             nmcli radio wifi on
         fi
         ;;
+    reconnect)
+        device=$(primary_device)
+        [ -n "$device" ] || exit 0
+        nmcli dev disconnect "$device" >/dev/null 2>&1 || true
+        nmcli dev connect "$device"
+        ;;
     *)
-        printf 'use: network-status [bar|status|details|devices|wifi-toggle]\n' >&2
+        printf 'use: network-status [bar|status|details|devices|wifi-toggle|reconnect]\n' >&2
         exit 2
         ;;
 esac

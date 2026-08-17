@@ -10,7 +10,7 @@ local function bin(name)
 end
 
 local terminal = bin("hypr-term")
-local launcher = bin("qs-bar") .. " launcher"
+local launcher = bin("qbar") .. " launcher"
 local quickshell_cmd = "env QT_QUICK_BACKEND=software " .. home .. "/.nix-profile/bin/quickshell --path " .. home .. "/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize"
 local board_run_cmd = "pgrep -fx " .. string.format("%q", home .. "/bin/board --config " .. home .. "/.config/board/board.toml run") .. " >/dev/null 2>&1 || " .. home .. "/bin/board --config " .. home .. "/.config/board/board.toml run"
 local function sh(cmd)
@@ -18,7 +18,7 @@ local function sh(cmd)
 end
 
 local function qs(action)
-  return sh(bin("qs-bar") .. " " .. action)
+  return sh(bin("qbar") .. " " .. action)
 end
 
 local function osd(action)

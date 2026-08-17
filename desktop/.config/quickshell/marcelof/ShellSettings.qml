@@ -6,6 +6,9 @@ JsonAdapter {
   property bool nativeTrayMenus: false
   property bool doNotDisturb: false
   property bool denseUi: false
+  property string appearanceMode: "dark"
+  property string fontToken: "fira-code-retina"
+  property string wallpaperPath: ""
   property string primaryColor: "#b4befe"
   property string weatherLocation: "Palmela, Portugal"
   property var favoriteAppIds: []

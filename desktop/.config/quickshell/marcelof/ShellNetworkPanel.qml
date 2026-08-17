@@ -40,6 +40,7 @@ ShellPopup {
         Layout.fillWidth: true
         spacing: theme.spacingLg
         ShellActionButton { Layout.fillWidth: true; icon: "󰖩"; label: networkPanel.shellConfig.networkWifiLabel; tooltip: "Toggle Wi-Fi"; tooltipState: networkPanel.shellRoot; onTriggered: networkPanel.shellRoot.runNetwork(networkPanel.shellConfig.networkWifiToggleAction) }
+        ShellActionButton { Layout.fillWidth: true; icon: "󰑓"; label: "Reconnect"; tooltip: "Reconnect primary network"; tooltipState: networkPanel.shellRoot; onTriggered: networkPanel.shellRoot.runNetwork("reconnect") }
         ShellActionButton { Layout.fillWidth: true; icon: "󰍜"; label: "Settings"; tooltip: "Open network settings"; tooltipState: networkPanel.shellRoot; onTriggered: Quickshell.execDetached(networkPanel.shellConfig.networkEditor()) }
       }
 
@@ -65,7 +66,7 @@ ShellPopup {
 
   Process {
     id: networkRefresh
-    command: networkPanel.shellConfig.network("devices")
+    command: networkPanel.shellConfig.network("details")
     stdout: StdioCollector { onStreamFinished: networkText.text = this.text.trim() }
   }
 }

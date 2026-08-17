@@ -52,8 +52,8 @@ fi
 echo
 
 echo "quickshell"
-if command -v qs-bar >/dev/null 2>&1; then
-  qs-bar status 2>/dev/null | sed "s/^/- /"
+if command -v qbar >/dev/null 2>&1; then
+  qbar status 2>/dev/null | sed "s/^/- /"
 else
-  echo "- qs-bar missing"
+  echo "- qbar missing"
 fi

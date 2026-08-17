@@ -8,12 +8,14 @@ Item {
   required property var shellConfig
   required property var shellSettings
   property alias agendaRefresh: agendaPanelRefresh
+  property alias reminderRefresh: reminderPanelRefresh
   property alias weatherRefresh: weatherPanelRefresh
 
   function refreshAll() {
     timePanelRefresh.running = true
     todoPanelRefresh.running = true
     agendaPanelRefresh.running = true
+    reminderPanelRefresh.running = true
     weatherPanelRefresh.running = true
     pomodoroRefresh.running = true
   }
@@ -58,6 +60,13 @@ Item {
   }
 
   Process {
+    id: reminderPanelRefresh
+    command: calendarService.shellConfig.reminderList()
+    running: true
+    stdout: StdioCollector { onStreamFinished: calendarService.shellRoot.reminderPanelText = this.text.trim() }
+  }
+
+  Process {
     id: weatherPanelRefresh
     command: calendarService.shellConfig.weather(calendarService.shellSettings.weatherLocation, "panel")
     running: true
@@ -97,6 +106,13 @@ Item {
     running: true
     repeat: true
     onTriggered: agendaPanelRefresh.running = calendarService.shellRoot.calendarOpen
+  }
+
+  Timer {
+    interval: 60000
+    running: true
+    repeat: true
+    onTriggered: reminderPanelRefresh.running = calendarService.shellRoot.calendarOpen
   }
 
   Timer {

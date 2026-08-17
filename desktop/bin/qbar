@@ -13,7 +13,7 @@ fi
 qs_bin="${QS_BIN:-$HOME/.nix-profile/bin/qs}"
 quickshell_bin="${QUICKSHELL_BIN:-$HOME/.nix-profile/bin/quickshell}"
 config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
-log_file="${QS_BAR_LOG:-/tmp/qs-bar.log}"
+log_file="${QBAR_LOG:-/tmp/qbar.log}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_lib="${script_dir%/bin}/lib/lib_qs_menus.sh"
 if [ -r "$repo_lib" ]; then
@@ -31,7 +31,7 @@ list_instances() {
 }
 
 usage() {
-  printf 'use: qs-bar [-q] [start|stop|restart|reload|status|runtime-prune|shell|toggle|show|hide|tray|controls|calendar|work-inbox|personal-dashboard|notifications|power|inhibit|keybindings|clipboard|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
+  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|tray|controls|calendar|work-inbox|personal-dashboard|notifications|power|inhibit|keybindings|clipboard|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
 }
 
 kill_all() {
@@ -80,7 +80,7 @@ call_ipc() {
   shift
 
   recover_wayland_display
-  if output=$(timeout --kill-after=1s "${QS_BAR_IPC_TIMEOUT:-2s}" "$qs_bin" ipc --path "$config_path" --any-display call "$target" "$@" 2>&1); then
+  if output=$(timeout --kill-after=1s "${QBAR_IPC_TIMEOUT:-2s}" "$qs_bin" ipc --path "$config_path" --any-display call "$target" "$@" 2>&1); then
     status=0
   else
     status=$?
@@ -128,6 +128,30 @@ ipc_target() {
 menu_toggle() { ipc_target shell toggle "$1" "{}"; }
 menu_summon() { ipc_target shell summon "$1" "{}"; }
 
+notice() {
+  command -v notify-send >/dev/null 2>&1 || return 0
+  case "${1:-}" in
+    time)
+      notify-send -a desktop-notice -u low "󰥔 Time" "$(check-time-panel 2>/dev/null || date)"
+      ;;
+    weather)
+      notify-send -a desktop-notice -u low "󰖕 Weather" "$(check-weather 2>/dev/null || printf 'Weather unavailable')"
+      ;;
+    battery)
+      local battery summary
+      battery=$(upower -e 2>/dev/null | grep -m1 BAT || true)
+      if [ -n "$battery" ]; then
+        summary=$(upower -i "$battery" 2>/dev/null | awk -F: '/state|percentage|capacity/ { gsub(/^ +/, "", $2); print $1 ": " $2 }')
+      fi
+      notify-send -a desktop-notice -u low "󰁹 Battery" "${summary:-Battery unavailable}"
+      ;;
+    *)
+      printf 'use: qbar notice [time|weather|battery]\n' >&2
+      exit 2
+      ;;
+  esac
+}
+
 running() {
   [ -n "$(quickshell_pids || true)" ]
 }
@@ -157,6 +181,7 @@ case "${1:-status}" in
     fi
     call_ipc shell "$@"
     ;;
+  notice) shift; notice "${1:-}" ;;
   toggle|show|hide) ipc "$1" ;;
   launcher) menu_summon launcher ;;
   tray|tray-manage) menu_toggle tray ;;

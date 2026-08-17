@@ -50,9 +50,29 @@ Inside Hyprland, use:
 hypr-session reload
 ```
 
+
+## Theme Boundary
+
+Quickshell keeps one local theme state file at `~/.local/state/quickshell/marcelof/settings.json`. It records the shell primary color, fixed dark appearance token, fixed font token, selected wallpaper path, density, weather location, DND, tray, and launcher preferences. This maps to Omarchy themes only at the local shell level: colors, font token, and wallpaper are readable from one state file, but this repo does not generate app templates, install theme marketplaces, alter boot branding, or own GTK/Ghostty theme rewrites from Quickshell.
+
+Editable today: primary color, density, weather location, DND, tray behavior, hidden apps, and wallpaper through the existing Settings and Wallpaper popups. `appearanceMode` stays `dark` and `fontToken` stays `fira-code-retina` until there is a real second supported value.
+
 ## Menu testing
 
-Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `desktop/tools/qs-menu-smoke wallpaper media notifications` for targeted visual checks, `desktop/tools/qs-menu-smoke` for the full popup set, `desktop/tools/qs-menu-smoke --open` to capture and open the contact sheet, or `desktop/tools/qs-menu-smoke --inspect` to send the current contact sheet plus the previous run when present to `codex exec --image` for visual comparison.
+Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. See [`hotkeys-omarchy-compat.md`](hotkeys-omarchy-compat.md) for the Omarchy manual category comparison and adopted profile-only shortcuts. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `desktop/tools/qs-menu-smoke wallpaper media notifications` for targeted visual checks, `desktop/tools/qs-menu-smoke` for the full popup set, `desktop/tools/qs-menu-smoke --open` to capture and open the contact sheet, or `desktop/tools/qs-menu-smoke --inspect` to send the current contact sheet plus the previous run when present to `codex exec --image` for visual comparison.
+
+Bar interactions:
+
+- Workspaces: left-click focuses the workspace.
+- Tray drawer: left-click expands/collapses; right-click opens tray management.
+- Privacy indicator: left-click opens Screen; right-click toggles DND.
+- Volume text: left-click mutes; right-click opens Media; scroll changes volume.
+- Media glyph: left-click play/pause-all; right-click opens Media.
+- Controls icon: left-click opens Controls.
+- Brightness text: left/right-click opens Controls; scroll changes brightness.
+- Network text: left-click opens Network; right-click opens `nmtui`.
+- Clock: left-click opens Calendar.
+- Notifications: left-click opens notification history.
 
 ### Codex image workaround
 
@@ -66,6 +86,19 @@ printf '%s\n' 'Inspect this screenshot visually. Do not run tools. List concrete
 ```
 
 Only use this path for screenshots that are safe to send through Codex image input. Use `desktop/tools/qs-menu-smoke --open` when the user only needs the contact sheet opened locally.
+
+## Security And System Ownership
+
+Quickshell owns the visible controls and IPC, not the privileged implementation:
+
+- Lock: `qbar lock` and the session menu delegate to `hyprlock`, `swaylock`, or `loginctl lock-session`. Do not replace this with a QML-only lock screen; a lock screen must be a real locker.
+- Idle: the Awake control uses `desktop-inhibit`, backed by `systemd-inhibit`, for manual idle/sleep inhibition. Quickshell should display and toggle this state, not become a second idle daemon.
+- Polkit: keep authorization prompts delegated to the system polkit agent. Do not collect passwords in Quickshell. Move polkit into Quickshell only if a maintained, secure agent is adopted and a real local bug justifies it.
+- System security: firewall, SSH daemon, Docker exposure, hibernation, snapshots, fingerprint/Fido, package updates, and Tailscale belong to homelab/system automation, not the home/dotfiles role.
+
+## Upstream Attribution
+
+Reference repos can be used for behavior, layout patterns, and small MIT-compatible snippets. Substantial copied QML or shell snippets must keep attribution near the adapted code or in the task entry that introduced it. Behavior-only rewrites need a source note in `docs/desktop/wayland-tasks.md`, but should not copy upstream branding unless it removes local glue and stays behind local entrypoints such as `qbar`.
 
 ## X11 archive
 
@@ -121,17 +154,17 @@ Calendar account sync stays outside Quickshell. The shell reads `calendar-agenda
 
 ## Reference Import Rule
 
-Reuse reference repos for behavior, layout patterns, and small implementation ideas only. Do not import upstream-branded shell binaries, broad framework rewrites, distro update machinery, or assumptions that conflict with the local default i3-compatible profile.
+Reuse reference repos for behavior, layout patterns, and small implementation ideas. Upstream runtime command names are acceptable when they make the repo smaller or more compatible, but they must remain behind local entrypoints such as `qbar` and must not force a full shell replacement. Do not import broad framework rewrites, distro update machinery, or assumptions that conflict with the local default i3-compatible profile.
 
 Adapted locally: Omarchy quattro key behavior, Caelestia-style session panel actions and idle inhibitor, end-4-style `Super+/` keybinding discoverability and cliphist watcher updates, Noctalia-style compact popup/control surfaces, and cxOrz-style backend-only cliphist ownership.
 
-Rejected locally: Omarchy-named runtime commands, upstream shell launchers, distro-level refresh/update jobs, and replacing the Marcelof Quickshell shell with a copied upstream shell.
+Rejected locally: distro-level refresh/update jobs, full upstream shell replacement, and copied launchers that duplicate a smaller local wrapper.
 
 ## Switchable launchers
 
 Quickshell remains the default shell UI:
 
-- `archive/obsolete/desktop/bin/qs-launcher` is the retired launcher wrapper; active bindings use `qs-bar launcher`.
+- `archive/obsolete/desktop/bin/qs-launcher` is the retired launcher wrapper; active bindings use `qbar launcher`.
 - `websearch` with no arguments opens the Quickshell web search panel when Wayland/Quickshell are available.
 
 Script-friendly Walker/terminal alternatives are available in parallel:

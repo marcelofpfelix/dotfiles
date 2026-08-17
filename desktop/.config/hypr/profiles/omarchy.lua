@@ -9,7 +9,7 @@ local function bin(name)
 end
 
 local terminal = bin("hypr-term")
-local launcher = bin("qs-bar") .. " launcher"
+local launcher = bin("qbar") .. " launcher"
 local quickshell_cmd = "env QT_QUICK_BACKEND=software " .. home .. "/.nix-profile/bin/quickshell --path " .. home .. "/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize"
 local board_run_cmd = "pgrep -fx " .. string.format("%q", home .. "/bin/board --config " .. home .. "/.config/board/board.toml run") .. " >/dev/null 2>&1 || " .. home .. "/bin/board --config " .. home .. "/.config/board/board.toml run"
 
@@ -18,7 +18,7 @@ local function sh(cmd)
 end
 
 local function qs(action)
-  return sh(bin("qs-bar") .. " " .. action)
+  return sh(bin("qbar") .. " " .. action)
 end
 
 local function osd(action)
@@ -225,8 +225,17 @@ bind_app(mod .. " + SHIFT + D", terminal .. " lazydocker")
 bind_app(mod .. " + SHIFT + O", "obsidian")
 bind_app(mod .. " + SHIFT + W", "typora --enable-wayland-ime")
 hl.bind("XF86Display", sh("monitor"), { locked = true, repeating = true })
-hl.bind(mod .. " + CTRL + D", sh("monitor"))
 hl.bind(mod .. " + CTRL + A", qs("controls"))
+hl.bind(mod .. " + CTRL + B", qs("controls"))
+hl.bind(mod .. " + CTRL + C", qs("screen"))
+hl.bind(mod .. " + CTRL + D", sh("monitor"))
+hl.bind(mod .. " + CTRL + SPACE", qs("wallpaper"))
+hl.bind(mod .. " + CTRL + SHIFT + SPACE", qs("settings"))
+hl.bind(mod .. " + SHIFT + ALT + comma", qs("notifications"))
+hl.bind(mod .. " + CTRL + comma", qs("dnd"))
+hl.bind(mod .. " + CTRL + ALT + T", sh(bin("qbar") .. " notice time"))
+hl.bind(mod .. " + CTRL + ALT + B", sh(bin("qbar") .. " notice battery"))
+hl.bind(mod .. " + CTRL + ALT + W", sh(bin("qbar") .. " notice weather"))
 hl.bind(mod .. " + CTRL + V", function() end)
 hl.bind(mod .. " + CTRL + W", function() end)
 hl.bind(mod .. " + CTRL + P", qs("power"))

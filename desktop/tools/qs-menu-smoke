@@ -110,7 +110,7 @@ capture_panel() {
   crop="$out_dir/$panel.crop.png"
   min_changed_pixels="$min_changed_pixels_default"
 
-  qs-bar close-panels >/dev/null 2>&1 || {
+  qbar close-panels >/dev/null 2>&1 || {
     printf "fail close-panels before %s\n" "$panel" >&2
     status=1
     return
@@ -140,19 +140,19 @@ capture_panel() {
       crop_panel_region "$panel" "$baseline" "$file" "$crop" || true
       record_result "$panel" ok "${width}x${height}:changed=$changed" "$file" "$baseline"
       printf 'ok   %s %s\n' "$panel" "$file"
-      qs-bar close-panels >/dev/null 2>&1 || {
+      qbar close-panels >/dev/null 2>&1 || {
         printf "fail close-panels after %s\n" "$panel" >&2
         status=1
       }
       return
     fi
-    qs-bar close-panels >/dev/null 2>&1 || true
+    qbar close-panels >/dev/null 2>&1 || true
     sleep "$sleep_time"
   done
   printf 'fail %s capture\n' "$panel" >&2
   record_result "$panel" fail capture "$file" "$baseline"
   status=1
-  qs-bar close-panels >/dev/null 2>&1 || {
+  qbar close-panels >/dev/null 2>&1 || {
     printf "fail close-panels after %s\n" "$panel" >&2
     status=1
   }
@@ -295,7 +295,7 @@ smoke_osd() {
   crop="$out_dir/osd.crop.png"
   min_changed_pixels=1000
 
-  qs-bar close-panels >/dev/null 2>&1 || true
+  qbar close-panels >/dev/null 2>&1 || true
   sleep "$sleep_time"
   if ! grim "$baseline" || [ ! -s "$baseline" ]; then
     printf "fail osd baseline capture\n" >&2
@@ -304,7 +304,7 @@ smoke_osd() {
     return
   fi
 
-  if ! qs-bar osd-volume >/dev/null 2>&1; then
+  if ! qbar osd-volume >/dev/null 2>&1; then
     printf "fail osd trigger\n" >&2
     record_result osd fail trigger "$file" "$baseline"
     status=1
@@ -332,13 +332,13 @@ smoke_osd() {
 smoke_clipboard_toggle() {
   local before after_open after_close
 
-  qs-bar close-panels >/dev/null 2>&1 || true
+  qbar close-panels >/dev/null 2>&1 || true
   sleep "$sleep_time"
   before=$(clipboard_visible || true)
-  qs-bar clipboard >/dev/null 2>&1 || true
+  qbar clipboard >/dev/null 2>&1 || true
   sleep "$sleep_time"
   after_open=$(clipboard_visible || true)
-  qs-bar clipboard >/dev/null 2>&1 || true
+  qbar clipboard >/dev/null 2>&1 || true
   sleep "$sleep_time"
   after_close=$(clipboard_visible || true)
 
@@ -369,7 +369,7 @@ case "${1:-}" in
   -h|--help) usage; exit 0 ;;
 esac
 
-need qs-bar
+need qbar
 need grim
 need identify
 need compare
@@ -380,7 +380,7 @@ if [ -z "$previous_dir" ]; then
 fi
 mkdir -p "$out_dir"
 printf 'panel\tstatus\tdetail\tfile\tbaseline\n' >"$summary_file"
-trap 'qs-bar close-panels >/dev/null 2>&1 || true' EXIT
+trap 'qbar close-panels >/dev/null 2>&1 || true' EXIT
 
 full_smoke=0
 if [ "$#" -eq 0 ]; then

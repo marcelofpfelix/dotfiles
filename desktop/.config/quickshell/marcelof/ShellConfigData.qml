@@ -19,7 +19,7 @@ QtObject {
 
   readonly property var notificationToastPolicy: ({
     criticalUrgency: 2,
-    importantApps: ["Slack", "Google Chrome", "Brave", "Calendar", "Meet", "Zoom"],
+    importantApps: ["Slack", "Google Chrome", "Brave", "Calendar", "Meet", "Zoom", "desktop-notice", "desktop-reminder"],
     importantActions: ["Accept", "Answer", "Join", "Approve", "Review", "Done"],
     completeActions: ["Done", "Complete", "Completed", "Dismiss", "Archive", "Mark read"],
     importantPatterns: ["urgent", "critical", "failed", "failure", "error", "incident", "meeting", "call", "mention", "review requested"]

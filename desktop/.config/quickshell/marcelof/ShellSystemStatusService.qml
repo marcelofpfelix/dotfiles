@@ -15,6 +15,7 @@ Item {
     refreshKbdBrightness()
     refreshNetwork()
     refreshPower()
+    refreshMonitor()
     refreshFan()
     refreshInhibit()
     refreshPrivacy()
@@ -25,6 +26,7 @@ Item {
   function refreshKbdBrightness() { kbdBrightnessRefresh.running = true }
   function refreshNetwork() { networkStatusRefresh.running = true }
   function refreshPower() { powerStatusRefresh.running = true }
+  function refreshMonitor() { monitorStatusRefresh.running = true }
   function refreshFan() { fanStatusRefresh.running = true }
   function refreshInhibit() { inhibitStatusRefresh.running = true }
   function refreshPrivacy() { privacyStatusRefresh.running = true }
@@ -88,6 +90,13 @@ Item {
     command: systemStatusService.shellConfig.powerStatus()
     running: true
     stdout: StdioCollector { onStreamFinished: systemStatusService.shellRoot.powerStatusText = this.text.trim() }
+  }
+
+  Process {
+    id: monitorStatusRefresh
+    command: systemStatusService.shellConfig.monitorStatus()
+    running: true
+    stdout: StdioCollector { onStreamFinished: systemStatusService.shellRoot.monitorStatusText = this.text.trim() }
   }
 
   Process {

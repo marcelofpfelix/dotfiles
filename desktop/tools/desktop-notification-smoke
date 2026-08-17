@@ -20,7 +20,7 @@ actions_supported() {
 send_action_notification() {
   local log="${XDG_RUNTIME_DIR:-/tmp}/desktop-notification-smoke.action"
   notify-send -a desktop-notification-smoke -A open=Open -A done=Done -t 10000 "Desktop notification action smoke" "Open notifications; this card should show Open and Done buttons." >"$log" 2>/dev/null &
-  qs-bar notifications >/dev/null 2>&1 || true
+  qbar notifications >/dev/null 2>&1 || true
   printf "action-log %s\n" "$log"
 }
 
@@ -29,21 +29,21 @@ send_routing_notifications() {
   : >"$log"
   notify-send -a desktop-neutral-smoke "Desktop neutral smoke" "This should be stored in history without a popup toast." >>"$log" 2>&1 || true
   notify-send -a desktop-critical-smoke -u critical "Desktop critical smoke" "This should still show a popup toast." >>"$log" 2>&1 || true
-  qs-bar notifications >/dev/null 2>&1 || true
+  qbar notifications >/dev/null 2>&1 || true
   printf "routing-log %s\n" "$log"
 }
 
 send_sticky_notification() {
   local log="${XDG_RUNTIME_DIR:-/tmp}/desktop-notification-smoke.sticky"
   notify-send -a desktop-sticky-smoke -A done=Done -t 0 "Desktop sticky smoke" "This no-timeout card should remain until dismissed or Done is clicked." >"$log" 2>/dev/null &
-  qs-bar notifications >/dev/null 2>&1 || true
+  qbar notifications >/dev/null 2>&1 || true
   printf "sticky-log %s\n" "$log"
 }
 
 case "${1:-run}" in
   --status|status)
     command -v notify-send >/dev/null 2>&1
-    command -v qs-bar >/dev/null 2>&1
+    command -v qbar >/dev/null 2>&1
     owner
     actions_supported
     ;;

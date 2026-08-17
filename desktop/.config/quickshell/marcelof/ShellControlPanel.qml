@@ -61,6 +61,15 @@ ShellPopup {
           ShellActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "External brightness up"; tooltipState: controlPanel.shellRoot; onTriggered: controlPanel.shellRoot.runExternalBrightness("up") }
         }
 
+        Text {
+          Layout.fillWidth: true
+          color: theme.textSubtle
+          wrapMode: Text.Wrap
+          font.family: theme.fontFamily
+          font.pixelSize: theme.fontSm
+          text: controlPanel.shellRoot.monitorStatusText.length > 0 ? controlPanel.shellRoot.monitorStatusText : "Display eDP-1 primary active"
+        }
+
         RowLayout {
           Layout.fillWidth: true
           visible: controlPanel.shellRoot.kbdBrightnessText.length > 0

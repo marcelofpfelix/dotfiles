@@ -44,6 +44,7 @@ ShellPopup {
     margin: 16
 
       ShellText { Layout.fillWidth: true; role: "title"; text: "Session" }
+      Text { Layout.fillWidth: true; color: theme.textSoft; wrapMode: Text.Wrap; font.family: theme.fontFamily; font.pixelSize: theme.fontMd; text: powerMenu.shellRoot.powerStatusText.length > 0 ? powerMenu.shellRoot.powerStatusText : "Power status --" }
       ShellText { Layout.fillWidth: true; role: "section"; text: "Choose a session action" }
 
       Repeater {

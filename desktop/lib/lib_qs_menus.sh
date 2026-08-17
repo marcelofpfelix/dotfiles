@@ -17,6 +17,7 @@ declare -gA qs_menu_labels=(
   [notifications]="Notifications"
   [passmenu]="Passwords"
   [power]="Session menu"
+  [screen]="Screen"
   [settings]="Settings"
   [tray]="Tray"
   [wallpaper]="Wallpaper"
@@ -33,7 +34,7 @@ qs_menu_label() {
 }
 
 qs_menu_open_panel() {
-  qs-bar "$1"
+  qbar "$1"
 }
 
 qs_menu_crop_geometry() {

@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+runtime_dir="${XDG_RUNTIME_DIR:-/tmp}/desktop-reminders"
+unit_prefix="desktop-reminder"
+
+usage() {
+  printf 'use: reminderctl [add DURATION MESSAGE...|list|clear all|clear UNIT|self-test]\n' >&2
+}
+
+parse_duration() {
+  local value=${1:-}
+  case "$value" in
+    *s|*m|*h) printf '%s\n' "$value" ;;
+    ''|*[!0-9]*) return 1 ;;
+    *) printf '%sm\n' "$value" ;;
+  esac
+}
+
+add_reminder() {
+  local duration message unit msg_file
+  [ "$#" -ge 2 ] || { usage; exit 2; }
+  duration=$(parse_duration "$1") || {
+    printf 'reminderctl: invalid duration: %s\n' "$1" >&2
+    exit 2
+  }
+  shift
+  message=$*
+  mkdir -p "$runtime_dir"
+  unit="${unit_prefix}-$(date +%s)"
+  msg_file="$runtime_dir/$unit.message"
+  printf '%s\n' "$message" >"$msg_file"
+  systemd-run --user --collect --unit="$unit" --on-active="$duration" \
+    "${SHELL:-/bin/sh}" -lc 'msg=$(cat "$1" 2>/dev/null || true); notify-send -a desktop-reminder "󰔛 Reminder" "${msg:-Reminder}"; rm -f "$1"' \
+    sh "$msg_file" >/dev/null
+  printf '%s\t%s\t%s\n' "$unit" "$duration" "$message"
+}
+
+list_reminders() {
+  local found=0 msg_file unit message
+  for msg_file in "$runtime_dir"/${unit_prefix}-*.message; do
+    [ -e "$msg_file" ] || break
+    unit=${msg_file##*/}
+    unit=${unit%.message}
+    systemctl --user --quiet is-active "$unit.timer" 2>/dev/null || continue
+    message=$(tr '\n' ' ' <"$msg_file")
+    printf '%s\t%s\n' "$unit" "${message:-Reminder}"
+    found=1
+  done
+  [ "$found" -eq 1 ] || printf 'No reminders\n'
+}
+
+clear_reminders() {
+  local target=${1:-}
+  [ -n "$target" ] || { usage; exit 2; }
+  case "$target" in
+    all)
+      systemctl --user list-timers "${unit_prefix}-*.timer" --all --no-legend 2>/dev/null |
+        awk '{ print $1 }' |
+        while read -r timer; do
+          [ -n "$timer" ] || continue
+          systemctl --user stop "$timer" "${timer%.timer}.service" 2>/dev/null || true
+        done
+      rm -f "$runtime_dir"/${unit_prefix}-*.message 2>/dev/null || true
+      ;;
+    *)
+      target=${target%.timer}
+      systemctl --user stop "$target.timer" "$target.service" 2>/dev/null || true
+      rm -f "$runtime_dir/$target.message" 2>/dev/null || true
+      ;;
+  esac
+}
+
+self_test() {
+  [ "$(parse_duration 5)" = "5m" ]
+  [ "$(parse_duration 5s)" = "5s" ]
+  [ "$(parse_duration 2h)" = "2h" ]
+  ! parse_duration nope >/dev/null 2>&1
+  printf 'reminderctl self-test: ok\n'
+}
+
+case "${1:-}" in
+  add) shift; add_reminder "$@" ;;
+  list) list_reminders ;;
+  clear) shift; clear_reminders "${1:-}" ;;
+  self-test|--self-test) self_test ;;
+  *) usage; exit 2 ;;
+esac

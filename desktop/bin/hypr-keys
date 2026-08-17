@@ -72,30 +72,34 @@ pretty_action() {
     if declare -p qs_menu_panels >/dev/null 2>&1 && command -v qs_menu_label >/dev/null 2>&1; then
         for menu in "${qs_menu_panels[@]}"; do
             case "$line" in
-                *"qs-bar $menu"*|*"qs(\"$menu\")"*) qs_menu_label "$menu"; return ;;
+                *"qbar $menu"*|*"qs(\"$menu\")"*) qs_menu_label "$menu"; return ;;
             esac
         done
     fi
     case "$line" in
         *'sh(terminal)'*) printf 'Terminal' ;;
         *'sh(launcher)'*) printf 'Apps' ;;
-        *'qs-bar keybindings'*) printf 'Keybindings' ;;
+        *'qbar keybindings'*) printf 'Keybindings' ;;
         *'common.actions.keybindings'*) printf 'Keybindings' ;;
-        *'qs-bar power'*) printf 'Session menu' ;;
-        *'qs-bar controls'*) printf 'Controls' ;;
+        *'qbar power'*) printf 'Session menu' ;;
+        *'qbar controls'*) printf 'Controls' ;;
         *'universal_paste'*) printf 'Paste' ;;
         *'noop()'*) printf 'No action' ;;
         *'function() end'*) printf 'No action' ;;
-        *'qs-bar network'*) printf 'Network' ;;
-        *'qs-bar clipboard'*) printf 'Clipboard history' ;;
-        *'qs-bar websearch'*) printf 'Web search' ;;
-        *'qs-bar toggle'*) printf 'Toggle bar' ;;
-        *'qs-bar lock'*) printf 'Lock' ;;
+        *'qbar network'*) printf 'Network' ;;
+        *'qbar clipboard'*) printf 'Clipboard history' ;;
+        *'qbar websearch'*) printf 'Web search' ;;
+        *'qbar toggle'*) printf 'Toggle bar' ;;
+        *'qbar lock'*) printf 'Lock' ;;
         *'qs("power")'*) printf 'Session menu' ;;
         *'qs("controls")'*) printf 'Controls' ;;
         *'qs("toggle")'*) printf 'Toggle bar' ;;
         *'qs("lock")'*) printf 'Lock' ;;
         *'qs("websearch")'*) printf 'Web search' ;;
+        *'qs("dnd")'*) printf 'Toggle DND' ;;
+        *'notice time'*) printf 'Time notice' ;;
+        *'notice battery'*) printf 'Battery notice' ;;
+        *'notice weather'*) printf 'Weather notice' ;;
         *'screenshot-wayland edit'*) printf 'Screenshot' ;;
         *'screenshot("edit")'*) printf 'Screenshot' ;;
         *'hyprpicker'*) printf 'Color picker' ;;

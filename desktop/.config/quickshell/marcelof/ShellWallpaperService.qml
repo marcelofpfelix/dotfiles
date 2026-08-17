@@ -20,7 +20,7 @@ Item {
     id: wallpaperCurrent
     command: wallpaperService.shellConfig.wallpaper("current")
     running: true
-    stdout: StdioCollector { onStreamFinished: wallpaperService.shellRoot.wallpaperSource = wallpaperService.shellConfig.fileUrl(this.text.trim()) }
+    stdout: StdioCollector { onStreamFinished: wallpaperService.shellRoot.applyWallpaperPath(this.text.trim()) }
   }
 
   Process {

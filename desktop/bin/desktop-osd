@@ -2,7 +2,7 @@
 set -euo pipefail
 
 run_qs() {
-  command -v qs-bar >/dev/null 2>&1 && qs-bar "$@" >/dev/null 2>&1 || true
+  command -v qbar >/dev/null 2>&1 && qbar "$@" >/dev/null 2>&1 || true
 }
 
 case "${1:-}" in

@@ -28,7 +28,7 @@ QtObject {
   function bin(name) { return binDir + "/" + name }
   function fileUrl(path) { return fileUrlPrefix + path }
   function cleanEnv(name) { return ["hypr-clean-env", name] }
-  function qs(action) { return [bin("qs-bar"), action] }
+  function qs(action) { return [bin("qbar"), action] }
   function screenshot(action) { return [bin("screenshot-wayland"), action] }
   function browser(url) { return [bin("chrome-wayland"), url] }
   function audio(action) { return [bin("audioctl"), action] }
@@ -122,11 +122,14 @@ QtObject {
       command.push(extra)
     return command
   }
+  function reminderList() { return [bin("reminderctl"), "list"] }
+  function reminderClearAll() { return [bin("reminderctl"), "clear", "all"] }
   function workInboxStatus() { return [bin("work-inbox-status")] }
   function audioStreams() { return [bin("check-audio-streams")] }
   function screenRecordStatus() { return screenRecord(statusAction) }
   function keyboardBrightnessStatus() { return keyboardBrightness(statusAction) }
   function powerStatus() { return [bin("power-status"), statusAction] }
+  function monitorStatus() { return [bin("monitor"), statusAction] }
   function fanStatus() { return [bin("fan-status")] }
   function inhibitStatus() { return inhibit(statusAction) }
   function privacyStatus() { return [bin("desktop-privacy-status"), statusAction] }

@@ -312,6 +312,7 @@ ShellRoot {
   property string kbdBrightnessText: ""
   property string networkStatusText: ""
   property string powerStatusText: ""
+  property string monitorStatusText: ""
   property string fanStatusText: "Fan --"
   property string privacyStatusText: ""
   property string mediaNowText: ""
@@ -322,6 +323,7 @@ ShellRoot {
   property string lisbonClockText: "--"
   property string timePanelText: ""
   property string agendaPanelText: ""
+  property string reminderPanelText: ""
   property string pomodoroModeText: shellConfig.states.idle
   property string pomodoroLabelText: ""
   property int pomodoroRemainingSeconds: 0
@@ -648,7 +650,7 @@ ShellRoot {
     return root.toggleShellMenu(menu, payloadJson)
   }
 
-  function togglePowerMenu() { root.toggleTransientPanel("powerMenuOpen") }
+  function togglePowerMenu() { root.toggleTransientPanel("powerMenuOpen", function() { systemStatusService.refreshPower() }) }
 
   function toggleTrayManage() { root.toggleTransientPanel("trayManageOpen") }
 
@@ -695,8 +697,15 @@ ShellRoot {
     root.toggleTransientPanel("wallpaperPanelOpen", function() { root.refreshWallpapers() })
   }
 
-  function setWallpaper(path) {
+  function applyWallpaperPath(path) {
+    if (String(path || "").length === 0)
+      return
     root.wallpaperSource = shellConfig.fileUrl(path)
+    shellSettings.wallpaperPath = path
+  }
+
+  function setWallpaper(path) {
+    root.applyWallpaperPath(path)
     Quickshell.execDetached(shellConfig.wallpaper("set", path))
     wallpaperService.refreshListSoon()
   }
@@ -1629,6 +1638,7 @@ ShellRoot {
       shellConfig: shellConfig
       clock: clock
       agendaRefresh: calendarService.agendaRefresh
+      reminderRefresh: calendarService.reminderRefresh
       panelOpen: root.calendarOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.calendar)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.calendar)

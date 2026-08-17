@@ -80,14 +80,13 @@ ShellPopup {
           readonly property bool isGroup: kind === "group"
           readonly property bool expanded: !isGroup && notificationCenter.shellRoot.selectedNotificationIndex === notificationIndex
           readonly property string iconSource: notificationCenter.shellRoot.notificationImageSource(isGroup || image.length === 0 ? appIcon : image)
-          readonly property int contentHeight: Math.ceil(detailColumn.implicitHeight + theme.paddingMd * 2)
+          readonly property int contentHeight: Math.ceil(notificationCard.implicitHeight)
           width: ListView.view.width
           height: isGroup ? 40 : Math.max(expanded ? 112 : 88, contentHeight)
           radius: isGroup ? 0 : theme.radiusSmall
           clip: true
-          color: isGroup ? theme.transparent : (expanded ? theme.surfaceRaised : theme.surface)
-          border.color: expanded ? notificationCenter.shellSettings.primaryColor : theme.transparent
-          border.width: expanded ? 1 : 0
+          color: theme.transparent
+          border.width: 0
 
           Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
@@ -138,106 +137,30 @@ ShellPopup {
             ShellActionButton { icon: "󰅖"; label: "App"; minWidth: 72; tooltip: "Clear app notifications"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.clearNotificationsForApp(app) }
           }
 
-          ColumnLayout {
-            id: detailColumn
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: theme.paddingMd
+          ShellNotificationCard {
+            id: notificationCard
+            anchors.fill: parent
             visible: !notificationDelegate.isGroup
-            spacing: theme.spacingSm
-
-            RowLayout {
-              Layout.fillWidth: true
-              spacing: theme.spacingLg
-              Item {
-                Layout.preferredWidth: notificationDelegate.iconSource.length > 0 ? 34 : 0
-                Layout.preferredHeight: notificationDelegate.iconSource.length > 0 ? 34 : 0
-                visible: notificationDelegate.iconSource.length > 0
-
-                Image {
-                  anchors.fill: parent
-                  source: notificationDelegate.iconSource
-                  sourceSize.width: 34 * Screen.devicePixelRatio
-                  sourceSize.height: 34 * Screen.devicePixelRatio
-                  fillMode: Image.PreserveAspectFit
-                  asynchronous: true
-                  smooth: true
-                  visible: status !== Image.Error
-                }
-              }
-              ShellText { Layout.fillWidth: true; role: "strong"; elide: Text.ElideRight; text: summary.length > 0 ? summary : text }
-              ShellText { role: "subtle"; text: time }
-              Rectangle {
-                width: theme.barItemSize
-                height: theme.barItemSize
-                radius: theme.radiusTiny
-                color: dismissMouse.containsMouse ? theme.border : theme.transparent
-                Text { anchors.centerIn: parent; color: theme.textSoft; font.family: theme.fontFamily; font.pixelSize: theme.fontSm; text: "󰅖" }
-                MouseArea { id: dismissMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { mouse.accepted = true; notificationCenter.shellRoot.dismissNotification(notificationDelegate.notificationIndex) } }
-              }
+            app: notificationDelegate.app
+            appIcon: notificationDelegate.appIcon
+            image: notificationDelegate.image
+            summary: notificationDelegate.summary.length > 0 ? notificationDelegate.summary : notificationDelegate.text
+            body: notificationDelegate.body
+            time: notificationDelegate.time
+            actionsText: notificationDelegate.actionsText
+            expanded: notificationDelegate.expanded
+            liveActions: notificationDelegate.liveActions
+            showActions: notificationDelegate.expanded && (notificationDelegate.actionsText.length > 0 || notificationDelegate.desktopEntry.length > 0 || notificationDelegate.app.length > 0)
+            selected: notificationDelegate.expanded
+            tooltipState: notificationCenter.shellRoot
+            onCloseRequested: notificationCenter.shellRoot.dismissNotification(notificationDelegate.notificationIndex)
+            onOpenRequested: {
+              if (notificationDelegate.expanded)
+                notificationCenter.shellRoot.focusNotificationApp(notificationDelegate.notificationIndex)
+              else
+                notificationCenter.shellRoot.selectedNotificationIndex = notificationDelegate.notificationIndex
             }
-
-            Text {
-              Layout.fillWidth: true
-              visible: !notificationDelegate.expanded && body.length > 0
-              color: theme.textSoft
-              elide: Text.ElideRight
-              font.family: theme.fontFamily
-              font.pixelSize: theme.fontSm
-              maximumLineCount: 1
-              wrapMode: Text.NoWrap
-              text: body
-            }
-
-            Text {
-              Layout.fillWidth: true
-              visible: notificationDelegate.expanded && body.length > 0
-              color: theme.textSoft
-              elide: notificationDelegate.expanded ? Text.ElideNone : Text.ElideRight
-              font.family: theme.fontFamily
-              font.pixelSize: theme.fontSm
-              maximumLineCount: notificationDelegate.expanded ? 8 : 1
-              wrapMode: notificationDelegate.expanded ? Text.Wrap : Text.NoWrap
-              text: notificationDelegate.expanded ? (body.length > 0 ? body : text) : body
-            }
-
-            Image {
-              Layout.preferredWidth: 96
-              Layout.preferredHeight: 64
-              Layout.maximumWidth: 96
-              Layout.maximumHeight: 64
-              visible: notificationDelegate.expanded && image.length > 0 && status !== Image.Error
-              source: notificationCenter.shellRoot.notificationImageSource(image)
-              fillMode: Image.PreserveAspectFit
-              asynchronous: true
-              smooth: true
-            }
-
-            RowLayout {
-              Layout.fillWidth: true
-              visible: notificationDelegate.expanded && (actionsText.length > 0 || desktopEntry.length > 0 || app.length > 0)
-              spacing: theme.spacingMd
-
-              ShellActionButton { icon: "󰍉"; label: "App"; minWidth: 72; tooltip: "Focus source app"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.focusNotificationApp(notificationDelegate.notificationIndex) }
-
-              Repeater {
-                model: liveActions && actionsText.length > 0 ? actionsText.split(" | ") : []
-
-                delegate: ShellActionButton {
-                  required property string modelData
-                  required property int index
-
-                  icon: "󰐊"
-                  label: modelData
-                  minWidth: 88
-                  Layout.maximumWidth: 150
-                  tooltip: "Run notification action: " + modelData
-                  tooltipState: notificationCenter.shellRoot
-                  onTriggered: notificationCenter.shellRoot.invokeNotificationAction(notificationDelegate.notificationIndex, index)
-                }
-              }
-            }
+            onActionRequested: index => notificationCenter.shellRoot.invokeNotificationAction(notificationDelegate.notificationIndex, index)
           }
         }
       }

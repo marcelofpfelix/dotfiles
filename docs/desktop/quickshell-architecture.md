@@ -11,13 +11,14 @@ This shell stays small by keeping ownership boring and visible.
 - `ShellConfigData.qml` owns static ids, menu sizes, menu rows, labels, and command data.
 - `ShellConfig.qml` owns helper functions that turn config data into commands.
 - `ShellTheme.qml` owns fonts, colors, spacing, radii, and shared dimensions.
+- `~/.local/state/quickshell/marcelof/settings.json` owns user-selected shell theme state such as primary color, density, weather location, wallpaper path, and fixed appearance/font tokens.
 - `desktop/lib/lib_qs_menus.sh` owns the shell menu registry for scripts.
-- `desktop/bin/qs-bar` owns Quickshell lifecycle and IPC entrypoints.
+- `desktop/bin/qbar` owns Quickshell lifecycle and IPC entrypoints.
 - `desktop/tools/*` owns validation, screenshots, smoke tests, and agent-only checks.
 
 ## IPC Direction
 
-The current shell is Quickshell-owned and scriptable through `qs-bar`, but its
+The current shell is Quickshell-owned and scriptable through `qbar`, but its
 canonical control target is still mostly `bar` plus a few panel-specific IPC
 targets. The next improvement is a small local `shell` IPC target that routes
 `ping`, `toggle`, `hide`, and `summon` to existing menus. Do not copy a full
@@ -38,7 +39,7 @@ X11-era files stay under `archive/x11/desktop/` or `archive/obsolete/desktop/` w
 
 ## Reference Rule
 
-Use reference repos for behavior, layout patterns, and small implementation ideas. Do not import upstream-branded binaries, broad framework rewrites, distro update machinery, or assumptions that fight the default i3-compatible profile.
+Use reference repos for behavior, layout patterns, and small implementation ideas. Upstream runtime command names are allowed only when they remove local glue and stay wrapped by local entrypoints such as `qbar`. Do not import broad framework rewrites, distro update machinery, or assumptions that fight the default i3-compatible profile.
 
 ## Do Not Abstract
 

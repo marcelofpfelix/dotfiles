@@ -114,80 +114,20 @@ Item {
     anchor.rect.x: Math.max(8, overlays.anchorWindow.width - implicitWidth - 10)
     anchor.rect.y: overlays.anchorWindow.height + 6
 
-    Rectangle {
+    ShellNotificationCard {
       id: toastCard
       width: parent.width
-      implicitHeight: Math.max(96, toastColumn.implicitHeight + 20)
-      radius: theme.radius
-      color: theme.surface
-      border.color: theme.primary
-      border.width: 1
-
-      MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: {
-          overlays.shellRoot.notificationToastOpen = false
-          overlays.shellRoot.notificationCenterOpen = true
-        }
-      }
-
-      ColumnLayout {
-        id: toastColumn
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.margins: theme.paddingMd
-        spacing: theme.spacingSm
-
-        RowLayout {
-          Layout.fillWidth: true
-          spacing: theme.spacingLg
-          Item {
-            Layout.preferredWidth: 34
-            Layout.preferredHeight: 34
-
-            Image {
-              id: toastIconImage
-              anchors.fill: parent
-              source: overlays.shellRoot.notificationImageSource(overlays.shellRoot.notificationToastImage.length > 0 ? overlays.shellRoot.notificationToastImage : overlays.shellRoot.notificationToastAppIcon)
-              sourceSize.width: 34 * Screen.devicePixelRatio
-              sourceSize.height: 34 * Screen.devicePixelRatio
-              fillMode: Image.PreserveAspectFit
-              asynchronous: true
-              smooth: true
-              visible: source.length > 0 && status !== Image.Error
-            }
-
-            Text { anchors.centerIn: parent; visible: toastIconImage.status !== Image.Ready; color: theme.warning; font.family: theme.fontFamily; font.pixelSize: theme.fontXl; text: "󰂚" }
-          }
-          ShellText { Layout.fillWidth: true; role: "strong"; elide: Text.ElideRight; text: overlays.shellRoot.notificationToastApp }
-          ShellText { role: "subtle"; text: "now" }
-        }
-
-        Text {
-          Layout.fillWidth: true
-          color: theme.text
-          elide: Text.ElideNone
-          font.family: theme.fontFamily
-          font.styleName: theme.fontStyle
-          font.pixelSize: theme.fontLg
-          maximumLineCount: 2
-          wrapMode: Text.Wrap
-          text: overlays.shellRoot.notificationToastSummary
-        }
-
-        Text {
-          Layout.fillWidth: true
-          visible: overlays.shellRoot.notificationToastBody.length > 0
-          color: theme.textSoft
-          elide: Text.ElideNone
-          font.family: theme.fontFamily
-          font.pixelSize: theme.fontMd
-          maximumLineCount: 4
-          wrapMode: Text.Wrap
-          text: overlays.shellRoot.notificationToastBody
-        }
+      app: overlays.shellRoot.notificationToastApp
+      appIcon: overlays.shellRoot.notificationToastAppIcon
+      image: overlays.shellRoot.notificationToastImage
+      summary: overlays.shellRoot.notificationToastSummary
+      body: overlays.shellRoot.notificationToastBody
+      time: "now"
+      selected: true
+      onCloseRequested: overlays.shellRoot.notificationToastOpen = false
+      onOpenRequested: {
+        overlays.shellRoot.notificationToastOpen = false
+        overlays.shellRoot.notificationCenterOpen = true
       }
     }
   }

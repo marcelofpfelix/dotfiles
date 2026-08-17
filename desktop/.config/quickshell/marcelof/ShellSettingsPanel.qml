@@ -84,7 +84,9 @@ ShellPopup {
           }
         }
       }
-      Text { Layout.fillWidth: true; color: theme.textSubtle; wrapMode: Text.Wrap; font.family: theme.fontFamily; font.pixelSize: theme.fontSm; text: "Favorites: " + settingsPanel.shellSettings.favoriteAppIds.length + "  Hidden apps: " + settingsPanel.shellSettings.hiddenAppIds.length + "  Weather: " + settingsPanel.shellSettings.weatherLocation }
+      Text { Layout.fillWidth: true; color: theme.textSubtle; wrapMode: Text.Wrap; font.family: theme.fontFamily; font.pixelSize: theme.fontSm; text: "Theme: " + settingsPanel.shellSettings.appearanceMode + "  Font: " + settingsPanel.shellSettings.fontToken + "  Primary: " + settingsPanel.shellSettings.primaryColor }
+      Text { Layout.fillWidth: true; color: theme.textSubtle; wrapMode: Text.Wrap; font.family: theme.fontFamily; font.pixelSize: theme.fontSm; text: "Wallpaper: " + (settingsPanel.shellSettings.wallpaperPath.length > 0 ? settingsPanel.shellSettings.wallpaperPath.split("/").pop() : "default") + "  Weather: " + settingsPanel.shellSettings.weatherLocation }
+      Text { Layout.fillWidth: true; color: theme.textSubtle; wrapMode: Text.Wrap; font.family: theme.fontFamily; font.pixelSize: theme.fontSm; text: "Favorites: " + settingsPanel.shellSettings.favoriteAppIds.length + "  Hidden apps: " + settingsPanel.shellSettings.hiddenAppIds.length }
       ShellActionButton { Layout.fillWidth: true; icon: "󰄬"; label: "Clear Hidden Apps"; active: settingsPanel.shellSettings.hiddenAppIds.length > 0; tooltip: "Clear hidden launcher apps"; tooltipState: settingsPanel.shellRoot; onTriggered: { settingsPanel.shellSettings.hiddenAppIds = []; settingsPanel.shellRoot.rebuildLauncher() } }
   }
 }
