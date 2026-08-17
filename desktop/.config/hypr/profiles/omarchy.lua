@@ -10,8 +10,8 @@ end
 
 local terminal = bin("hypr-term")
 local launcher = bin("qbar") .. " launcher"
-local quickshell_cmd = "env QT_QUICK_BACKEND=software " .. home .. "/.nix-profile/bin/quickshell --path " .. home .. "/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize"
-local board_run_cmd = "pgrep -fx " .. string.format("%q", home .. "/bin/board --config " .. home .. "/.config/board/board.toml run") .. " >/dev/null 2>&1 || " .. home .. "/bin/board --config " .. home .. "/.config/board/board.toml run"
+local quickshell_cmd = common.quickshell_cmd(home)
+local board_run_cmd = common.board_run_cmd(home)
 
 local function sh(cmd)
   return hl.dsp.exec_cmd(cmd)
