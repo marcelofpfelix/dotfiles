@@ -443,7 +443,7 @@ Do these in this order; each task should leave one small validation command behi
 
 ## Automation helpers
 
-- `desktop/tools/desktop-accept` applies dotfiles, reloads Quickshell, runs Hyprland smoke, runs full Quickshell menu smoke, and finishes with `desktop/tools/desktop-doctor`.
+- `desktop/tools/desktop-accept` runs static script checks, validates `quickshell-repeat-audit`, checks all Hyprland profiles including `profiles/common.lua`, runs QML lint and the repeat audit, applies dotfiles, reloads Quickshell, runs Hyprland smoke, runs menu smoke, and finishes with `desktop/tools/desktop-doctor`.
 - `desktop-startup-report` prints Hyprland startup commands, autostart desktop files, running user services, and the current Quickshell instance.
 
 ## Notes
@@ -709,7 +709,7 @@ Task source: latest local review request. Priority is code repetition and simple
   - Sources: local repetition audit, current `ShellTheme.qml`/`ShellConfigData.qml` split.
   - Acceptance: the audit has an allowlist for intentional repeats and fails on new repeated literals outside theme/config/component primitives.
   - Validation: `ruby -c desktop/tools/quickshell-repeat-audit`, `desktop/tools/quickshell-repeat-audit`, temporary non-allowlisted repeat fixture.
-  - Current behavior: repeated literals are printed as `allowed` or `BLOCK`; the script exits 1 on any non-allowlisted repeated literal and exits 0 for the current intentional repeats.
+  - Current behavior: repeated literals are printed as `allowed` or `BLOCK`; the script exits 1 on any non-allowlisted repeated literal and exits 0 for the current intentional repeats. `desktop/tools/desktop-accept` now syntax-checks and runs this audit before applying and reloading the desktop.
 
 - [x] P0: Finish the QML config boundary.
   - Sources: Caelestia config/state split, surface-dots config file layout, current `ShellConfig.qml`/`ShellConfigData.qml`.
