@@ -18,12 +18,12 @@ This shell stays small by keeping ownership boring and visible.
 
 ## IPC Direction
 
-The current shell is Quickshell-owned and scriptable through `qbar`, but its
-canonical control target is still mostly `bar` plus a few panel-specific IPC
-targets. The next improvement is a small local `shell` IPC target that routes
-`ping`, `toggle`, `hide`, and `summon` to existing menus. Do not copy a full
-third-party plugin manager until local built-in menu/widget routing is too
-large to keep declarative.
+The current shell is Quickshell-owned and scriptable through `qbar`. The
+canonical menu control target is `shell`: `ping`, `toggle`, `hide`, and
+`summon` route through one panel lifecycle and the shared menu registry. Keep
+older `bar` and panel-specific IPC calls only where they are already stable
+compatibility shims. Do not copy a full third-party plugin manager until local
+built-in menu/widget routing is too large to keep declarative.
 
 ## Boundaries
 
