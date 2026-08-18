@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:$PATH"
+
+quiet=0
+if [[ ${1:-} == "-q" ]]; then
+  quiet=1
+  shift
+fi
+
+usage() {
+  printf "use: omarchy-shell [-q] shell <ping|toggle|summon|hide|listMenus|closePanels> [args...]\n" >&2
+}
+
+if [[ ${1:-} == "-h" || ${1:-} == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if (( $# < 2 )); then
+  usage
+  exit 2
+fi
+
+target=$1
+method=$2
+shift 2
+
+case "$target:$method" in
+  shell:toggle|shell:summon)
+    if (( $# == 1 )); then
+      set -- "$1" "{}"
+    fi
+    ;;
+  shell:*)
+    ;;
+  notifications:toggleDnd)
+    target=shell
+    method=toggle
+    set -- dnd "{}"
+    ;;
+  *)
+    (( quiet )) && exit 0
+    printf "omarchy-shell: unsupported local target %s %s\n" "$target" "$method" >&2
+    exit 2
+    ;;
+esac
+
+if (( quiet )); then
+  exec qbar -q "$target" "$method" "$@"
+fi
+exec qbar "$target" "$method" "$@"

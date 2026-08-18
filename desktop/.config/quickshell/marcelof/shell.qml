@@ -507,6 +507,7 @@ ShellRoot {
     const menu = root.shellMenuId(id)
     switch (menu) {
     case "bar": return !root.barHidden
+    case "menu":
     case "launcher":
     case "apps": return launcher.panelOpen
     case "clipboard":
@@ -525,6 +526,7 @@ ShellRoot {
     case "screen": return root.screenPanelOpen
     case "wallpaper":
     case "wall": return root.wallpaperPanelOpen
+    case "clock":
     case "calendar":
     case "time": return root.calendarOpen
     case "work-inbox":
@@ -550,6 +552,7 @@ ShellRoot {
     case "all":
     case "panels": root.closeTransientPanels(); return true
     case "bar": root.barHidden = true; return true
+    case "menu":
     case "launcher":
     case "apps": root.hideLauncher(); return true
     case "clipboard":
@@ -568,6 +571,7 @@ ShellRoot {
     case "screen": root.screenPanelOpen = false; return true
     case "wallpaper":
     case "wall": root.wallpaperPanelOpen = false; return true
+    case "clock":
     case "calendar":
     case "time": root.calendarOpen = false; return true
     case "work-inbox":
@@ -591,6 +595,7 @@ ShellRoot {
     const menu = root.shellMenuId(id)
     switch (menu) {
     case "bar": root.barHidden = !root.barHidden; return true
+    case "menu":
     case "launcher":
     case "apps": root.toggleLauncher(); return true
     case "clipboard":
@@ -614,6 +619,7 @@ ShellRoot {
     case "screen": root.toggleScreenPanel(); return true
     case "wallpaper":
     case "wall": root.toggleWallpaperPanel(); return true
+    case "clock":
     case "calendar":
     case "time": root.toggleCalendar(); return true
     case "work-inbox":

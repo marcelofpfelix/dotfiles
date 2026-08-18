@@ -22,6 +22,7 @@ ALLOWLIST = {
     '"keys"',
     '"launcher"',
     '"media"',
+    '"menu"',
     '"network"',
     '"notifications"',
     '"passmenu"',

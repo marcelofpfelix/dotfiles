@@ -388,7 +388,7 @@ check_notification_smoke_status() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys hypr-term qbar qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app notificationctl reminderctl work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
+for cmd in hypr-session hypr-keys hypr-term qbar omarchy-shell qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app notificationctl reminderctl work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes

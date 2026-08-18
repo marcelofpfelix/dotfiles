@@ -1108,3 +1108,22 @@ Claim rule: complete one task at a time. Keep `default` i3-compatible, keep `oma
   - Dependencies: none.
   - Validation: `rg -n "Reference|MIT|attribution|Omarchy" docs/desktop`.
   - Current behavior: `docs/desktop/wayland.md` records the upstream attribution policy and keeps runtime names behind local entrypoints such as `qbar`.
+
+- [x] P0: Add a minimal Omarchy shell IPC compatibility shim.
+  - Sources: Omarchy quattro `bin/omarchy-shell`, `docs/omarchy-shell.md`, and `manual/32-shell-plugins.md`.
+  - Acceptance: `omarchy-shell shell ping`, `omarchy-shell shell toggle omarchy.menu`, and `omarchy-shell shell toggle omarchy.clock` route through the local `qbar` IPC. Unsupported direct plugin targets fail clearly instead of opening the wrong local menu.
+  - Dependencies: reuse the existing local Quickshell process and `qbar`; do not add a plugin loader yet.
+  - Validation: `bash -n desktop/bin/omarchy-shell desktop/bin/qbar`, `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `omarchy-shell -q shell ping`, and live menu toggle/hide checks after `home -y` and `qbar reload`.
+  - Current behavior: `omarchy.menu` aliases the local launcher, `omarchy.clock` aliases the local calendar, and `notifications toggleDnd` maps to the existing DND toggle.
+
+- [ ] P0: Add read-only Omarchy plugin manifest review.
+  - Sources: Omarchy plugin manifest schema in `manual/32-shell-plugins.md`.
+  - Acceptance: a local review command validates `manifest.json`, lists kinds and entry points, warns that plugin QML is unsandboxed, and leaves plugins disabled by default.
+  - Dependencies: no installer side effects and no runtime plugin execution in this task.
+  - Validation: manifest fixtures for one valid and one invalid plugin plus `desktop/tools/desktop-doctor`.
+
+- [ ] P1: Add explicit local adapters for useful Omarchy plugin IPC targets.
+  - Sources: Omarchy `docs/omarchy-shell.md` target list and local `qbar shell` target.
+  - Acceptance: only targets backed by existing local state get adapters; unsupported targets keep failing clearly.
+  - Dependencies: reuse `qbar` and existing Quickshell IPC handlers.
+  - Validation: wrapper self-tests and live `qbar shell ping`.
