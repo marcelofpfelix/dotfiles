@@ -1136,3 +1136,40 @@ Claim rule: complete one task at a time. Keep `default` i3-compatible, keep `oma
   - Dependencies: reuse `omarchy-plugin-review`; no loader, no sudo, no shell reload, no enable state.
   - Validation: `omarchy-plugin-add self-test`, `bash -n desktop/bin/omarchy-plugin-add`, and `desktop/tools/desktop-doctor`.
   - Current behavior: `omarchy-plugin-add --yes <plugin-dir-or-git-url>` copies or clones into a temporary staging directory, validates, refuses id collisions, and moves the reviewed plugin into the Omarchy-compatible user plugin directory. `--enable` is accepted only to explain that enable is skipped until local plugin loading exists.
+
+## 2026-08-18 Omarchy Quickshell Replacement Audit
+
+Snapshot: `/tmp/omarchy-quattro`, branch `quattro`, refreshed with `git pull --ff-only`; last observed commit `f32ebbd`. Local shell summary: `desktop/.config/quickshell/marcelof` has about 6.1k QML lines, with `shell.qml` still about 1.8k lines. Omarchy's comparable shell is larger overall, but its structure is better separated: root shell, shared `Ui/` primitives, plugin registry, panel loader, bar widget registry, and first-party plugins.
+
+Use this pass to replace local custom glue only where Omarchy's structure makes this repo smaller or less duplicated. Do not copy the full shell.
+
+- [ ] P0: Replace local menu lifecycle glue with a built-in panel registry.
+  - Sources: Omarchy `shell/shell.qml` `summon`, `hide`, `toggle`, `panelEntries`, and `Ui/Panel.qml`; local `shell.qml` `closeTransientPanels`, `shellMenuOpen`, `hideShellMenu`, `toggleShellMenu`, and `openShellMenu`.
+  - Acceptance: one registry maps built-in menu id, aliases, open property, refresh callback, floating/sidebar kind, and default size. `qbar shell summon|hide|toggle <id>` keeps working, repeated hotkeys still close, and Escape/focus-grab still close floating menus.
+  - Dependencies: built-in local menus only; no third-party plugin loading or dynamic QML execution.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/*.qml`, `qbar shell listMenus`, `qbar shell toggle launcher`, `qbar shell hide launcher`, `desktop/tools/qs-menu-smoke launcher controls notifications clipboard calendar network power`, and `desktop/tools/desktop-doctor`.
+  - Stop conditions: stop if the registry becomes code generation or requires replacing all panels in one diff.
+
+- [ ] P0: Fold popup lifecycle into shared local panel primitives.
+  - Sources: Omarchy `shell/Ui/Panel.qml` and `shell/Ui/PanelController.qml`; local `ShellPopup.qml`, `ShellFloatingPopup.qml`, and `ShellPanel.qml`.
+  - Acceptance: sidebar and floating menus expose the same `open`, `close`, `hide`, `show`, `toggle`, and optional IPC lifecycle. Individual panels should not need their own IPC handlers unless they have custom arguments such as passmenu mode or web-search site.
+  - Dependencies: reuse current `PopupWindow`, `FloatingWindow`, and `HyprlandFocusGrab`; do not change visual layout in this task.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellPopup.qml desktop/.config/quickshell/marcelof/ShellFloatingPopup.qml desktop/.config/quickshell/marcelof/*.qml` and manual double-toggle checks for `Win+D`, `Win+,`, `Win+/`, and `Win+Ctrl+A`.
+
+- [ ] P1: Consolidate menu metadata into one local data shape.
+  - Sources: Omarchy manifest and `shell.json` layout idea; local `ShellConfigData.qml.menuIds/menuSizes`, `desktop/lib/lib_qs_menus.sh`, `desktop/bin/qbar`, and `desktop/tools/qs-menu-smoke`.
+  - Acceptance: menu id, aliases, display label, smoke name, default size, and command routing are no longer maintained in several unrelated switch statements. Keep separate Bash and QML maps only where crossing the boundary would add more code than it removes.
+  - Dependencies: no new parser dependency; `jq` is allowed only for existing JSON checks.
+  - Validation: `bash -n desktop/bin/qbar desktop/lib/lib_qs_menus.sh desktop/tools/qs-menu-smoke`, `qbar list-menus`, and `desktop/tools/qs-menu-smoke --list`.
+
+- [ ] P1: Defer Omarchy bar widget registry until menu lifecycle is simpler.
+  - Sources: Omarchy `plugins/bar/Bar.qml`, `BarModel.js`, widget manifests, and shared `Ui/BarWidget.qml`; local `ShellBar.qml` and `board render --watch quickshell quickshell-bar`.
+  - Acceptance: document exact bar widgets that would become registry-backed, but do not replace `ShellBar.qml` until a focused diff removes real duplication. `board` remains the status renderer for health checks and personal dashboard data.
+  - Dependencies: first finish built-in menu registry; avoid a plugin layout editor unless the user asks for draggable/reorderable bar widgets.
+  - Validation: docs-only until implementation starts; then `qmllint ShellBar.qml` and `desktop/tools/qs-menu-smoke controls media notifications`.
+
+- [ ] P2: Keep local notification/media behavior while borrowing only small Omarchy UI ideas.
+  - Sources: Omarchy `plugins/notifications/Service.qml`, `plugins/notifications/components/NotificationCard.qml`, `plugins/services/media/Service.qml`, and `plugins/panels/audio/Panel.qml`; local `ShellNotificationCard.qml`, `ShellNotificationCenter.qml`, `ShellMediaPanel.qml`, and `audioctl`.
+  - Acceptance: notification history, action routing, DND, and helper-owned audio boundaries stay local. Only copy layout/service splits that reduce duplicated QML or fix a visible bug.
+  - Dependencies: do not let MPRIS/player controls pause Google Meet/browser capture sessions unless explicitly requested.
+  - Validation: `desktop/tools/desktop-notification-smoke actions routing`, `audioctl self-test`, `desktop/tools/qs-menu-smoke notifications media`, and a manual Meet call safety check when audio control behavior changes.

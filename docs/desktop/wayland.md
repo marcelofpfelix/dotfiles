@@ -68,6 +68,26 @@ Use `omarchy-plugin-review <plugin-dir>` before enabling any third-party plugin.
 
 Use `omarchy-plugin-add --yes <plugin-dir-or-git-url>` only to stage a reviewed plugin under `~/.config/omarchy/plugins/<id>`. It does not enable or execute plugin QML.
 
+### Omarchy replacement audit
+
+Snapshot: `/tmp/omarchy-quattro` on branch `quattro`, refreshed with `git pull --ff-only` on 2026-08-18, commit `f32ebbd`.
+
+The useful Omarchy pattern is organization, not a full shell copy. Omarchy keeps a long-running Quickshell root with a `shell` IPC target, manifest-backed plugins, a small shared `Ui/Panel.qml` lifecycle wrapper, and shared bar/panel button primitives. The local shell already has matching behavior through `qbar shell ...`, `ShellFloatingPopup.qml`, `ShellPopup.qml`, `ShellPanel.qml`, and existing menu components, but `shell.qml` still owns too much menu routing and per-panel open state.
+
+Good replacement candidates:
+
+- Replace local per-panel open/hide/toggle booleans and switch statements with an Omarchy-style built-in panel registry. This should shrink `shell.qml` without enabling third-party QML.
+- Move menu ids, display names, IPC aliases, sizes, and smoke-test names into one local registry shape. Keep QML as the source for UI sizes; do not generate code unless repeated drift returns.
+- Adapt Omarchy-style `Ui/Panel.qml` lifecycle semantics into the existing `ShellPopup.qml` and `ShellFloatingPopup.qml` instead of copying every panel.
+- Borrow Omarchy bar widget registry ideas only after local menu routing is simpler. `ShellBar.qml` is smaller than Omarchy's bar and already delegates status rendering to `board`.
+- Keep local notification and media behavior. Omarchy has useful card/service structure, but local notifications already persist history and local media intentionally avoids pausing Google Meet/browser audio.
+
+Not replacement candidates:
+
+- Do not replace secure lock, idle, or polkit with copied QML in this repo. Quickshell may own visible buttons and IPC, but privileged behavior stays delegated to real system services.
+- Do not import Omarchy installer, update, Arch package, snapshot, or distro policy flows.
+- Do not enable staged third-party Omarchy plugins until a first-party-only registry proves it reduces local code and has a clear rollback path.
+
 ## Menu testing
 
 Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. See [`hotkeys-omarchy-compat.md`](hotkeys-omarchy-compat.md) for the Omarchy manual category comparison and adopted profile-only shortcuts. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `desktop/tools/qs-menu-smoke wallpaper media notifications` for targeted visual checks, `desktop/tools/qs-menu-smoke` for the full popup set, `desktop/tools/qs-menu-smoke --open` to capture and open the contact sheet, or `desktop/tools/qs-menu-smoke --inspect` to send the current contact sheet plus the previous run when present to `codex exec --image` for visual comparison.
