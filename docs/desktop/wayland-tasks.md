@@ -1129,3 +1129,10 @@ Claim rule: complete one task at a time. Keep `default` i3-compatible, keep `oma
   - Dependencies: reuse `qbar` and existing Quickshell IPC handlers.
   - Validation: `omarchy-shell self-test`, `omarchy-shell shell ping`, `omarchy-shell notifications dndState`, `omarchy-shell omarchy.clock toggle`, `omarchy-shell omarchy.clock hide`, `omarchy-shell media status`, and `desktop/tools/desktop-doctor`.
   - Current behavior: direct panel targets with `open`, `show`, `summon`, `close`, `hide`, `toggle`, `ping`, and `refresh` map to existing local menus for menu, clock, audio, network, power, clipboard, notifications, weather, and monitor. Notifications map DND state/toggle/set, history, and clear. Media maps helper-owned audio status/play/pause/playPause only, so browser/Meet audio remains untouched. Lock maps `lock` and reports `false` for status because local locking stays delegated.
+
+- [x] P1: Add safe Omarchy plugin staging without execution.
+  - Sources: Omarchy `omarchy-plugin-add` staging flow and local `omarchy-plugin-review`.
+  - Acceptance: a plugin directory or git URL can be staged into `~/.config/omarchy/plugins/<id>` only after manifest review. The command warns that plugins are unsandboxed and does not enable or run plugin QML.
+  - Dependencies: reuse `omarchy-plugin-review`; no loader, no sudo, no shell reload, no enable state.
+  - Validation: `omarchy-plugin-add self-test`, `bash -n desktop/bin/omarchy-plugin-add`, and `desktop/tools/desktop-doctor`.
+  - Current behavior: `omarchy-plugin-add --yes <plugin-dir-or-git-url>` copies or clones into a temporary staging directory, validates, refuses id collisions, and moves the reviewed plugin into the Omarchy-compatible user plugin directory. `--enable` is accepted only to explain that enable is skipped until local plugin loading exists.

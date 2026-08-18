@@ -66,6 +66,8 @@ This does not make upstream Omarchy plugins drop-in compatible yet. Drop-in plug
 
 Use `omarchy-plugin-review <plugin-dir>` before enabling any third-party plugin. It validates the manifest, rejects symlinks and unsafe entry points, and reminds that plugin QML is unsandboxed.
 
+Use `omarchy-plugin-add --yes <plugin-dir-or-git-url>` only to stage a reviewed plugin under `~/.config/omarchy/plugins/<id>`. It does not enable or execute plugin QML.
+
 ## Menu testing
 
 Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. See [`hotkeys-omarchy-compat.md`](hotkeys-omarchy-compat.md) for the Omarchy manual category comparison and adopted profile-only shortcuts. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `desktop/tools/qs-menu-smoke wallpaper media notifications` for targeted visual checks, `desktop/tools/qs-menu-smoke` for the full popup set, `desktop/tools/qs-menu-smoke --open` to capture and open the contact sheet, or `desktop/tools/qs-menu-smoke --inspect` to send the current contact sheet plus the previous run when present to `codex exec --image` for visual comparison.
