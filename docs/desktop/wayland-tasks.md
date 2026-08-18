@@ -1123,8 +1123,9 @@ Claim rule: complete one task at a time. Keep `default` i3-compatible, keep `oma
   - Validation: `omarchy-plugin-review self-test`, `omarchy-plugin-review --first-party /tmp/omarchy-quattro/shell/plugins/panels/clock`, and `desktop/tools/desktop-doctor`.
   - Current behavior: `omarchy-plugin-review` validates manifest schema, id/name/version, supported kinds, safe relative entry points, entry point files, missing symlinks, and reserved `omarchy.*` ids unless `--first-party` is explicit. It prints a short plugin summary and never executes plugin code.
 
-- [ ] P1: Add explicit local adapters for useful Omarchy plugin IPC targets.
+- [x] P1: Add explicit local adapters for useful Omarchy plugin IPC targets.
   - Sources: Omarchy `docs/omarchy-shell.md` target list and local `qbar shell` target.
   - Acceptance: only targets backed by existing local state get adapters; unsupported targets keep failing clearly.
   - Dependencies: reuse `qbar` and existing Quickshell IPC handlers.
-  - Validation: wrapper self-tests and live `qbar shell ping`.
+  - Validation: `omarchy-shell self-test`, `omarchy-shell shell ping`, `omarchy-shell notifications dndState`, `omarchy-shell omarchy.clock toggle`, `omarchy-shell omarchy.clock hide`, `omarchy-shell media status`, and `desktop/tools/desktop-doctor`.
+  - Current behavior: direct panel targets with `open`, `show`, `summon`, `close`, `hide`, `toggle`, `ping`, and `refresh` map to existing local menus for menu, clock, audio, network, power, clipboard, notifications, weather, and monitor. Notifications map DND state/toggle/set, history, and clear. Media maps helper-owned audio status/play/pause/playPause only, so browser/Meet audio remains untouched. Lock maps `lock` and reports `false` for status because local locking stays delegated.

@@ -467,7 +467,8 @@ run_required calendar-agenda-status-self-test calendar-agenda-status self-test
 run_required calendar-sync-status-self-test calendar-sync-status self-test
 run_required calendar-sync-status calendar-sync-status status
 
-section "omarchy plugin review"
+section "omarchy compatibility"
+run_required omarchy-shell-self-test omarchy-shell self-test
 run_required omarchy-plugin-review-self-test omarchy-plugin-review self-test
 
 section "screen share"

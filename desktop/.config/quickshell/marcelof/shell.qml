@@ -1502,6 +1502,16 @@ ShellRoot {
 
     function ping(): string { return "ok" }
     function listMenus(): string { return JSON.stringify(shellConfig.menuIds) }
+    function dndState(): string { return shellSettings.doNotDisturb ? "on" : "off" }
+    function isDnd(): string { return dndState() }
+    function toggleDnd(): string { root.toggleDnd(); return dndState() }
+    function setDnd(value: string): string {
+      const v = String(value || "").toLowerCase()
+      shellSettings.doNotDisturb = v === "true" || v === "1" || v === "on" || v === "yes"
+      if (shellSettings.doNotDisturb)
+        root.notificationToastOpen = false
+      return dndState()
+    }
     function toggle(id: string, payloadJson: string): string { return root.toggleShellMenu(id, payloadJson) ? "ok" : "unknown" }
     function hide(id: string): string { return root.hideShellMenu(id) ? "ok" : "unknown" }
     function summon(id: string, payloadJson: string): string { return root.openShellMenu(id, payloadJson) ? "ok" : "unknown" }
