@@ -21,6 +21,52 @@ ShellRoot {
   function menuHeightFor(id) { return root.menuSize(id).height }
   function menuCompactHeightFor(id) { return root.menuSize(id).compactHeight }
 
+  readonly property var shellMenuAliases: ({
+    menu: "launcher",
+    apps: "launcher",
+    clip: "clipboard",
+    passwords: "passmenu",
+    web: "websearch",
+    keys: "keybindings",
+    "tray-manage": "tray",
+    audio: "media",
+    wall: "wallpaper",
+    clock: "calendar",
+    time: "calendar",
+    work: "work-inbox",
+    workInbox: "work-inbox",
+    dashboard: "personal-dashboard",
+    personal: "personal-dashboard",
+    personalDashboard: "personal-dashboard",
+    net: "network",
+    session: "power",
+    inhibit: "stay-awake"
+  })
+
+  readonly property var shellMenuRegistry: ({
+    clipboard: { openProperty: "clipboardOpen", toggle: "toggleClipboard" },
+    passmenu: { openProperty: "passMenuOpen", toggle: "togglePassmenu" },
+    websearch: { openProperty: "webSearchOpen", toggle: "toggleDefaultWebSearch" },
+    keybindings: { openProperty: "keybindingsOpen", refresh: "refreshKeybindings" },
+    tray: { openProperty: "trayManageOpen" },
+    controls: { openProperty: "controlPanelOpen", refresh: "refreshControls" },
+    media: { openProperty: "mediaPanelOpen", refresh: "refreshAudioState" },
+    screen: { openProperty: "screenPanelOpen", refresh: "refreshScreenState" },
+    wallpaper: { openProperty: "wallpaperPanelOpen", refresh: "refreshWallpapers" },
+    calendar: { openProperty: "calendarOpen", refresh: "refreshCalendar" },
+    "work-inbox": { openProperty: "workInboxOpen", refresh: "refreshWorkInbox" },
+    "personal-dashboard": { openProperty: "personalDashboardOpen", refresh: "refreshPersonalDashboard" },
+    settings: { openProperty: "settingsOpen" },
+    notifications: { openProperty: "notificationCenterOpen" },
+    network: { openProperty: "networkPanelOpen", refresh: "refreshNetwork" },
+    power: { openProperty: "powerMenuOpen", refresh: "refreshPower", hide: "hidePowerMenu" }
+  })
+
+  readonly property var shellActionRegistry: ({
+    dnd: "toggleDnd",
+    "stay-awake": "toggleIdleInhibit"
+  })
+
   function toggleLauncher() {
     launcher.panelOpen = !launcher.panelOpen
     if (launcher.panelOpen) {
@@ -472,174 +518,100 @@ ShellRoot {
 
   function closeTransientPanels() {
     root.hideLauncher()
-    root.clipboardOpen = false
-    root.passMenuOpen = false
-    root.trayManageOpen = false
-    root.controlPanelOpen = false
-    root.mediaPanelOpen = false
-    root.screenPanelOpen = false
-    root.wallpaperPanelOpen = false
-    root.calendarOpen = false
-    root.workInboxOpen = false
-    root.personalDashboardOpen = false
-    root.settingsOpen = false
-    root.notificationCenterOpen = false
-    root.keybindingsOpen = false
-    root.webSearchOpen = false
-    root.networkPanelOpen = false
+    for (let menu in root.shellMenuRegistry) {
+      const entry = root.shellMenuRegistry[menu]
+      if (entry.hide && typeof root[entry.hide] === "function")
+        root[entry.hide]()
+      else if (entry.openProperty)
+        root[entry.openProperty] = false
+    }
     root.clearSessionConfirm()
-    root.powerMenuOpen = false
+  }
+
+  function runShellCallback(name) {
+    if (typeof name === "function") {
+      name()
+      return
+    }
+    const callback = String(name || "")
+    if (callback.length > 0 && typeof root[callback] === "function")
+      root[callback]()
   }
 
   function toggleTransientPanel(openProperty, onOpen) {
     const next = !root[openProperty]
     root.closeTransientPanels()
     root[openProperty] = next
-    if (next && onOpen)
-      onOpen()
+    if (next)
+      root.runShellCallback(onOpen)
   }
 
   function shellMenuId(id) {
-    return String(id || "").replace(/^omarchy[.-]/, "").replace(/_/g, "-")
+    const raw = String(id || "").replace(/^omarchy[.-]/, "").replace(/_/g, "-")
+    return root.shellMenuAliases[raw] || raw
+  }
+
+  function shellMenuEntry(id) {
+    return root.shellMenuRegistry[root.shellMenuId(id)] || null
   }
 
   function shellMenuOpen(id) {
     const menu = root.shellMenuId(id)
-    switch (menu) {
-    case "bar": return !root.barHidden
-    case "menu":
-    case "launcher":
-    case "apps": return launcher.panelOpen
-    case "clipboard":
-    case "clip": return root.clipboardOpen
-    case "passmenu":
-    case "passwords": return root.passMenuOpen
-    case "websearch":
-    case "web": return root.webSearchOpen
-    case "keybindings":
-    case "keys": return root.keybindingsOpen
-    case "tray":
-    case "tray-manage": return root.trayManageOpen
-    case "controls": return root.controlPanelOpen
-    case "media":
-    case "audio": return root.mediaPanelOpen
-    case "screen": return root.screenPanelOpen
-    case "wallpaper":
-    case "wall": return root.wallpaperPanelOpen
-    case "clock":
-    case "calendar":
-    case "time": return root.calendarOpen
-    case "work-inbox":
-    case "workInbox":
-    case "work": return root.workInboxOpen
-    case "personal-dashboard":
-    case "personalDashboard":
-    case "dashboard":
-    case "personal": return root.personalDashboardOpen
-    case "settings": return root.settingsOpen
-    case "notifications": return root.notificationCenterOpen
-    case "network":
-    case "net": return root.networkPanelOpen
-    case "power":
-    case "session": return root.powerMenuOpen
-    default: return false
-    }
+    if (menu === "bar") return !root.barHidden
+    if (menu === "launcher") return launcher.panelOpen
+    const entry = root.shellMenuEntry(menu)
+    return !!(entry && entry.openProperty && root[entry.openProperty])
   }
 
   function hideShellMenu(id) {
     const menu = root.shellMenuId(id)
-    switch (menu) {
-    case "all":
-    case "panels": root.closeTransientPanels(); return true
-    case "bar": root.barHidden = true; return true
-    case "menu":
-    case "launcher":
-    case "apps": root.hideLauncher(); return true
-    case "clipboard":
-    case "clip": root.clipboardOpen = false; return true
-    case "passmenu":
-    case "passwords": root.passMenuOpen = false; return true
-    case "websearch":
-    case "web": root.webSearchOpen = false; return true
-    case "keybindings":
-    case "keys": root.keybindingsOpen = false; return true
-    case "tray":
-    case "tray-manage": root.trayManageOpen = false; return true
-    case "controls": root.controlPanelOpen = false; return true
-    case "media":
-    case "audio": root.mediaPanelOpen = false; return true
-    case "screen": root.screenPanelOpen = false; return true
-    case "wallpaper":
-    case "wall": root.wallpaperPanelOpen = false; return true
-    case "clock":
-    case "calendar":
-    case "time": root.calendarOpen = false; return true
-    case "work-inbox":
-    case "workInbox":
-    case "work": root.workInboxOpen = false; return true
-    case "personal-dashboard":
-    case "personalDashboard":
-    case "dashboard":
-    case "personal": root.personalDashboardOpen = false; return true
-    case "settings": root.settingsOpen = false; return true
-    case "notifications": root.notificationCenterOpen = false; return true
-    case "network":
-    case "net": root.networkPanelOpen = false; return true
-    case "power":
-    case "session": root.hidePowerMenu(); return true
-    default: return false
+    if (menu === "all" || menu === "panels") {
+      root.closeTransientPanels()
+      return true
     }
+    if (menu === "bar") {
+      root.barHidden = true
+      return true
+    }
+    if (menu === "launcher") {
+      root.hideLauncher()
+      return true
+    }
+    const entry = root.shellMenuEntry(menu)
+    if (!entry) return false
+    if (entry.hide && typeof root[entry.hide] === "function")
+      root[entry.hide]()
+    else if (entry.openProperty)
+      root[entry.openProperty] = false
+    return true
   }
 
   function toggleShellMenu(id, payloadJson) {
     const menu = root.shellMenuId(id)
-    switch (menu) {
-    case "bar": root.barHidden = !root.barHidden; return true
-    case "menu":
-    case "launcher":
-    case "apps": root.toggleLauncher(); return true
-    case "clipboard":
-    case "clip": root.toggleClipboard(); return true
-    case "passmenu":
-    case "passwords":
-      if (root.passMenuOpen)
-        root.passMenuOpen = false
-      else
-        root.openPassmenu(shellConfig.actions.copy, "username", "gopass")
+    if (menu === "bar") {
+      root.barHidden = !root.barHidden
       return true
-    case "websearch":
-    case "web": root.toggleWebSearch(shellConfig.defaultWebSearchSite); return true
-    case "keybindings":
-    case "keys": root.toggleKeybindings(); return true
-    case "tray":
-    case "tray-manage": root.toggleTrayManage(); return true
-    case "controls": root.toggleControlPanel(); return true
-    case "media":
-    case "audio": root.toggleMediaPanel(); return true
-    case "screen": root.toggleScreenPanel(); return true
-    case "wallpaper":
-    case "wall": root.toggleWallpaperPanel(); return true
-    case "clock":
-    case "calendar":
-    case "time": root.toggleCalendar(); return true
-    case "work-inbox":
-    case "workInbox":
-    case "work": root.toggleWorkInbox(); return true
-    case "personal-dashboard":
-    case "personalDashboard":
-    case "dashboard":
-    case "personal": root.togglePersonalDashboard(); return true
-    case "settings": root.toggleSettings(); return true
-    case "notifications": root.toggleNotifications(); return true
-    case "network":
-    case "net": root.toggleNetworkPanel(); return true
-    case "power":
-    case "session": root.togglePowerMenu(); return true
-    case "dnd": root.toggleDnd(); return true
-    case "inhibit":
-    case "stay-awake": root.toggleIdleInhibit(); return true
-    default: return false
     }
+    if (menu === "launcher") {
+      root.toggleLauncher()
+      return true
+    }
+    const action = root.shellActionRegistry[menu]
+    if (action && typeof root[action] === "function") {
+      root[action]()
+      return true
+    }
+    const entry = root.shellMenuEntry(menu)
+    if (!entry) return false
+    if (entry.toggle && typeof root[entry.toggle] === "function") {
+      root[entry.toggle]()
+      return true
+    }
+    if (entry.openProperty) {
+      root.toggleTransientPanel(entry.openProperty, entry.refresh || "")
+      return true
+    }
+    return false
   }
 
   function openShellMenu(id, payloadJson) {
@@ -649,12 +621,29 @@ ShellRoot {
       return true
     }
     if (root.shellMenuOpen(menu)) {
-      if (menu === "launcher" || menu === "apps")
+      if (menu === "launcher")
         launcher.focusSearch()
       return true
     }
     return root.toggleShellMenu(menu, payloadJson)
   }
+
+  function togglePassmenu() {
+    if (root.passMenuOpen)
+      root.passMenuOpen = false
+    else
+      root.openPassmenu(shellConfig.actions.copy, "username", "gopass")
+  }
+
+  function toggleDefaultWebSearch() { root.toggleWebSearch(shellConfig.defaultWebSearchSite) }
+
+  function refreshKeybindings() { menuDataService.refreshKeybindings() }
+  function refreshControls() { systemStatusService.refreshControls() }
+  function refreshNetwork() { systemStatusService.refreshNetwork() }
+  function refreshPower() { systemStatusService.refreshPower() }
+  function refreshCalendar() { calendarService.refreshAll() }
+  function refreshWorkInbox() { dashboardService.refreshWorkInbox() }
+  function refreshPersonalDashboard() { dashboardService.refreshPersonalDashboard() }
 
   function togglePowerMenu() { root.toggleTransientPanel("powerMenuOpen", function() { systemStatusService.refreshPower() }) }
 

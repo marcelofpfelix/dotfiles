@@ -1143,11 +1143,12 @@ Snapshot: `/tmp/omarchy-quattro`, branch `quattro`, refreshed with `git pull --f
 
 Use this pass to replace local custom glue only where Omarchy's structure makes this repo smaller or less duplicated. Do not copy the full shell.
 
-- [ ] P0: Replace local menu lifecycle glue with a built-in panel registry.
+- [x] P0: Replace local menu lifecycle glue with a built-in panel registry.
   - Sources: Omarchy `shell/shell.qml` `summon`, `hide`, `toggle`, `panelEntries`, and `Ui/Panel.qml`; local `shell.qml` `closeTransientPanels`, `shellMenuOpen`, `hideShellMenu`, `toggleShellMenu`, and `openShellMenu`.
   - Acceptance: one registry maps built-in menu id, aliases, open property, refresh callback, floating/sidebar kind, and default size. `qbar shell summon|hide|toggle <id>` keeps working, repeated hotkeys still close, and Escape/focus-grab still close floating menus.
   - Dependencies: built-in local menus only; no third-party plugin loading or dynamic QML execution.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/*.qml`, `qbar shell listMenus`, `qbar shell toggle launcher`, `qbar shell hide launcher`, `desktop/tools/qs-menu-smoke launcher controls notifications clipboard calendar network power`, and `desktop/tools/desktop-doctor`.
+  - Current behavior: `shell.qml` now has a built-in `shellMenuAliases`, `shellMenuRegistry`, and `shellActionRegistry`. Generic shell IPC open/hide/toggle routes through those maps for built-in local menus while launcher, bar, DND, and idle inhibit keep their small special paths. Live validation passed after `home -y` and `qbar reload`: `qbar shell ping`, `qbar shell listMenus`, `qbar shell toggle launcher`, `qbar shell hide launcher`, `qbar shell toggle controls`, `qbar shell hide controls`, targeted smoke at `~/.local/state/quickshell/menu-smoke/20260818-093803`, full smoke at `~/.local/state/quickshell/menu-smoke/20260818-093955`, and `desktop/tools/desktop-doctor`.
   - Stop conditions: stop if the registry becomes code generation or requires replacing all panels in one diff.
 
 - [ ] P0: Fold popup lifecycle into shared local panel primitives.
