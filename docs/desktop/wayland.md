@@ -62,7 +62,9 @@ Editable today: primary color, density, weather location, DND, tray behavior, hi
 
 `desktop/bin/omarchy-shell` is a local compatibility shim over `qbar`, not a second shell runtime. It supports the Omarchy-style `shell` IPC target for existing local menus, including `omarchy.menu` as the app launcher and `omarchy.clock` as the calendar. Direct plugin targets are intentionally rejected until a local adapter exists, except `notifications toggleDnd`, which maps to the existing DND toggle.
 
-This does not make upstream Omarchy plugins drop-in compatible yet. First-party plugin loading still needs a small manifest review/install path and explicit target adapters before arbitrary QML runs inside the long-lived Quickshell process.
+This does not make upstream Omarchy plugins drop-in compatible yet. Drop-in plugin loading still needs a small install/enable path and explicit target adapters before arbitrary QML runs inside the long-lived Quickshell process.
+
+Use `omarchy-plugin-review <plugin-dir>` before enabling any third-party plugin. It validates the manifest, rejects symlinks and unsafe entry points, and reminds that plugin QML is unsandboxed.
 
 ## Menu testing
 

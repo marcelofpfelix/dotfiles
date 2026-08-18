@@ -1116,11 +1116,12 @@ Claim rule: complete one task at a time. Keep `default` i3-compatible, keep `oma
   - Validation: `bash -n desktop/bin/omarchy-shell desktop/bin/qbar`, `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `omarchy-shell -q shell ping`, and live menu toggle/hide checks after `home -y` and `qbar reload`.
   - Current behavior: `omarchy.menu` aliases the local launcher, `omarchy.clock` aliases the local calendar, and `notifications toggleDnd` maps to the existing DND toggle.
 
-- [ ] P0: Add read-only Omarchy plugin manifest review.
+- [x] P0: Add read-only Omarchy plugin manifest review.
   - Sources: Omarchy plugin manifest schema in `manual/32-shell-plugins.md`.
   - Acceptance: a local review command validates `manifest.json`, lists kinds and entry points, warns that plugin QML is unsandboxed, and leaves plugins disabled by default.
   - Dependencies: no installer side effects and no runtime plugin execution in this task.
-  - Validation: manifest fixtures for one valid and one invalid plugin plus `desktop/tools/desktop-doctor`.
+  - Validation: `omarchy-plugin-review self-test`, `omarchy-plugin-review --first-party /tmp/omarchy-quattro/shell/plugins/panels/clock`, and `desktop/tools/desktop-doctor`.
+  - Current behavior: `omarchy-plugin-review` validates manifest schema, id/name/version, supported kinds, safe relative entry points, entry point files, missing symlinks, and reserved `omarchy.*` ids unless `--first-party` is explicit. It prints a short plugin summary and never executes plugin code.
 
 - [ ] P1: Add explicit local adapters for useful Omarchy plugin IPC targets.
   - Sources: Omarchy `docs/omarchy-shell.md` target list and local `qbar shell` target.

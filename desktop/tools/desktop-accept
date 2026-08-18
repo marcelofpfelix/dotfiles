@@ -7,7 +7,7 @@ repo=${DOTFILES_REPO:-$HOME/gwt/marcelofpfelix/dotfiles/main}
 
 cd "$repo"
 
-bash -n desktop/bin/qbar desktop/bin/omarchy-shell desktop/tools/qs-menu-smoke desktop/tools/desktop-doctor desktop/bin/desktop-startup-report desktop/bin/passmenu-action desktop/bin/notification-focus-app desktop/bin/notificationctl desktop/bin/reminderctl desktop/bin/work-inbox-status desktop/bin/pomodoroctl desktop/bin/calendar-agenda-status desktop/bin/calendar-sync-status
+bash -n desktop/bin/qbar desktop/bin/omarchy-shell desktop/bin/omarchy-plugin-review desktop/tools/qs-menu-smoke desktop/tools/desktop-doctor desktop/bin/desktop-startup-report desktop/bin/passmenu-action desktop/bin/notification-focus-app desktop/bin/notificationctl desktop/bin/reminderctl desktop/bin/work-inbox-status desktop/bin/pomodoroctl desktop/bin/calendar-agenda-status desktop/bin/calendar-sync-status
 ruby -c desktop/tools/quickshell-repeat-audit
 luac -p desktop/.config/hypr/init.lua desktop/.config/hypr/profiles/common.lua desktop/.config/hypr/profiles/default.lua desktop/.config/hypr/profiles/omarchy.lua
 qmllint desktop/.config/quickshell/marcelof/shell.qml
