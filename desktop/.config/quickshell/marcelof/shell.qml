@@ -22,7 +22,7 @@ ShellRoot {
   function menuCompactHeightFor(id) { return root.menuSize(id).compactHeight }
 
   readonly property var shellMenuAliases: ({
-    menu: "launcher",
+    menu: "root-menu",
     apps: "launcher",
     clip: "clipboard",
     passwords: "passmenu",
@@ -44,6 +44,7 @@ ShellRoot {
   })
 
   readonly property var shellMenuRegistry: ({
+    "root-menu": { openProperty: "rootMenuOpen" },
     clipboard: { openProperty: "clipboardOpen", toggle: "toggleClipboard" },
     passmenu: { openProperty: "passMenuOpen", toggle: "togglePassmenu" },
     websearch: { openProperty: "webSearchOpen", toggle: "toggleDefaultWebSearch" },
@@ -312,6 +313,7 @@ ShellRoot {
   property string passMode: shellConfig.actions.copy
   property string passUserKey: "username"
   property string passBackend: "gopass"
+  property bool rootMenuOpen: false
   property bool keybindingsOpen: false
   property bool networkPanelOpen: false
   property bool powerMenuOpen: false
@@ -626,6 +628,29 @@ ShellRoot {
       return true
     }
     return root.toggleShellMenu(menu, payloadJson)
+  }
+
+  function runMenuAction(action) {
+    switch (String(action || "")) {
+    case "apps":
+      root.closeTransientPanels()
+      root.toggleLauncher()
+      break
+    case "web": root.toggleWebSearch(shellConfig.defaultWebSearchSite); break
+    case "keys": root.toggleKeybindings(); break
+    case "clipboard": root.toggleClipboard(); break
+    case "wallpaper": root.toggleWallpaperPanel(); break
+    case "screen": root.toggleScreenPanel(); break
+    case "media": root.toggleMediaPanel(); break
+    case "network": root.toggleNetworkPanel(); break
+    case "calendar": root.toggleCalendar(); break
+    case "work": root.toggleWorkInbox(); break
+    case "dashboard": root.togglePersonalDashboard(); break
+    case "notifications": root.toggleNotifications(); break
+    case "settings": root.toggleSettings(); break
+    case "tray": root.toggleTrayManage(); break
+    case "power": root.togglePowerMenu(); break
+    }
   }
 
   function togglePassmenu() {
@@ -1622,6 +1647,15 @@ ShellRoot {
       panelOpen: root.controlPanelOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.controls)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.controls)
+    }
+
+    ShellRootMenuPanel {
+      anchorWindow: bar
+      shellRoot: root
+      shellConfig: shellConfig
+      panelOpen: root.rootMenuOpen
+      panelWidth: root.menuWidthFor(shellConfig.menuIds.rootMenu)
+      panelHeight: root.menuHeightFor(shellConfig.menuIds.rootMenu)
     }
 
     ShellSettingsPanel {

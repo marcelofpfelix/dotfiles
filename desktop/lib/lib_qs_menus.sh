@@ -2,7 +2,7 @@
 # Shared Quickshell menu metadata for small shell helpers.
 
 qs_menu_panels=(
-  launcher controls media notifications work-inbox personal-dashboard
+  root-menu launcher controls media notifications work-inbox personal-dashboard
   calendar wallpaper screen settings keybindings clipboard passmenu websearch network tray power power-confirm
 )
 
@@ -17,6 +17,7 @@ declare -gA qs_menu_labels=(
   [notifications]="Notifications"
   [passmenu]="Passwords"
   [power]="Session menu"
+  [root-menu]="Menu"
   [screen]="Screen"
   [settings]="Settings"
   [tray]="Tray"
@@ -42,6 +43,7 @@ qs_menu_crop_geometry() {
   local width=720 height=700 x y
 
   case "$panel" in
+    root-menu) width=660; height=360; x=0; y=0 ;;
     launcher) width=960; height=820; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     clipboard|passmenu) width=800; height=660; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     websearch) width=700; height=124; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;

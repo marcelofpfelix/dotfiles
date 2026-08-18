@@ -99,7 +99,8 @@ QtObject {
     wallpaper: "wallpaper",
     websearch: "websearch",
     workInbox: "work-inbox",
-    personalDashboard: "personal-dashboard"
+    personalDashboard: "personal-dashboard",
+    rootMenu: "root-menu"
   })
 
   readonly property var menuSizes: ({
@@ -120,6 +121,7 @@ QtObject {
     calendar: { width: 640, height: 720 },
     "work-inbox": { width: 640, height: 420 },
     "personal-dashboard": { width: 640, height: 240 },
+    "root-menu": { width: 640, height: 320 },
     notifications: { width: 640, height: 420 },
     keybindings: { width: 640, height: 560 },
     network: { width: 640, height: 320 },

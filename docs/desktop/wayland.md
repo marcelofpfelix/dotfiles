@@ -60,7 +60,7 @@ Editable today: primary color, density, weather location, DND, tray behavior, hi
 
 ## Omarchy Shell Compatibility
 
-`desktop/bin/omarchy-shell` is a local compatibility shim over `qbar`, not a second shell runtime. It supports the Omarchy-style `shell` IPC target for existing local menus, including `omarchy.menu` as the app launcher and `omarchy.clock` as the calendar. Direct plugin targets are mapped only when backed by existing local state: panel open/close/toggle methods, notification DND/history/clear, helper-owned media play/pause/status, and lock. Unsupported targets still fail clearly.
+`desktop/bin/omarchy-shell` is a local compatibility shim over `qbar`, not a second shell runtime. It supports the Omarchy-style `shell` IPC target for existing local menus, including `omarchy.menu` as the root menu and `omarchy.clock` as the calendar. Direct plugin targets are mapped only when backed by existing local state: panel open/close/toggle methods, notification DND/history/clear, helper-owned media play/pause/status, and lock. Unsupported targets still fail clearly.
 
 This does not make upstream Omarchy plugins drop-in compatible yet. Drop-in plugin loading still needs a small install/enable path and explicit target adapters before arbitrary QML runs inside the long-lived Quickshell process.
 
@@ -90,7 +90,7 @@ Not replacement candidates:
 
 ## Menu testing
 
-Main paths: `Win+D` or `Win+Space` opens apps, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. See [`hotkeys-omarchy-compat.md`](hotkeys-omarchy-compat.md) for the Omarchy manual category comparison and adopted profile-only shortcuts. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `desktop/tools/qs-menu-smoke wallpaper media notifications` for targeted visual checks, `desktop/tools/qs-menu-smoke` for the full popup set, `desktop/tools/qs-menu-smoke --open` to capture and open the contact sheet, or `desktop/tools/qs-menu-smoke --inspect` to send the current contact sheet plus the previous run when present to `codex exec --image` for visual comparison.
+Main paths: `Win+D` opens apps, `Win+Space` opens the root menu, `Win+,` opens web search, `Win+/` opens keybindings, `Win+Ctrl+A` opens Controls, and `Win+Shift+E` or `Win+Esc` opens the session menu. See [`hotkeys-omarchy-compat.md`](hotkeys-omarchy-compat.md) for the Omarchy manual category comparison and adopted profile-only shortcuts. Controls is the hub for menus without dedicated keys: Apps, Web, Keys, Clip, Wall, Screen, Media, Net, Time, Notes, and Awake. Awake uses `desktop-inhibit` to prevent idle and sleep during calls or long-running desktop work. Use `desktop/tools/qs-menu-smoke wallpaper media notifications` for targeted visual checks, `desktop/tools/qs-menu-smoke` for the full popup set, `desktop/tools/qs-menu-smoke --open` to capture and open the contact sheet, or `desktop/tools/qs-menu-smoke --inspect` to send the current contact sheet plus the previous run when present to `codex exec --image` for visual comparison.
 
 Bar interactions:
 

@@ -15,26 +15,7 @@ ShellPopup {
   readonly property var menuActionRows: shellConfig.controlMenuRows
 
   function triggerMenuAction(action) {
-    switch (action) {
-    case "apps":
-      controlPanel.shellRoot.closeTransientPanels()
-      controlPanel.shellRoot.toggleLauncher()
-      break
-    case "web": controlPanel.shellRoot.toggleWebSearch(controlPanel.shellConfig.defaultWebSearchSite); break
-    case "keys": controlPanel.shellRoot.toggleKeybindings(); break
-    case "clipboard": controlPanel.shellRoot.toggleClipboard(); break
-    case "wallpaper": controlPanel.shellRoot.toggleWallpaperPanel(); break
-    case "screen": controlPanel.shellRoot.toggleScreenPanel(); break
-    case "media": controlPanel.shellRoot.toggleMediaPanel(); break
-    case "network": controlPanel.shellRoot.toggleNetworkPanel(); break
-    case "calendar": controlPanel.shellRoot.toggleCalendar(); break
-    case "work": controlPanel.shellRoot.toggleWorkInbox(); break
-    case "dashboard": controlPanel.shellRoot.togglePersonalDashboard(); break
-    case "notifications": controlPanel.shellRoot.toggleNotifications(); break
-    case "settings": controlPanel.shellRoot.toggleSettings(); break
-    case "tray": controlPanel.shellRoot.toggleTrayManage(); break
-    case "power": controlPanel.shellRoot.togglePowerMenu(); break
-    }
+    controlPanel.shellRoot.runMenuAction(action)
   }
 
   ShellScrollPanel {

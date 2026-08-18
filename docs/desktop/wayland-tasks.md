@@ -1111,10 +1111,17 @@ Claim rule: complete one task at a time. Keep `default` i3-compatible, keep `oma
 
 - [x] P0: Add a minimal Omarchy shell IPC compatibility shim.
   - Sources: Omarchy quattro `bin/omarchy-shell`, `docs/omarchy-shell.md`, and `manual/32-shell-plugins.md`.
-  - Acceptance: `omarchy-shell shell ping`, `omarchy-shell shell toggle omarchy.menu`, and `omarchy-shell shell toggle omarchy.clock` route through the local `qbar` IPC. Unsupported direct plugin targets fail clearly instead of opening the wrong local menu.
+  - Acceptance: `omarchy-shell shell ping`, `omarchy-shell shell toggle omarchy.menu`, and `omarchy-shell shell toggle omarchy.clock` route through the local `qbar` IPC. `omarchy.menu` opens the local root menu, whose Apps button opens the app launcher. Unsupported direct plugin targets fail clearly instead of opening the wrong local menu.
   - Dependencies: reuse the existing local Quickshell process and `qbar`; do not add a plugin loader yet.
   - Validation: `bash -n desktop/bin/omarchy-shell desktop/bin/qbar`, `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `omarchy-shell -q shell ping`, and live menu toggle/hide checks after `home -y` and `qbar reload`.
-  - Current behavior: `omarchy.menu` aliases the local launcher, `omarchy.clock` aliases the local calendar, and `notifications toggleDnd` maps to the existing DND toggle.
+  - Current behavior: `omarchy.menu` aliases the local root menu, `omarchy.clock` aliases the local calendar, and `notifications toggleDnd` maps to the existing DND toggle.
+
+
+- [x] P0: Add Omarchy-style root menu entrypoint.
+  - Sources: Omarchy quattro `shell/plugins/menu/BarWidget.qml` plus the existing local Controls menu rows.
+  - Acceptance: `Win+Space`, `qbar menu`, and the left bar penguin toggle the same root menu; `Win+D` remains the app launcher; right-clicking the penguin opens the configured terminal.
+  - Dependencies: reuse existing Quickshell menu actions and `qbar`; do not import the full upstream menu/plugin system yet.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/*.qml`, `luac -p desktop/.config/hypr/init.lua desktop/.config/hypr/profiles/common.lua desktop/.config/hypr/profiles/default.lua desktop/.config/hypr/profiles/omarchy.lua`, `bash -n desktop/bin/qbar desktop/lib/lib_qs_menus.sh`, `qbar shell toggle omarchy.menu '{}'`, and `qbar shell hide omarchy.menu`.
 
 - [x] P0: Add read-only Omarchy plugin manifest review.
   - Sources: Omarchy plugin manifest schema in `manual/32-shell-plugins.md`.

@@ -99,6 +99,39 @@ PanelWindow {
         Layout.maximumWidth: 620
         spacing: barTheme.spacingLg
 
+        Rectangle {
+          Layout.alignment: Qt.AlignVCenter
+          width: barTheme.barItemSize
+          height: barTheme.barItemSize
+          radius: barTheme.radiusTiny
+          color: menuMouse.containsMouse || barRoot.rootMenuOpen ? barTheme.surfaceHigh : barTheme.transparent
+
+          Text {
+            anchors.centerIn: parent
+            color: barTheme.text
+            font.family: barTheme.fontFamily
+            font.styleName: barTheme.fontStyle
+            font.pixelSize: barTheme.fontMd
+            text: ""
+          }
+
+          MouseArea {
+            id: menuMouse
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onEntered: barRoot.showTooltip(parent, "Menu")
+            onExited: barRoot.hideTooltip()
+            onClicked: mouse => {
+              if (mouse.button === Qt.RightButton)
+                Quickshell.execDetached(barConfig.terminal())
+              else
+                barRoot.toggleShellMenu("omarchy.menu", "{}")
+            }
+          }
+        }
+
         Row {
           spacing: barTheme.spacingSm
           Layout.alignment: Qt.AlignVCenter

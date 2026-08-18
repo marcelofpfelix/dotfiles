@@ -111,6 +111,7 @@ QtObject {
   }
   function calculator() { return ["sh", "-c", "command -v gnome-calculator >/dev/null 2>&1 && exec gnome-calculator || notify-send Quickshell 'gnome-calculator missing'"] }
   function slack() { return [bin("slack-wayland")] }
+  function terminal() { return [bin("hypr-term")] }
   function hyprTermTaskNext() { return [bin("hypr-term"), "task", "next"] }
   function checkTimePanel() { return [bin("check-time-panel")] }
   function checkTodoPanel() { return [bin("check-todo-panel")] }

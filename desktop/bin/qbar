@@ -31,7 +31,7 @@ list_instances() {
 }
 
 usage() {
-  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|tray|controls|calendar|work-inbox|personal-dashboard|notifications|power|inhibit|keybindings|clipboard|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
+  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|power|inhibit|keybindings|clipboard|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
 }
 
 kill_all() {
@@ -184,6 +184,7 @@ case "${1:-status}" in
   notice) shift; notice "${1:-}" ;;
   toggle|show|hide) ipc "$1" ;;
   launcher) menu_summon launcher ;;
+  root-menu|menu) menu_toggle root-menu ;;
   tray|tray-manage) menu_toggle tray ;;
   controls) menu_toggle controls ;;
   media|audio) menu_toggle media ;;

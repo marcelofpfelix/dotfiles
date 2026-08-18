@@ -11,6 +11,7 @@ end
 
 local terminal = bin("hypr-term")
 local launcher = bin("qbar") .. " launcher"
+local root_menu = bin("qbar") .. " shell toggle omarchy.menu '{}'"
 local quickshell_cmd = common.quickshell_cmd(home)
 local board_run_cmd = common.board_run_cmd(home)
 local function sh(cmd)
@@ -132,7 +133,7 @@ hl.bind(mod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mod .. " + E", hl.dsp.layout("togglesplit"))
 hl.bind(mod .. " + SHIFT + V", hl.dsp.layout("splitv"))
 hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mod .. " + SPACE", sh(launcher))
+hl.bind(mod .. " + SPACE", sh(root_menu))
 hl.bind(mod .. " + A", note("focus parent has no dwindle equivalent yet"))
 hl.bind(mod .. " + S", sh("hypr-scratch toggle"))
 hl.bind(mod .. " + ALT + S", sh("hypr-scratch move"))

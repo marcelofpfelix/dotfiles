@@ -10,6 +10,7 @@ end
 
 local terminal = bin("hypr-term")
 local launcher = bin("qbar") .. " launcher"
+local root_menu = bin("qbar") .. " shell toggle omarchy.menu '{}'"
 local quickshell_cmd = common.quickshell_cmd(home)
 local board_run_cmd = common.board_run_cmd(home)
 
@@ -141,8 +142,8 @@ hl.bind(mod .. " + U", sh(terminal .. " popup-tmux"))
 -- open tmux launcher
 hl.bind(mod .. " + ALT + RETURN", sh("tmx"))
 hl.bind(mod .. " + SHIFT + RETURN", sh("xdg-open about:blank"))
--- open app launcher
-hl.bind(mod .. " + SPACE", sh(launcher))
+-- open root menu
+hl.bind(mod .. " + SPACE", sh(root_menu))
 hl.bind(mod .. " + D", sh(launcher))
 hl.bind(mod .. " + C", universal_clipboard_shortcut("CTRL", "C", "CTRL", "Insert"))
 hl.bind(mod .. " + V", universal_clipboard_shortcut("CTRL", "V", "SHIFT", "Insert"))
