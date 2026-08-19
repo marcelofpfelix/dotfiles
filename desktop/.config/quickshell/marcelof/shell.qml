@@ -298,7 +298,6 @@ ShellRoot {
   property string sessionConfirmIcon: ""
   property var sessionConfirmCommand: []
   property bool controlPanelOpen: false
-  property bool mediaPanelOpen: false
   property bool screenPanelOpen: false
   property bool wallpaperPanelOpen: false
   property bool calendarOpen: false
@@ -323,7 +322,6 @@ ShellRoot {
   property string powerStatusText: ""
   property string fanStatusText: "Fan --"
   property string privacyStatusText: ""
-  property string mediaNowText: ""
   property string weatherPanelText: ""
   property string inhibitStatusText: "inactive"
   readonly property string lisbonClockText: Qt.formatDateTime(clock.date, "ddd-dd HH:mm:ss")
@@ -673,9 +671,7 @@ ShellRoot {
 
   function toggleNetworkPanel() { bar.toggleNetworkPanel() }
 
-  function toggleMediaPanel() {
-    root.toggleTransientPanel("mediaPanelOpen", function() { root.refreshAudioState() })
-  }
+  function toggleMediaPanel() { bar.toggleMediaPanel() }
 
   function refreshScreenState() {
     screenService.refresh()
@@ -1065,20 +1061,6 @@ ShellRoot {
     if (!row || !row.sticky || root.notificationActionCompletes(actionLabel))
       root.dismissNotification(index)
   }
-  function updateAudioStreams(output) {
-    audioStreams.clear()
-    const lines = String(output || "").trim().split(/\n+/)
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (line.length === 0)
-        continue
-      const parts = line.split("|")
-      if (parts.length < 5)
-        continue
-      audioStreams.append({ id: parts[0], app: parts[1], media: parts[2], volume: parts[3], muted: parts[4] })
-    }
-  }
-
   function updateAudioStatus(output) {
     const text = String(output || "").trim()
     root.audioStatusText = text
@@ -1205,52 +1187,12 @@ ShellRoot {
     calendarService.refreshPomodoroSoon()
   }
 
-  function refreshAudioMixer() {
-    audioService.refreshMixer()
-  }
-
-  function refreshAudioState() {
-    audioService.refreshState()
-  }
-
   function scheduleAudioRefresh() {
     audioService.refreshSoon()
   }
 
-  function audioNoiseRunning() {
-    return root.audioStatusText.indexOf("brown-noise: running") >= 0
-  }
-
-  function audioMusicRunning() {
-    return root.audioStatusText.indexOf("music: running") >= 0
-  }
-
-  function audioPlaybackActive() {
-    return root.audioDisplayText.length > 0 && root.audioDisplayText.indexOf("(paused)") < 0
-  }
-
   function runAudioctl(action) {
     Quickshell.execDetached(shellConfig.audio(action))
-    root.scheduleAudioRefresh()
-  }
-
-  function runPlayerctl(action) {
-    Quickshell.execDetached(shellConfig.playerctl(action))
-    root.scheduleAudioRefresh()
-  }
-
-  function runSinkInputAction(id, action) {
-    const command = shellConfig.sinkInputAction(id, action)
-    if (command.length === 0)
-      return
-    Quickshell.execDetached(command)
-    root.scheduleAudioRefresh()
-  }
-
-  function setSinkInputVolume(id, value) {
-    if (!id)
-      return
-    Quickshell.execDetached(shellConfig.sinkInputVolume(id, value))
     root.scheduleAudioRefresh()
   }
 
@@ -1401,7 +1343,6 @@ ShellRoot {
   }
   ListModel { id: notificationHistory }
   ListModel { id: notificationInboxModel }
-  ListModel { id: audioStreams }
   ListModel { id: wallpaperModel }
 
 
@@ -1665,16 +1606,6 @@ ShellRoot {
       panelHeight: root.menuHeightFor(shellConfig.menuIds.screen)
     }
 
-    ShellMediaPanel {
-      anchorWindow: bar
-      shellRoot: root
-      shellConfig: shellConfig
-      audioStreamsModel: audioStreams
-      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.media, "{}") : root.hideShellMenu(shellConfig.menuIds.media)
-      panelOpen: root.mediaPanelOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.media)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.media)
-    }
 
     ShellControlPanel {
       anchorWindow: bar

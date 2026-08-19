@@ -187,7 +187,7 @@ case "${1:-status}" in
   root-menu|menu) menu_toggle root-menu ;;
   tray|tray-manage) menu_toggle tray ;;
   controls) menu_toggle controls ;;
-  media|audio) menu_toggle media ;;
+  media|audio) ipc_target omarchy.audio toggle ;;
   screen|screenshot|record) menu_toggle screen ;;
   wallpaper) menu_toggle wallpaper ;;
   calendar) menu_toggle calendar ;;

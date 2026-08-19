@@ -137,7 +137,6 @@ QtObject {
     tray: { openProperty: "trayManageOpen" },
     controls: { openProperty: "controlPanelOpen", refresh: "refreshControls" },
     emojis: { toggle: "toggleEmojis", hide: "hideEmojis" },
-    media: { openProperty: "mediaPanelOpen", refresh: "refreshAudioState" },
     screen: { openProperty: "screenPanelOpen", refresh: "refreshScreenState" },
     wallpaper: { openProperty: "wallpaperPanelOpen", refresh: "refreshWallpapers" },
     calendar: { openProperty: "calendarOpen", refresh: "refreshCalendar" },

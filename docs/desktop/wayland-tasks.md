@@ -1338,6 +1338,7 @@ scripts where native Quickshell or an existing local command already works.
   - Acceptance: manage sinks, sources, volume/mute, playback streams, microphone level, and MPRIS; keep saved music/noise restore/pause/stop/force-kill under `audioctl`; never affect communication/capture streams with music controls.
   - Dependencies: host adapter and physical-sink/availability mapping; import Omarchy Media only if it replaces local code.
   - Validation: upstream model tests, `audioctl self-test`, `qmllint`, mixer smoke, saved noise+music restore, and manual Meet mic/share safety test.
+  - Progress 2026-08-19: copied and statically mounted Audio panel/model/manifest; archived `ShellMediaPanel.qml`. Native PipeWire now owns sink/source selection, mute/volume, input meter, and per-stream mixing; direct `wpctl set-default` persists selected devices. One availability probe replaces four Omarchy tuning/default helpers, runs only while open, and the old active `check-audio-streams`/MPRIS QML pollers were removed. The separate bar music button remains `audioctl`-owned. QML/model, `audioctl self-test`, IPC lifecycle, screenshot, no-idle-helper, runtime-log, and one-process checks pass. Manual Meet mic/share safety remains unrun.
   - Stop: no unused tuning/EasyEffects assumptions; stop on PipeWire or Quickshell crash regression.
 
 - [ ] P1: Copy Wi-Fi QR after Network is stable.

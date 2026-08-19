@@ -7,6 +7,7 @@ import QtQuick.Layouts
 import "plugins/panels/power" as PowerPlugin
 import "plugins/panels/monitor" as MonitorPlugin
 import "plugins/panels/bluetooth" as BluetoothPlugin
+import "plugins/panels/audio" as AudioPlugin
 import "plugins/panels/network" as NetworkPlugin
 
 PanelWindow {
@@ -61,6 +62,7 @@ PanelWindow {
 
   function switchPanelFrom(owner, direction) { return false }
   function toggleNetworkPanel() { networkPanel.toggle() }
+  function toggleMediaPanel() { audioPanel.toggle() }
   function showTooltip(target, text) { barRoot.showTooltip(target, text) }
   function hideTooltip(target) { barRoot.hideTooltip() }
 
@@ -242,39 +244,6 @@ PanelWindow {
         MouseArea { id: privacyMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.LeftButton | Qt.RightButton; cursorShape: Qt.PointingHandCursor; onClicked: mouse => { if (mouse.button === Qt.RightButton) barRoot.toggleDnd(); else barRoot.toggleScreenPanel() } }
       }
 
-      Text {
-        Layout.alignment: Qt.AlignVCenter
-        color: barRoot.defaultSinkAudio() && barRoot.defaultSinkAudio().muted ? barSettings.primaryColor : barTheme.textMuted
-        font.family: barTheme.fontFamily
-              font.styleName: barTheme.fontStyle
-        font.pixelSize: barTheme.fontMd
-        text: {
-          const audio = barRoot.defaultSinkAudio()
-          if (!audio)
-            return " --"
-
-          return (audio.muted ? "󰝟 " : " ") + Math.round(audio.volume * 100) + "%"
-        }
-
-        MouseArea {
-          anchors.fill: parent
-          acceptedButtons: Qt.LeftButton | Qt.RightButton
-          cursorShape: Qt.PointingHandCursor
-          onClicked: mouse => {
-            if (mouse.button === Qt.RightButton)
-              barRoot.toggleMediaPanel()
-            else
-              barRoot.toggleMute()
-          }
-          onWheel: wheel => {
-            if (wheel.angleDelta.y > 0)
-              barRoot.adjustVolume(0.05)
-            else if (wheel.angleDelta.y < 0)
-              barRoot.adjustVolume(-0.05)
-          }
-        }
-      }
-
       Rectangle {
         Layout.alignment: Qt.AlignVCenter
         width: barTheme.workspaceHeight
@@ -308,6 +277,7 @@ PanelWindow {
       }
 
 
+      AudioPlugin.Panel { id: audioPanel; Layout.alignment: Qt.AlignVCenter; bar: bar }
       MonitorPlugin.Panel { Layout.alignment: Qt.AlignVCenter; bar: bar }
       BluetoothPlugin.Panel { Layout.alignment: Qt.AlignVCenter; bar: bar }
       NetworkPlugin.Panel { id: networkPanel; Layout.alignment: Qt.AlignVCenter; bar: bar }

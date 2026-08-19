@@ -7,16 +7,8 @@ Item {
   required property var shellRoot
   required property var shellConfig
 
-  function refreshMixer() {
-    audioStreamsRefresh.running = true
-  }
-
   function refreshState() {
-    audioStatusRefresh.running = true
-    if (audioService.shellRoot.mediaPanelOpen) {
-      audioStreamsRefresh.running = true
-      mediaNowRefresh.running = true
-    }
+    if (!audioStatusRefresh.running) audioStatusRefresh.running = true
   }
 
   function refreshSoon() {
@@ -24,24 +16,10 @@ Item {
   }
 
   Process {
-    id: audioStreamsRefresh
-    command: audioService.shellConfig.audioStreams()
-    running: false
-    stdout: StdioCollector { onStreamFinished: audioService.shellRoot.updateAudioStreams(this.text) }
-  }
-
-  Process {
     id: audioStatusRefresh
     command: audioService.shellConfig.audio(audioService.shellConfig.statusAction)
     running: true
     stdout: StdioCollector { onStreamFinished: audioService.shellRoot.updateAudioStatus(this.text) }
-  }
-
-  Process {
-    id: mediaNowRefresh
-    command: audioService.shellConfig.mediaNowPlaying()
-    running: true
-    stdout: StdioCollector { onStreamFinished: audioService.shellRoot.mediaNowText = this.text.trim() }
   }
 
   Timer {

@@ -133,14 +133,12 @@ QtObject {
   function reminderList() { return [bin("reminderctl"), "list"] }
   function reminderClearAll() { return [bin("reminderctl"), "clear", "all"] }
   function workInboxStatus() { return [bin("work-inbox-status")] }
-  function audioStreams() { return [bin("check-audio-streams")] }
   function screenRecordStatus() { return screenRecord(statusAction) }
   function keyboardBrightnessStatus() { return keyboardBrightness(statusAction) }
   function powerStatus() { return [bin("power-status"), statusAction] }
   function fanStatus() { return [bin("fan-status")] }
   function inhibitStatus() { return inhibit(statusAction) }
   function privacyStatus() { return [bin("desktop-privacy-status"), statusAction] }
-  function mediaNowPlaying() { return [bin("media-now-playing")] }
   function hyprKeys() { return [bin("hypr-keys")] }
 
 function menuSize(id, dense) {
