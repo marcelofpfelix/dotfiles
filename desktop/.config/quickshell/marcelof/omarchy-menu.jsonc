@@ -17,6 +17,7 @@
   "trigger.media": {"icon":"󰕾","label":"Media","aliases":["audio","music"],"action":"$HOME/bin/qbar media"},
 
   "status.controls": {"icon":"󰒓","label":"Controls","action":"$HOME/bin/qbar controls"},
+  "status.display": {"icon":"󰒓","label":"Displays","action":"$HOME/bin/qbar display"},
   "status.network": {"icon":"󰖩","label":"Network","aliases":["wifi"],"action":"$HOME/bin/qbar network"},
   "status.calendar": {"icon":"󰥔","label":"Time and calendar","aliases":["time","clock"],"action":"$HOME/bin/qbar calendar"},
   "status.work": {"icon":"󰻞","label":"Work inbox","action":"$HOME/bin/qbar work-inbox"},

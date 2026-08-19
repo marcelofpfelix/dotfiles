@@ -57,7 +57,6 @@ QtObject {
   function boardText(surface) { return boardCommand(["render", "text", surface]) }
   function boardAction(action) { return boardCommand(["action", action]) }
   function weather(location, mode) { return ["sh", "-c", "WEATHER_LOCATION=" + shellQuote(location) + " " + bin("check-weather") + (mode ? " " + mode : "")] }
-  function brightnessBar() { return ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print \"󰃠 \" $4}' || printf '󰃠 --'"] }
   function brightnessPercent() { return ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print $4}' || printf -- --"] }
   function portalStatus() { return ["sh", "-c", "printf 'hyprland '; systemctl --user is-active xdg-desktop-portal-hyprland.service 2>/dev/null || printf unavailable; printf ', portal '; systemctl --user is-active xdg-desktop-portal.service 2>/dev/null || printf unavailable"] }
   function launcherMruLoad() { return ["sh", "-c", "cat \"${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof/launcher-mru.txt\" 2>/dev/null || true"] }
@@ -88,9 +87,6 @@ QtObject {
   function powerProfile(profile) { return [bin("power-status"), "set-profile", profile] }
   function inhibit(action) { return [bin("desktop-inhibit"), action] }
   function brightness(action) { return [bin("bri"), action] }
-  function brightnessSet(value) { return ["brightnessctl", "set", value] }
-  function externalBrightness(action) { return [bin("external-brightness"), action] }
-  function setExternalBrightness(value) { return [bin("external-brightness"), "set", String(value)] }
   function keyboardBrightness(action) { return [bin("kbd-brightness"), action] }
   function locker() { return ["sh", "-c", "command -v hyprlock >/dev/null 2>&1 && exec hyprlock; command -v swaylock >/dev/null 2>&1 && exec swaylock -f; loginctl lock-session || notify-send Hyprland \"No Wayland locker found\""] }
   function systemctl(action) { return ["systemctl", action] }
@@ -141,11 +137,9 @@ QtObject {
   function screenRecordStatus() { return screenRecord(statusAction) }
   function keyboardBrightnessStatus() { return keyboardBrightness(statusAction) }
   function powerStatus() { return [bin("power-status"), statusAction] }
-  function monitorStatus() { return [bin("monitor"), statusAction] }
   function fanStatus() { return [bin("fan-status")] }
   function inhibitStatus() { return inhibit(statusAction) }
   function privacyStatus() { return [bin("desktop-privacy-status"), statusAction] }
-  function externalBrightnessStatus() { return externalBrightness(statusAction) }
   function mediaNowPlaying() { return [bin("media-now-playing")] }
   function hyprKeys() { return [bin("hypr-keys")] }
 

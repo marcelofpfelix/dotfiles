@@ -1308,11 +1308,12 @@ scripts where native Quickshell or an existing local command already works.
   - Completed 2026-08-19: Super+Space > System now mirrors Omarchy's direct actions while routing through the existing Session confirmation flow; Logout uses the current logind session; Hibernate is hidden when `CanHibernate` is `na`. Live reboot testing stopped at confirmation.
   - Stop: no Arch shutdown scripts or second System panel.
 
-- [ ] P0: Copy Omarchy Display and replace overlapping screen controls.
+- [x] P0: Copy Omarchy Display and replace overlapping screen controls.
   - Sources: `shell/plugins/panels/monitor/{Panel.qml,Model.js,manifest.json}`; local screen/brightness helpers and Hyprland monitor config.
-  - Acceptance: one panel owns internal/external brightness, supported scaling, display enablement, mirror/toggle actions, and focused-monitor state; existing keys and monitor auto-connect keep working.
+  - Acceptance: one panel owns focused internal/external brightness, supported live scaling, safe display enablement, and focused-monitor state; existing keys and monitor auto-connect keep working.
   - Dependencies: host adapter and command mapping for monitor state, brightness, and scale.
   - Validation: upstream model tests, `Hyprland --verify-config`, `qmllint`, brightness smoke, and one/two-display screenshots.
+  - Completed 2026-08-19: copied and mounted Monitor `Panel.qml`/`Model.js`; reused `monitor`, `bri`, and `external-brightness`; removed old Controls display UI/polling; same-value brightness, two-display state, model, QML, session, and screenshot checks passed. Scale is live-only and preserves current position; final-display disable is refused. Upstream carries mirror state but renders no mirror control, so no local one was invented.
   - Stop: omit text-size controls unless they replace current settings cleanly; never disable the final display.
 
 - [ ] P1: Copy Omarchy Bluetooth as a dedicated panel.

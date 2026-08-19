@@ -21,35 +21,7 @@ ShellPopup {
   ShellScrollPanel {
     anchors.fill: parent
 
-        ShellText { Layout.fillWidth: true; role: "section"; text: "Display" }
-
-        RowLayout {
-          Layout.fillWidth: true
-          spacing: theme.spacingXl
-          ShellText { role: "softStrong"; text: "󰃠" }
-          Slider { Layout.fillWidth: true; from: 1; to: 100; value: controlPanel.shellRoot.brightnessValue; onMoved: controlPanel.shellRoot.setBrightness(value) }
-          Text { width: 42; color: theme.textSoft; horizontalAlignment: Text.AlignRight; font.family: theme.fontFamily; font.pixelSize: theme.fontMd; text: controlPanel.shellRoot.brightnessText }
-        }
-
-        RowLayout {
-          Layout.fillWidth: true
-          visible: controlPanel.shellRoot.externalBrightnessText.length > 0
-          spacing: theme.spacingXl
-          ShellText { role: "softStrong"; text: "󰍹" }
-          Slider { Layout.fillWidth: true; from: 0; to: 100; value: controlPanel.shellRoot.externalBrightnessValue; onMoved: controlPanel.shellRoot.setExternalBrightness(value) }
-          Text { width: 128; color: theme.textSoft; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight; font.family: theme.fontFamily; font.pixelSize: theme.fontMd; text: controlPanel.shellRoot.externalBrightnessText }
-          ShellActionButton { icon: "-"; label: ""; minWidth: 34; tooltip: "External brightness down"; tooltipState: controlPanel.shellRoot; onTriggered: controlPanel.shellRoot.runExternalBrightness(controlPanel.shellConfig.actions.down) }
-          ShellActionButton { icon: "+"; label: ""; minWidth: 34; tooltip: "External brightness up"; tooltipState: controlPanel.shellRoot; onTriggered: controlPanel.shellRoot.runExternalBrightness("up") }
-        }
-
-        Text {
-          Layout.fillWidth: true
-          color: theme.textSubtle
-          wrapMode: Text.Wrap
-          font.family: theme.fontFamily
-          font.pixelSize: theme.fontSm
-          text: controlPanel.shellRoot.monitorStatusText.length > 0 ? controlPanel.shellRoot.monitorStatusText : "Display eDP-1 primary active"
-        }
+        ShellText { Layout.fillWidth: true; role: "section"; text: "Keyboard" }
 
         RowLayout {
           Layout.fillWidth: true

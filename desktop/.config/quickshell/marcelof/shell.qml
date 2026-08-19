@@ -317,13 +317,10 @@ ShellRoot {
   property string kbdBrightnessText: ""
   property string networkStatusText: ""
   property string powerStatusText: ""
-  property string monitorStatusText: ""
   property string fanStatusText: "Fan --"
   property string privacyStatusText: ""
   property string mediaNowText: ""
   property string weatherPanelText: ""
-  property string externalBrightnessText: ""
-  property real externalBrightnessValue: 0
   property string inhibitStatusText: "inactive"
   readonly property string lisbonClockText: Qt.formatDateTime(clock.date, "ddd-dd HH:mm:ss")
   property string timePanelText: ""
@@ -1415,18 +1412,6 @@ ShellRoot {
     root.brightnessText = root.brightnessValue + "%"
     root.runBrightness(String(root.brightnessValue))
     overlays.show("󰃠", "Brightness " + root.brightnessText)
-  }
-
-  function setExternalBrightness(value) {
-    root.externalBrightnessValue = Math.max(0, Math.min(100, Math.round(value)))
-    Quickshell.execDetached(shellConfig.setExternalBrightness(root.externalBrightnessValue))
-    systemStatusService.refreshExternalBrightnessSoon()
-    overlays.show("󰍹", "External brightness " + root.externalBrightnessValue + "%")
-  }
-
-  function runExternalBrightness(action) {
-    Quickshell.execDetached(shellConfig.externalBrightness(action))
-    systemStatusService.refreshExternalBrightnessSoon()
   }
 
   function runKbdBrightness(action) {

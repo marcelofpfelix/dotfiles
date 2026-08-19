@@ -15,29 +15,24 @@ Item {
     refreshKbdBrightness()
     refreshNetwork()
     refreshPower()
-    refreshMonitor()
     refreshFan()
     refreshInhibit()
     refreshPrivacy()
-    refreshExternalBrightness()
   }
 
   function refreshBrightness() { brightnessRefresh.running = true }
   function refreshKbdBrightness() { kbdBrightnessRefresh.running = true }
   function refreshNetwork() { networkStatusRefresh.running = true }
   function refreshPower() { powerStatusRefresh.running = true }
-  function refreshMonitor() { monitorStatusRefresh.running = true }
   function refreshFan() { fanStatusRefresh.running = true }
   function refreshInhibit() { inhibitStatusRefresh.running = true }
   function refreshPrivacy() { privacyStatusRefresh.running = true }
-  function refreshExternalBrightness() { externalBrightnessRefresh.running = true }
 
   function refreshBrightnessSoon() { brightnessRefreshLater.restart() }
   function refreshKbdBrightnessSoon() { kbdBrightnessRefreshLater.restart() }
   function refreshNetworkSoon() { networkStatusRefreshLater.restart() }
   function refreshPowerSoon() { powerStatusRefreshLater.restart() }
   function refreshInhibitSoon() { inhibitStatusRefreshLater.restart() }
-  function refreshExternalBrightnessSoon() { externalBrightnessRefreshLater.restart() }
 
   Process {
     id: brightnessRefresh
@@ -93,13 +88,6 @@ Item {
   }
 
   Process {
-    id: monitorStatusRefresh
-    command: systemStatusService.shellConfig.monitorStatus()
-    running: true
-    stdout: StdioCollector { onStreamFinished: systemStatusService.shellRoot.monitorStatusText = this.text.trim() }
-  }
-
-  Process {
     id: fanStatusRefresh
     command: systemStatusService.shellConfig.fanStatus()
     stdout: StdioCollector { onStreamFinished: systemStatusService.shellRoot.fanStatusText = this.text.trim().length > 0 ? this.text.trim() : "Fan --" }
@@ -140,23 +128,5 @@ Item {
     onTriggered: privacyStatusRefresh.running = true
   }
 
-  Process {
-    id: externalBrightnessRefresh
-    command: systemStatusService.shellConfig.externalBrightnessStatus()
-    running: true
-    stdout: StdioCollector {
-      onStreamFinished: {
-        systemStatusService.shellRoot.externalBrightnessText = this.text.trim()
-        const match = systemStatusService.shellRoot.externalBrightnessText.match(/([0-9]+)%/)
-        systemStatusService.shellRoot.externalBrightnessValue = match ? Number(match[1]) : 0
-      }
-    }
-  }
 
-  Timer {
-    id: externalBrightnessRefreshLater
-    interval: 600
-    repeat: false
-    onTriggered: externalBrightnessRefresh.running = true
-  }
 }

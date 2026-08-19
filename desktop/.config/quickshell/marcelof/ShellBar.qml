@@ -5,6 +5,7 @@ import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts
 import "plugins/panels/power" as PowerPlugin
+import "plugins/panels/monitor" as MonitorPlugin
 
 PanelWindow {
   id: bar
@@ -303,7 +304,7 @@ PanelWindow {
       }
 
 
-      StatusText { visible: text.length > 0 && text.indexOf("100%") < 0; command: barConfig.brightnessBar(); interval: 5000; leftClickCommand: barConfig.qs(barConfig.menuIds.controls); rightClickCommand: barConfig.qs(barConfig.menuIds.controls); wheelUpCommand: barConfig.brightnessSet("+5%"); wheelDownCommand: barConfig.brightnessSet("5%-") }
+      MonitorPlugin.Panel { Layout.alignment: Qt.AlignVCenter; bar: bar }
       StatusText { command: barConfig.network("bar"); interval: 10000; leftClickCommand: barConfig.qs(barConfig.menuIds.network); rightClickCommand: barConfig.networkEditor() }
 
       PowerPlugin.Panel {
