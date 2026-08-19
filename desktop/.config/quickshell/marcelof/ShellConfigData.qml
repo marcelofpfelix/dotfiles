@@ -100,10 +100,15 @@ QtObject {
     settings: "settings",
     tray: "tray",
     wallpaper: "wallpaper",
+    wifiQr: "wifiqr",
     websearch: "websearch",
     workInbox: "work-inbox",
     personalDashboard: "personal-dashboard",
     rootMenu: "root-menu"
+  })
+
+  readonly property var pluginIds: ({
+    wifiQr: "omarchy.wifiqr"
   })
 
   readonly property var menuAliases: ({

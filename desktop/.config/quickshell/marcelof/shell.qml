@@ -522,7 +522,7 @@ ShellRoot {
     if (menu === "launcher") return launcher.panelOpen
     if (menu === shellConfig.menuIds.rootMenu) return rootMenu.opened
     if (menu === shellConfig.menuIds.emojis) return emojiOverlay.opened
-    if (menu === "wifiqr") return wifiQrOverlay.opened
+    if (menu === shellConfig.menuIds.wifiQr) return wifiQrOverlay.opened
     const entry = root.shellMenuEntry(menu)
     return !!(entry && entry.openProperty && root[entry.openProperty])
   }
@@ -541,7 +541,7 @@ ShellRoot {
       root.hideLauncher()
       return true
     }
-    if (menu === "wifiqr") {
+    if (menu === shellConfig.menuIds.wifiQr) {
       wifiQrOverlay.close()
       return true
     }
@@ -564,7 +564,7 @@ ShellRoot {
       root.toggleLauncher()
       return true
     }
-    if (menu === "wifiqr") {
+    if (menu === shellConfig.menuIds.wifiQr) {
       wifiQrOverlay.opened ? wifiQrOverlay.close() : wifiQrOverlay.open(payloadJson || "{}")
       return true
     }
@@ -1275,11 +1275,11 @@ ShellRoot {
   QtObject {
     id: pluginHostObject
     function hide(pluginId) {
-      if (String(pluginId) === "omarchy.wifiqr") { wifiQrOverlay.close(); return true }
+      if (String(pluginId) === shellConfig.pluginIds.wifiQr) { wifiQrOverlay.close(); return true }
       return root.hideShellMenu(pluginId)
     }
     function summon(pluginId, payloadJson) {
-      if (String(pluginId) === "omarchy.wifiqr") { wifiQrOverlay.open(payloadJson || "{}"); return true }
+      if (String(pluginId) === shellConfig.pluginIds.wifiQr) { wifiQrOverlay.open(payloadJson || "{}"); return true }
       return root.openShellMenu(pluginId, payloadJson || "{}")
     }
   }
@@ -1295,7 +1295,7 @@ ShellRoot {
   WifiQrPlugin.Panel {
     id: wifiQrOverlay
     shell: pluginHostObject
-    manifest: ({ id: "omarchy.wifiqr" })
+    manifest: ({ id: shellConfig.pluginIds.wifiQr })
   }
 
   ImagePickerPlugin.ImagePicker {

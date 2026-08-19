@@ -252,7 +252,7 @@ quickshell_bar_status() {
         "launcher) menu_summon launcher"
         "controls) menu_toggle controls"
         "notifications) menu_toggle notifications"
-        "network) menu_toggle network"
+        "network) ipc_target omarchy.network toggle"
         "clipboard) menu_toggle clipboard"
         "close-panels) ipc_target shell closePanels"
         "osd-volume) ipc osdVolume"
