@@ -3,6 +3,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
+import qs.Ui as OmarchyUi
 
 ShellFloatingPopup {
   id: passMenuPanel
@@ -44,13 +45,20 @@ ShellFloatingPopup {
         Text { color: theme.textMuted; font.family: theme.fontFamily; font.pixelSize: theme.fontMd; text: passMenuPanel.shellRoot.passModeLabel() }
       }
 
-      ShellSearchBox {
+      OmarchyUi.TextField {
         id: passSearch
-        placeholder: "Search passwords"
+        Layout.fillWidth: true
+        Layout.preferredHeight: theme.searchHeight
+        placeholderText: "Search passwords"
+        foreground: theme.text
+        accent: theme.primary
+        font.family: theme.fontFamily
+        font.styleName: theme.fontStyle
+        font.pixelSize: theme.fontInput
         onTextChanged: passMenuPanel.shellRoot.rebuildPassModel()
-        onEscapePressed: passMenuPanel.close()
-        onDownPressed: { passList.selectRelative(1) }
-        onUpPressed: { passList.selectRelative(-1) }
+        Keys.onEscapePressed: passMenuPanel.close()
+        Keys.onDownPressed: { passList.selectRelative(1) }
+        Keys.onUpPressed: { passList.selectRelative(-1) }
         onAccepted: passMenuPanel.shellRoot.runPassEntry()
       }
 

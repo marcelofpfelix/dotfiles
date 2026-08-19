@@ -14,8 +14,8 @@ ShellPopup {
 
   IpcHandler {
     target: "network"
-    function toggle() { networkPanel.shellRoot.toggleNetworkPanel() }
-    function hide() { networkPanel.shellRoot.networkPanelOpen = false }
+    function toggle() { networkPanel.toggle() }
+    function hide() { networkPanel.hide() }
   }
 
   ShellPanel {

@@ -29,8 +29,8 @@ ShellPopup {
         ShellActionButton {
           visible: notificationCenter.shellRoot.selectedNotificationIndex >= 0
           icon: "󰅖"
-          label: "App"
-          minWidth: 76
+          label: "Clear app"
+          minWidth: 108
           tooltip: "Clear selected app notifications"
           tooltipState: notificationCenter.shellRoot
           onTriggered: notificationCenter.shellRoot.clearNotificationsForApp(notificationCenter.shellRoot.notificationAppAt(notificationCenter.shellRoot.selectedNotificationIndex))
@@ -134,7 +134,7 @@ ShellPopup {
             }
             Text { Layout.fillWidth: true; color: theme.warning; elide: Text.ElideRight; font.family: theme.fontFamily; font.styleName: theme.fontStyle; font.pixelSize: theme.fontMd; text: app }
             ShellText { role: "muted"; text: count + "" }
-            ShellActionButton { icon: "󰅖"; label: "App"; minWidth: 72; tooltip: "Clear app notifications"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.clearNotificationsForApp(app) }
+            ShellActionButton { icon: "󰅖"; label: "Clear"; minWidth: 80; tooltip: "Clear app notifications"; tooltipState: notificationCenter.shellRoot; onTriggered: notificationCenter.shellRoot.clearNotificationsForApp(app) }
           }
 
           ShellNotificationCard {
@@ -150,7 +150,7 @@ ShellPopup {
             actionsText: notificationDelegate.actionsText
             expanded: notificationDelegate.expanded
             liveActions: notificationDelegate.liveActions
-            showActions: notificationDelegate.expanded && (notificationDelegate.actionsText.length > 0 || notificationDelegate.desktopEntry.length > 0 || notificationDelegate.app.length > 0)
+            showActions: (notificationDelegate.liveActions && notificationDelegate.actionsText.length > 0) || (notificationDelegate.expanded && (notificationDelegate.desktopEntry.length > 0 || notificationDelegate.app.length > 0))
             selected: notificationDelegate.expanded
             tooltipState: notificationCenter.shellRoot
             onCloseRequested: notificationCenter.shellRoot.dismissNotification(notificationDelegate.notificationIndex)

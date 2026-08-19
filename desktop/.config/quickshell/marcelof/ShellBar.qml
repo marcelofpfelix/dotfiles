@@ -96,8 +96,8 @@ PanelWindow {
 
       RowLayout {
         Layout.alignment: Qt.AlignVCenter
-        Layout.maximumWidth: 620
-        spacing: barTheme.spacingLg
+        Layout.maximumWidth: implicitWidth
+        spacing: barTheme.spacingXs
 
         Rectangle {
           Layout.alignment: Qt.AlignVCenter
@@ -319,8 +319,6 @@ PanelWindow {
       }
 
 
-      ShellIconButton { tooltipState: barRoot; icon: "󰒓"; tooltip: "Controls"; onTriggered: barRoot.toggleControlPanel() }
-      StatusText { command: barConfig.weather(barSettings.weatherLocation); interval: 900000 }
       StatusText { visible: text.length > 0 && text.indexOf("100%") < 0; command: barConfig.brightnessBar(); interval: 5000; leftClickCommand: barConfig.qs(barConfig.menuIds.controls); rightClickCommand: barConfig.qs(barConfig.menuIds.controls); wheelUpCommand: barConfig.brightnessSet("+5%"); wheelDownCommand: barConfig.brightnessSet("5%-") }
       StatusText { command: barConfig.network("bar"); interval: 10000; leftClickCommand: barConfig.qs(barConfig.menuIds.network); rightClickCommand: barConfig.networkEditor() }
 
@@ -332,13 +330,27 @@ PanelWindow {
               font.styleName: barTheme.fontStyle
         font.pixelSize: barTheme.fontMd
         text: UPower.displayDevice.ready ? bar.batteryIcon(UPower.displayDevice) + " " + bar.batteryPercent(UPower.displayDevice) + "%" : ""
+
+        MouseArea {
+          anchors.fill: parent
+          hoverEnabled: true
+          cursorShape: Qt.PointingHandCursor
+          onEntered: barRoot.showTooltip(parent, "Battery and power")
+          onExited: barRoot.hideTooltip()
+          onClicked: barRoot.toggleControlPanel()
+        }
       }
 
+    }
+
+    Row {
+      anchors.centerIn: parent
+      spacing: barTheme.spacingLg
+
       Text {
-        Layout.alignment: Qt.AlignVCenter
         color: barTheme.textMuted
         font.family: barTheme.fontFamily
-              font.styleName: barTheme.fontStyle
+        font.styleName: barTheme.fontStyle
         font.pixelSize: barTheme.fontMd
         text: " " + barRoot.lisbonClockText
 
@@ -350,7 +362,6 @@ PanelWindow {
       }
 
       Text {
-        Layout.alignment: Qt.AlignVCenter
         color: notificationHistoryModel.count > 0 ? barSettings.primaryColor : barTheme.textMuted
         font.family: barTheme.fontFamily
         font.styleName: barTheme.fontStyle
@@ -375,6 +386,7 @@ PanelWindow {
     ShellTrayManagePanel {
       anchorWindow: bar
       shellRoot: barRoot
+      visibilityAction: value => value ? barRoot.openShellMenu(barConfig.menuIds.tray, "{}") : barRoot.hideShellMenu(barConfig.menuIds.tray)
       panelOpen: barRoot.trayManageOpen
       panelWidth: barRoot.menuWidthFor(barConfig.menuIds.tray)
       panelHeight: barRoot.menuHeightFor(barConfig.menuIds.tray)

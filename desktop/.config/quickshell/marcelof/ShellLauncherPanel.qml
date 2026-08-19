@@ -3,6 +3,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
+import qs.Ui as OmarchyUi
 
 ShellFloatingPopup {
   id: launcherPanel
@@ -89,18 +90,27 @@ ShellFloatingPopup {
       anchors.margins: theme.panelMargin
       spacing: theme.spacingXl
 
-      ShellSearchBox {
+      OmarchyUi.TextField {
         id: search
+        Layout.fillWidth: true
+        Layout.preferredHeight: theme.searchHeight
+        placeholderText: "Search apps"
+        foreground: theme.text
+        accent: theme.primary
+        font.family: theme.fontFamily
+        font.styleName: theme.fontStyle
+        font.pixelSize: theme.fontInput
         onTextChanged: launcherPanel.shellRoot.rebuildLauncher()
-        onEscapePressed: launcherPanel.shellRoot.hideLauncher()
-        onDownPressed: { appList.selectRelative(1) }
-        onUpPressed: { appList.selectRelative(-1) }
+        Keys.onEscapePressed: launcherPanel.shellRoot.hideLauncher()
+        Keys.onDownPressed: { appList.selectRelative(1) }
+        Keys.onUpPressed: { appList.selectRelative(-1) }
         onAccepted: launcherPanel.shellRoot.launchCurrentApp()
-        onKeyPressed: event => {
+        Keys.onPressed: event => {
           if ((event.modifiers & Qt.AltModifier) && event.key >= Qt.Key_1 && event.key <= Qt.Key_9) {
             launcherPanel.shellRoot.launchAppAtIndex(event.key - Qt.Key_1)
             event.accepted = true
-          }
+          } else
+            event.accepted = false
         }
       }
 
@@ -153,7 +163,7 @@ ShellFloatingPopup {
             anchors.verticalCenter: parent.verticalCenter
             width: theme.barItemSize
             height: theme.barItemSize
-            source: Quickshell.iconPath(modelData.icon, true)
+            source: launcherPanel.shellRoot.appLibrary.iconSource(modelData.icon)
           }
 
           Row {

@@ -67,10 +67,12 @@ self_test() {
   printf "#!/usr/bin/env bash\nprintf 'notificationctl %%s\n' \"\$*\" >>\"$log\"\n" >"$tmp/bin/notificationctl"
   chmod +x "$tmp/bin/qbar" "$tmp/bin/audioctl" "$tmp/bin/notificationctl"
   QBAR_BIN="$tmp/bin/qbar" "$0" -q omarchy.clock toggle >/dev/null
+  QBAR_BIN="$tmp/bin/qbar" "$0" -q shell listPlugins >/dev/null
   QBAR_BIN="$tmp/bin/qbar" "$0" -q notifications toggleDnd >/dev/null
   AUDIOCTL_BIN="$tmp/bin/audioctl" "$0" -q media playPause
   NOTIFICATIONCTL_BIN="$tmp/bin/notificationctl" "$0" -q notifications clear
   grep -Fq "qbar -q shell toggle clock {}" "$log"
+  grep -Fq "qbar -q shell listPlugins" "$log"
   grep -Fq "qbar -q shell toggleDnd" "$log"
   grep -Fq "audioctl play-pause-all" "$log"
   grep -Fq "notificationctl clear all" "$log"

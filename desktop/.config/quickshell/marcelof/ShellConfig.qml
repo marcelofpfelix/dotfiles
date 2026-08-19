@@ -9,6 +9,7 @@ QtObject {
   readonly property string stateDir: configData.stateDir
   readonly property string defaultWallpaperUrl: configData.defaultWallpaperUrl
   readonly property string defaultWebSearchSite: configData.defaultWebSearchSite
+  readonly property string defaultPassUserKey: configData.defaultPassUserKey
   readonly property string fileUrlPrefix: configData.fileUrlPrefix
   readonly property string textSeparator: configData.textSeparator
   readonly property string boardQuickshellSurface: configData.boardQuickshellSurface
@@ -21,6 +22,9 @@ QtObject {
   readonly property var batteryPolicy: configData.batteryPolicy
   readonly property var notificationToastPolicy: configData.notificationToastPolicy
   readonly property var menuIds: configData.menuIds
+  readonly property var menuAliases: configData.menuAliases
+  readonly property var menuRegistry: configData.menuRegistry
+  readonly property var actionRegistry: configData.actionRegistry
   readonly property var labels: configData.labels
   readonly property var actions: configData.actions
   readonly property var states: configData.states
@@ -47,14 +51,14 @@ QtObject {
   function volumeMixer() { return cleanEnv("pavucontrol") }
   function shellQuote(value) { return "'" + String(value).replace(/'/g, "'\"'\"'") + "'" }
   function hyprStateWatch() { return [bin("hypr-state"), "watch"] }
-  function boardQuickshellBar() { return ["env", "BAR_COLOR_FORMAT=quickshell", "board", "--config", boardConfig, "render", "--watch", "quickshell", boardQuickshellSurface] }
-  function boardText(surface) { return ["board", "--config", boardConfig, "render", "text", surface] }
-  function boardAction(action) { return ["board", "--config", boardConfig, "action", action] }
+  function boardCommand(args) { return ["board", "--config", boardConfig].concat(args) }
+  function boardQuickshellBar() { return ["env", "BAR_COLOR_FORMAT=quickshell"].concat(boardCommand(["render", "--watch", "quickshell", boardQuickshellSurface])) }
+  function boardText(surface) { return boardCommand(["render", "text", surface]) }
+  function boardAction(action) { return boardCommand(["action", action]) }
   function weather(location, mode) { return ["sh", "-c", "WEATHER_LOCATION=" + shellQuote(location) + " " + bin("check-weather") + (mode ? " " + mode : "")] }
   function brightnessBar() { return ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print \"󰃠 \" $4}' || printf '󰃠 --'"] }
   function brightnessPercent() { return ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print $4}' || printf -- --"] }
   function portalStatus() { return ["sh", "-c", "printf 'hyprland '; systemctl --user is-active xdg-desktop-portal-hyprland.service 2>/dev/null || printf unavailable; printf ', portal '; systemctl --user is-active xdg-desktop-portal.service 2>/dev/null || printf unavailable"] }
-  function lisbonClock() { return ["env", "TZ=Europe/Lisbon", "date", "+%a-%d %H:%M:%S"] }
   function launcherMruLoad() { return ["sh", "-c", "cat \"${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof/launcher-mru.txt\" 2>/dev/null || true"] }
   function launcherMruSave(cache) { return ["sh", "-c", "dir=${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof; file=$dir/launcher-mru.txt; tmp=$file.tmp; mkdir -p \"$dir\"; printf %s " + shellQuote(cache) + " > \"$tmp\" && mv \"$tmp\" \"$file\""] }
   function cliphistList() { return ["sh", "-c", "cliphist list 2>/dev/null"] }

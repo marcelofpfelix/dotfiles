@@ -5,10 +5,13 @@ root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 status=0
 
 scan_file() {
-  local file=$1 rel
+  local file=$1 rel matches
   rel="${file#"$root"/}"
 
-  if grep -nE '(^|[^[:alnum:]_.-])(rofi|dmenu|zenity|xrandr|feh|polybar|picom)([[:space:];|&`$()<>{}]|$)' "$file"; then
+  matches=$(grep -nE '(^|[^[:alnum:]_.-])(rofi|dmenu|zenity|xrandr|feh|polybar|picom)([[:space:];|&`$()<>{}]|$)' "$file" \
+    | awk -F: '$2 !~ /^[[:space:]]*(#|\/\/)/' || true)
+  if [ -n "$matches" ]; then
+    printf '%s\n' "$matches"
     printf 'active Wayland file calls legacy X11 helper: %s\n' "$rel" >&2
     status=1
   fi

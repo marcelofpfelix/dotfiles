@@ -11,6 +11,7 @@ QtObject {
   readonly property string boardQuickshellSurface: "quickshell-bar"
   readonly property string defaultWallpaperUrl: fileUrlPrefix + home + "/.local/share/backgrounds/bkg2.png"
   readonly property string defaultWebSearchSite: "google"
+  readonly property string defaultPassUserKey: "username"
   readonly property string statusAction: "status"
   readonly property string networkWifiLabel: "Wi-Fi"
   readonly property string networkUnavailableText: "Network unavailable"
@@ -103,6 +104,53 @@ QtObject {
     rootMenu: "root-menu"
   })
 
+  readonly property var menuAliases: ({
+    menu: "root-menu",
+    apps: "launcher",
+    clip: "clipboard",
+    passwords: "passmenu",
+    web: "websearch",
+    keys: "keybindings",
+    "tray-manage": "tray",
+    audio: "media",
+    wall: "wallpaper",
+    clock: "calendar",
+    time: "calendar",
+    work: "work-inbox",
+    workInbox: "work-inbox",
+    dashboard: "personal-dashboard",
+    personal: "personal-dashboard",
+    personalDashboard: "personal-dashboard",
+    net: "network",
+    session: "power",
+    inhibit: "stay-awake"
+  })
+
+  readonly property var menuRegistry: ({
+    "root-menu": { toggle: "toggleRootMenu", hide: "hideRootMenu" },
+    clipboard: { openProperty: "clipboardOpen", toggle: "toggleClipboard" },
+    passmenu: { openProperty: "passMenuOpen", toggle: "togglePassmenu" },
+    websearch: { openProperty: "webSearchOpen", toggle: "toggleDefaultWebSearch" },
+    keybindings: { openProperty: "keybindingsOpen", refresh: "refreshKeybindings" },
+    tray: { openProperty: "trayManageOpen" },
+    controls: { openProperty: "controlPanelOpen", refresh: "refreshControls" },
+    media: { openProperty: "mediaPanelOpen", refresh: "refreshAudioState" },
+    screen: { openProperty: "screenPanelOpen", refresh: "refreshScreenState" },
+    wallpaper: { openProperty: "wallpaperPanelOpen", refresh: "refreshWallpapers" },
+    calendar: { openProperty: "calendarOpen", refresh: "refreshCalendar" },
+    "work-inbox": { openProperty: "workInboxOpen", refresh: "refreshWorkInbox" },
+    "personal-dashboard": { openProperty: "personalDashboardOpen", refresh: "refreshPersonalDashboard" },
+    settings: { openProperty: "settingsOpen" },
+    notifications: { openProperty: "notificationCenterOpen" },
+    network: { openProperty: "networkPanelOpen", refresh: "refreshNetwork" },
+    power: { openProperty: "powerMenuOpen", refresh: "refreshPower", hide: "hidePowerMenu" }
+  })
+
+  readonly property var actionRegistry: ({
+    dnd: "toggleDnd",
+    "stay-awake": "toggleIdleInhibit"
+  })
+
   readonly property var menuSizes: ({
     default: { width: 640, height: 560 },
     compact: { width: 640, height: 360 },
@@ -116,12 +164,12 @@ QtObject {
     wallpaper: { width: 640, height: 560, compactHeight: 360 },
     screen: { width: 640, height: 460 },
     media: { width: 640, height: 260 },
-    controls: { width: 640, height: 720 },
+    controls: { width: 720, height: 960 },
     settings: { width: 640, height: 420 },
     calendar: { width: 640, height: 720 },
     "work-inbox": { width: 640, height: 420 },
     "personal-dashboard": { width: 640, height: 240 },
-    "root-menu": { width: 640, height: 320 },
+    "root-menu": { width: 360, height: 780 },
     notifications: { width: 640, height: 420 },
     keybindings: { width: 640, height: 560 },
     network: { width: 640, height: 320 },
@@ -151,7 +199,7 @@ QtObject {
     [
       { icon: "󰒓", label: "Set", tooltip: "Shell settings", action: "settings" },
       { icon: "󱊖", label: "Tray", tooltip: "Tray manager", action: "tray" },
-      { icon: "⏻", label: "Power", tooltip: "Power menu", action: "power" }
+      { icon: "⏻", label: "System", tooltip: "Session and power actions", action: "power" }
     ]
   ]
 

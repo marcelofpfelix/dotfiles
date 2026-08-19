@@ -170,8 +170,8 @@ Rectangle {
 
       ShellActionButton {
         icon: "󰍉"
-        label: "App"
-        minWidth: 72
+        label: "Open app"
+        minWidth: 100
         tooltip: "Focus source app"
         tooltipState: card.tooltipState
         onTriggered: card.openRequested()

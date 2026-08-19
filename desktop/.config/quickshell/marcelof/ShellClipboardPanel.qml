@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
+import qs.Ui as OmarchyUi
 
 ShellFloatingPopup {
   id: clipboardPanel
@@ -37,13 +38,20 @@ ShellFloatingPopup {
         Text { color: theme.textMuted; font.family: theme.fontFamily; font.pixelSize: theme.fontMd; text: clipboardPanel.clipboardModel.count + " entries" }
       }
 
-      ShellSearchBox {
+      OmarchyUi.TextField {
         id: clipSearch
-        placeholder: "Search clipboard"
+        Layout.fillWidth: true
+        Layout.preferredHeight: theme.searchHeight
+        placeholderText: "Search clipboard"
+        foreground: theme.text
+        accent: theme.primary
+        font.family: theme.fontFamily
+        font.styleName: theme.fontStyle
+        font.pixelSize: theme.fontInput
         onTextChanged: clipboardPanel.shellRoot.rebuildClipboardModel()
-        onEscapePressed: clipboardPanel.close()
-        onDownPressed: { clipList.selectRelative(1) }
-        onUpPressed: { clipList.selectRelative(-1) }
+        Keys.onEscapePressed: clipboardPanel.close()
+        Keys.onDownPressed: { clipList.selectRelative(1) }
+        Keys.onUpPressed: { clipList.selectRelative(-1) }
         onAccepted: clipboardPanel.shellRoot.pasteClipboardEntry()
       }
 

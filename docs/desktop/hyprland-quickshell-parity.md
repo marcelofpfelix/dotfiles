@@ -7,7 +7,7 @@ This is the active gap list for replacing the old i3, Polybar, rofi, and small X
 - Active desktop path: Hyprland plus Quickshell only.
 - Profiles: `default` for i3-compatible migration behavior and `omarchy` for similar Wayland-first behavior using local code and generic apps.
 - X11 config is archived under `archive/x11/desktop/` and is not redeployed by `home -y`.
-- No upstream Omarchy shell binaries or Omarchy-named runtime scripts are used.
+- No upstream Omarchy shell replacement is installed. Local `omarchy-shell` and plugin review/staging commands are compatibility adapters over `qbar`; they do not start a second shell runtime or execute staged plugin QML.
 - Packages must be tracked in homelab install intent, not installed ad hoc.
 
 ## Done

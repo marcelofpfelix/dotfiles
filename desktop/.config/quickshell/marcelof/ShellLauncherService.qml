@@ -9,6 +9,7 @@ Item {
   required property var shellSettings
   required property var launcherPanel
   required property var launcherModel
+  required property var appLibrary
 
   property var launcherEntries: []
   property var launcherMru: []
@@ -36,11 +37,6 @@ Item {
     return listContains(shellSettings.favoriteAppIds, entryId(entry))
   }
 
-  function isHidden(entry) {
-    const id = entryId(entry)
-    return id === shellRoot.launcherSmokeHiddenId || listContains(shellSettings.hiddenAppIds, id)
-  }
-
   function toggleFavoriteById(id) {
     if (!id)
       return
@@ -52,6 +48,7 @@ Item {
     if (!id)
       return
     shellSettings.hiddenAppIds = toggleListValue(shellSettings.hiddenAppIds, id)
+    appLibrary.appsChanged()
     rebuild()
   }
 
@@ -83,55 +80,6 @@ Item {
     if (arg.length === 0)
       return rows
     return rows.filter(row => (row.name + " " + row.subtext).toLowerCase().indexOf(arg.toLowerCase()) >= 0 || raw.indexOf(">web ") === 0 || raw.indexOf(">yt ") === 0 || raw.indexOf(">youtube ") === 0)
-  }
-
-  function entryText(entry) {
-    const keywords = entry && entry.keywords && entry.keywords.join ? entry.keywords.join(" ") : ""
-    return [entry ? entry.name : "", entry ? entry.genericName : "", entry ? entry.comment : "", entry ? entry.id : "", keywords].join(" ").toLowerCase()
-  }
-
-  function acronym(entry) {
-    const text = [entry ? entry.name : "", entry ? entry.genericName : "", entry ? entry.id : ""].join(" ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[._:/\-]+/g, " ").toLowerCase()
-    const parts = text.split(/[^a-z0-9]+/)
-    let result = ""
-    for (let i = 0; i < parts.length; i++) {
-      if (parts[i].length > 0)
-        result += parts[i][0]
-    }
-    return result
-  }
-
-  function score(entry, query) {
-    const q = query.trim().toLowerCase()
-    const name = String(entry && entry.name || "").toLowerCase()
-    const id = String(entry && entry.id || "").toLowerCase()
-    const haystack = entryText(entry)
-    if (q.length === 0)
-      return 0
-
-    const terms = q.split(/\s+/)
-    for (let i = 0; i < terms.length; i++) {
-      const term = terms[i]
-      if (term.length === 0)
-        continue
-      if (haystack.indexOf(term) < 0 && !(term.length <= 5 && acronym(entry).indexOf(term) >= 0))
-        return -1
-    }
-
-    const nameIndex = name.indexOf(q)
-    const idIndex = id.indexOf(q)
-    if (nameIndex === 0) return 10000 - name.length
-    if (idIndex === 0) return 9500 - id.length
-    if (nameIndex > 0) return 8000 - nameIndex * 10 - name.length
-    if (idIndex > 0) return 7600 - idIndex * 10 - id.length
-
-    const hayIndex = haystack.indexOf(q)
-    if (hayIndex >= 0) return 6000 - hayIndex
-
-    const acronymIndex = acronym(entry).indexOf(q)
-    if (acronymIndex === 0) return 5000
-    if (acronymIndex > 0) return 4600 - acronymIndex * 10
-    return 4000 - name.length
   }
 
   function mruIndex(entry) {
@@ -196,17 +144,7 @@ Item {
     Quickshell.execDetached(shellConfig.launcherMruSave(cache))
   }
 
-  function entryById(id) {
-    const values = DesktopEntries.applications.values || []
-    for (let i = 0; i < values.length; i++) {
-      if (entryId(values[i]) === String(id || ""))
-        return values[i]
-    }
-    return null
-  }
-
   function rebuild() {
-    const values = DesktopEntries.applications.values || []
     const query = launcherPanel.searchText
     const commandRows = commandEntries(query)
     if (query.trim().indexOf(">") === 0) {
@@ -217,17 +155,15 @@ Item {
       launcherPanel.currentIndex = launcherModel.count > 0 ? 0 : -1
       return
     }
-    const rows = []
-    for (let i = 0; i < values.length; i++) {
-      const entry = values[i]
-      if (!entry || entry.noDisplay || !entry.name || isHidden(entry))
-        continue
-      const rowScore = score(entry, query)
-      if (rowScore < 0)
-        continue
+    const rows = appLibrary.sortedEntries(query)
+    for (let i = 0; i < rows.length; i++) {
+      const entry = rows[i].entry
       const favorite = isFavorite(entry)
       const boost = mruBoost(entry) + mfuBoost(entry) + (favorite ? 20000 : 0)
-      rows.push({ entry: entry, score: rowScore + boost, key: String(entry.name).toLowerCase(), mru: mruIndex(entry), boost: boost, favorite: favorite })
+      rows[i].score += boost
+      rows[i].mru = mruIndex(entry)
+      rows[i].boost = boost
+      rows[i].favorite = favorite
     }
 
     rows.sort((a, b) => {
@@ -267,14 +203,9 @@ Item {
       return
     }
     recordUse(entry)
-    if (entry && entry.command && entry.command.length > 0)
-      Quickshell.execDetached({ command: entry.command, workingDirectory: entry.workingDirectory || "" })
-    else if (entry && typeof entry.execute === "function")
-      entry.execute()
-    else if (entry && entry.id)
-      Quickshell.execDetached(shellConfig.gtkLaunch(entry.id))
-    else
+    if (!entry || !entry.id)
       return
+    appLibrary.launch(entry.id, entry.name)
     launcherPanel.panelOpen = false
     launcherPanel.searchText = ""
   }
@@ -285,12 +216,12 @@ Item {
     launcherPanel.currentIndex = index
     if (index < launcherEntries.length) {
       const entry = launcherEntries[index]
-      launchEntry(entry && entry.id ? (entryById(entry.id) || entry) : entry)
+      launchEntry(entry && entry.id ? (appLibrary.entryById(entry.id) || entry) : entry)
       return
     }
     const row = launcherModel.get(index)
     if (row && row.id)
-      launchEntry(entryById(row.id) || row)
+      launchEntry(appLibrary.entryById(row.id) || row)
   }
 
   function launchCurrent() {
@@ -302,7 +233,7 @@ Item {
   }
 
   Connections {
-    target: DesktopEntries.applications
-    function onValuesChanged() { if (launcherPanel.panelOpen) launcherService.rebuild() }
+    target: appLibrary
+    function onAppsChanged() { if (launcherPanel.panelOpen) launcherService.rebuild() }
   }
 }

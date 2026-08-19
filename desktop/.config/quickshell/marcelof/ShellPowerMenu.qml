@@ -36,7 +36,7 @@ ShellPopup {
     function confirmExit() { powerMenu.shellRoot.togglePowerMenu() }
     function power() { powerMenu.shellRoot.togglePowerMenu() }
     function confirmReboot() { powerMenu.shellRoot.openSessionConfirm("Reboot", "󰜉", powerMenu.shellConfig.reboot()) }
-    function hide() { powerMenu.shellRoot.hidePowerMenu() }
+    function hide() { powerMenu.hide() }
   }
 
   ShellPanel {

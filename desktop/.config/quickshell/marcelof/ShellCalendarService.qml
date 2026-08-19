@@ -25,20 +25,6 @@ Item {
   }
 
   Process {
-    id: lisbonClock
-    command: calendarService.shellConfig.lisbonClock()
-    running: true
-    stdout: StdioCollector { onStreamFinished: calendarService.shellRoot.lisbonClockText = this.text.trim() }
-  }
-
-  Timer {
-    interval: 1000
-    running: true
-    repeat: true
-    onTriggered: lisbonClock.running = true
-  }
-
-  Process {
     id: timePanelRefresh
     command: calendarService.shellConfig.checkTimePanel()
     running: true

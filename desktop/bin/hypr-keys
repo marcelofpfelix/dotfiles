@@ -79,6 +79,7 @@ pretty_action() {
     case "$line" in
         *'sh(terminal)'*) printf 'Terminal' ;;
         *'sh(launcher)'*) printf 'Apps' ;;
+        *'sh(root_menu)'*) printf 'Root menu' ;;
         *'qbar keybindings'*) printf 'Keybindings' ;;
         *'common.actions.keybindings'*) printf 'Keybindings' ;;
         *'qbar power'*) printf 'Session menu' ;;

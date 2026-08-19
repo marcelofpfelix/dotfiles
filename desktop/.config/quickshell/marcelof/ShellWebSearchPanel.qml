@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
+import qs.Ui as OmarchyUi
 
 ShellFloatingPopup {
   id: webSearchPanel
@@ -64,11 +65,16 @@ ShellFloatingPopup {
         }
       }
 
-      ShellSearchBox {
+      OmarchyUi.TextField {
         id: webSearchInput
         width: parent.width
-        inputHeight: theme.searchHeightLarge
-        onEscapePressed: webSearchPanel.close()
+        height: theme.searchHeightLarge
+        foreground: theme.text
+        accent: theme.primary
+        font.family: theme.fontFamily
+        font.styleName: theme.fontStyle
+        font.pixelSize: theme.fontInput
+        Keys.onEscapePressed: webSearchPanel.close()
         onAccepted: webSearchPanel.runSearch()
       }
     }

@@ -43,14 +43,14 @@ qs_menu_crop_geometry() {
   local width=720 height=700 x y
 
   case "$panel" in
-    root-menu) width=660; height=360; x=0; y=0 ;;
+    root-menu) width=420; height=840; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     launcher) width=960; height=820; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     clipboard|passmenu) width=800; height=660; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     websearch) width=700; height=124; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     osd) width=360; height=140; x=$(((max_w - width) / 2)); y=0 ;;
     notifications) width=660; height=450; x=$((max_w - width)); y=0 ;;
     wallpaper) width=720; height=430; x=$((max_w - width)); y=0 ;;
-    controls) width=760; height=840; x=$((max_w - width)); y=0 ;;
+    controls) width=840; height=1020; x=$((max_w - width)); y=0 ;;
     calendar) width=780; height=840; x=$((max_w - width)); y=0 ;;
     personal-dashboard) width=720; height=620; x=$((max_w - width)); y=0 ;;
     *) x=$((max_w - width)); y=0 ;;

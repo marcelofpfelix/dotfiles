@@ -150,9 +150,9 @@ ShellPopup {
           spacing: theme.spacingXl
           ShellText { role: "softStrong"; text: "󰁹" }
           ShellText { Layout.fillWidth: true; role: "soft"; elide: Text.ElideRight; text: controlPanel.shellRoot.powerStatusText }
-          ShellActionButton { icon: "󰾅"; label: "Save"; tooltip: "Power saver"; tooltipState: controlPanel.shellRoot; onTriggered: controlPanel.shellRoot.setPowerProfile("power-saver") }
-          ShellActionButton { icon: "󰾆"; label: "Bal"; tooltip: "Balanced"; tooltipState: controlPanel.shellRoot; onTriggered: controlPanel.shellRoot.setPowerProfile("balanced") }
-          ShellActionButton { icon: "󰓅"; label: "Perf"; tooltip: "Performance"; tooltipState: controlPanel.shellRoot; onTriggered: controlPanel.shellRoot.setPowerProfile("performance") }
+          ShellActionButton { icon: "󰾅"; label: "Save"; active: controlPanel.shellRoot.powerStatusText.indexOf("power-saver") === 0; tooltip: "Power saver"; tooltipState: controlPanel.shellRoot; onTriggered: controlPanel.shellRoot.setPowerProfile("power-saver") }
+          ShellActionButton { icon: "󰾆"; label: "Bal"; active: controlPanel.shellRoot.powerStatusText.indexOf("balanced") === 0; tooltip: "Balanced"; tooltipState: controlPanel.shellRoot; onTriggered: controlPanel.shellRoot.setPowerProfile("balanced") }
+          ShellActionButton { icon: "󰓅"; label: "Perf"; active: controlPanel.shellRoot.powerStatusText.indexOf("performance") === 0; tooltip: "Performance"; tooltipState: controlPanel.shellRoot; onTriggered: controlPanel.shellRoot.setPowerProfile("performance") }
         }
 
         RowLayout {

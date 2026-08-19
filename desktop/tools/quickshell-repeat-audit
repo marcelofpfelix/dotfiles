@@ -18,6 +18,7 @@ ALLOWLIST = {
     '"controls"',
     '"dashboard"',
     '"file://"',
+    '"function"',
     '"gopass"',
     '"keys"',
     '"launcher"',

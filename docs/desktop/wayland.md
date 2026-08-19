@@ -62,7 +62,9 @@ Editable today: primary color, density, weather location, DND, tray behavior, hi
 
 `desktop/bin/omarchy-shell` is a local compatibility shim over `qbar`, not a second shell runtime. It supports the Omarchy-style `shell` IPC target for existing local menus, including `omarchy.menu` as the root menu and `omarchy.clock` as the calendar. Direct plugin targets are mapped only when backed by existing local state: panel open/close/toggle methods, notification DND/history/clear, helper-owned media play/pause/status, and lock. Unsupported targets still fail clearly.
 
-This does not make upstream Omarchy plugins drop-in compatible yet. Drop-in plugin loading still needs a small install/enable path and explicit target adapters before arbitrary QML runs inside the long-lived Quickshell process.
+Built-in menus now share one declarative registry in `ShellConfigData.qml`. Omarchy-compatible clients can inspect it with `omarchy-shell shell listPlugins` and `omarchy-shell shell listShellConfig`; entries are read-only, first-party menu surfaces and cannot be disabled. This avoids a second registry runtime while keeping the useful Omarchy IPC contract.
+
+Upstream Omarchy plugins are not drop-in compatible. Their QML imports Omarchy `Commons`, `Ui`, config mutators, and service objects that this shell intentionally does not ship. Loading those files without that runtime would fail, while importing the whole runtime would duplicate the local shell. Add dynamic loading only when a reviewed plugin provides enough value to justify its specific missing dependencies.
 
 Use `omarchy-plugin-review <plugin-dir>` before enabling any third-party plugin. It validates the manifest, rejects symlinks and unsafe entry points, and reminds that plugin QML is unsandboxed.
 
@@ -72,12 +74,12 @@ Use `omarchy-plugin-add --yes <plugin-dir-or-git-url>` only to stage a reviewed 
 
 Snapshot: `/tmp/omarchy-quattro` on branch `quattro`, refreshed with `git pull --ff-only` on 2026-08-18, commit `f32ebbd`.
 
-The useful Omarchy pattern is organization, not a full shell copy. Omarchy keeps a long-running Quickshell root with a `shell` IPC target, manifest-backed plugins, a small shared `Ui/Panel.qml` lifecycle wrapper, and shared bar/panel button primitives. The local shell already has matching behavior through `qbar shell ...`, `ShellFloatingPopup.qml`, `ShellPopup.qml`, `ShellPanel.qml`, and existing menu components, but `shell.qml` still owns too much menu routing and per-panel open state.
+The useful Omarchy pattern is organization, not a full shell copy. Omarchy keeps a long-running Quickshell root with a `shell` IPC target, manifest-backed plugins, a small shared `Ui/Panel.qml` lifecycle wrapper, and shared bar/panel button primitives. The local shell already has matching behavior through `qbar shell ...`, `ShellFloatingPopup.qml`, `ShellPopup.qml`, `ShellPanel.qml`, and existing menu components. Built-in routing now lives in `ShellConfigData.qml`; `shell.qml` retains the live panel state.
 
 Good replacement candidates:
 
-- Replace local per-panel open/hide/toggle booleans and switch statements with an Omarchy-style built-in panel registry. This should shrink `shell.qml` without enabling third-party QML.
-- Move menu ids, display names, IPC aliases, sizes, and smoke-test names into one local registry shape. Keep QML as the source for UI sizes; do not generate code unless repeated drift returns.
+- Keep built-in menu ids, aliases, lifecycle callbacks, actions, and sizes in `ShellConfigData.qml`; `shell.qml` only executes that registry.
+- Keep the small Bash menu registry for shell completion, smoke crops, and labels. Do not generate Bash from QML unless drift becomes a repeated bug.
 - Adapt Omarchy-style `Ui/Panel.qml` lifecycle semantics into the existing `ShellPopup.qml` and `ShellFloatingPopup.qml` instead of copying every panel.
 - Borrow Omarchy bar widget registry ideas only after local menu routing is simpler. `ShellBar.qml` is smaller than Omarchy's bar and already delegates status rendering to `board`.
 - Keep local notification and media behavior. Omarchy has useful card/service structure, but local notifications already persist history and local media intentionally avoids pausing Google Meet/browser audio.
@@ -86,7 +88,7 @@ Not replacement candidates:
 
 - Do not replace secure lock, idle, or polkit with copied QML in this repo. Quickshell may own visible buttons and IPC, but privileged behavior stays delegated to real system services.
 - Do not import Omarchy installer, update, Arch package, snapshot, or distro policy flows.
-- Do not enable staged third-party Omarchy plugins until a first-party-only registry proves it reduces local code and has a clear rollback path.
+- Do not enable staged third-party Omarchy plugins until a reviewed plugin justifies supporting its concrete Omarchy UI and service dependencies.
 
 ## Menu testing
 

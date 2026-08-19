@@ -11,62 +11,19 @@ import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import "plugins/menu" as OmarchyMenu
+import "services" as OmarchyServices
 
 ShellRoot {
   id: root
 
   property string launcherSmokeHiddenId: ""
+  readonly property var appLibrary: appLibraryService
   function menuSize(id) { return shellConfig.menuSize(id, shellSettings.denseUi) }
   function menuWidthFor(id) { return root.menuSize(id).width }
   function menuHeightFor(id) { return root.menuSize(id).height }
   function menuCompactHeightFor(id) { return root.menuSize(id).compactHeight }
 
-  readonly property var shellMenuAliases: ({
-    menu: "root-menu",
-    apps: "launcher",
-    clip: "clipboard",
-    passwords: "passmenu",
-    web: "websearch",
-    keys: "keybindings",
-    "tray-manage": "tray",
-    audio: "media",
-    wall: "wallpaper",
-    clock: "calendar",
-    time: "calendar",
-    work: "work-inbox",
-    workInbox: "work-inbox",
-    dashboard: "personal-dashboard",
-    personal: "personal-dashboard",
-    personalDashboard: "personal-dashboard",
-    net: "network",
-    session: "power",
-    inhibit: "stay-awake"
-  })
-
-  readonly property var shellMenuRegistry: ({
-    "root-menu": { openProperty: "rootMenuOpen" },
-    clipboard: { openProperty: "clipboardOpen", toggle: "toggleClipboard" },
-    passmenu: { openProperty: "passMenuOpen", toggle: "togglePassmenu" },
-    websearch: { openProperty: "webSearchOpen", toggle: "toggleDefaultWebSearch" },
-    keybindings: { openProperty: "keybindingsOpen", refresh: "refreshKeybindings" },
-    tray: { openProperty: "trayManageOpen" },
-    controls: { openProperty: "controlPanelOpen", refresh: "refreshControls" },
-    media: { openProperty: "mediaPanelOpen", refresh: "refreshAudioState" },
-    screen: { openProperty: "screenPanelOpen", refresh: "refreshScreenState" },
-    wallpaper: { openProperty: "wallpaperPanelOpen", refresh: "refreshWallpapers" },
-    calendar: { openProperty: "calendarOpen", refresh: "refreshCalendar" },
-    "work-inbox": { openProperty: "workInboxOpen", refresh: "refreshWorkInbox" },
-    "personal-dashboard": { openProperty: "personalDashboardOpen", refresh: "refreshPersonalDashboard" },
-    settings: { openProperty: "settingsOpen" },
-    notifications: { openProperty: "notificationCenterOpen" },
-    network: { openProperty: "networkPanelOpen", refresh: "refreshNetwork" },
-    power: { openProperty: "powerMenuOpen", refresh: "refreshPower", hide: "hidePowerMenu" }
-  })
-
-  readonly property var shellActionRegistry: ({
-    dnd: "toggleDnd",
-    "stay-awake": "toggleIdleInhibit"
-  })
 
   function toggleLauncher() {
     launcher.panelOpen = !launcher.panelOpen
@@ -272,7 +229,7 @@ ShellRoot {
   function openPassmenu(mode, userKey, backend) {
     root.closeTransientPanels()
     root.passMode = String(mode || shellConfig.actions.copy)
-    root.passUserKey = String(userKey || "username")
+    root.passUserKey = String(userKey || shellConfig.defaultPassUserKey)
     root.passBackend = String(backend || "gopass")
     root.passMenuOpen = true
     passMenuPanel.searchText = ""
@@ -311,9 +268,9 @@ ShellRoot {
   property bool clipboardOpen: false
   property bool passMenuOpen: false
   property string passMode: shellConfig.actions.copy
-  property string passUserKey: "username"
+  property string passUserKey: shellConfig.defaultPassUserKey
   property string passBackend: "gopass"
-  property bool rootMenuOpen: false
+  readonly property bool rootMenuOpen: rootMenu.opened
   property bool keybindingsOpen: false
   property bool networkPanelOpen: false
   property bool powerMenuOpen: false
@@ -368,7 +325,7 @@ ShellRoot {
   property string externalBrightnessText: ""
   property real externalBrightnessValue: 0
   property string inhibitStatusText: "inactive"
-  property string lisbonClockText: "--"
+  readonly property string lisbonClockText: Qt.formatDateTime(clock.date, "ddd-dd HH:mm:ss")
   property string timePanelText: ""
   property string agendaPanelText: ""
   property string reminderPanelText: ""
@@ -520,8 +477,8 @@ ShellRoot {
 
   function closeTransientPanels() {
     root.hideLauncher()
-    for (let menu in root.shellMenuRegistry) {
-      const entry = root.shellMenuRegistry[menu]
+    for (let menu in shellConfig.menuRegistry) {
+      const entry = shellConfig.menuRegistry[menu]
       if (entry.hide && typeof root[entry.hide] === "function")
         root[entry.hide]()
       else if (entry.openProperty)
@@ -550,17 +507,18 @@ ShellRoot {
 
   function shellMenuId(id) {
     const raw = String(id || "").replace(/^omarchy[.-]/, "").replace(/_/g, "-")
-    return root.shellMenuAliases[raw] || raw
+    return shellConfig.menuAliases[raw] || raw
   }
 
   function shellMenuEntry(id) {
-    return root.shellMenuRegistry[root.shellMenuId(id)] || null
+    return shellConfig.menuRegistry[root.shellMenuId(id)] || null
   }
 
   function shellMenuOpen(id) {
     const menu = root.shellMenuId(id)
     if (menu === "bar") return !root.barHidden
     if (menu === "launcher") return launcher.panelOpen
+    if (menu === shellConfig.menuIds.rootMenu) return rootMenu.opened
     const entry = root.shellMenuEntry(menu)
     return !!(entry && entry.openProperty && root[entry.openProperty])
   }
@@ -598,7 +556,7 @@ ShellRoot {
       root.toggleLauncher()
       return true
     }
-    const action = root.shellActionRegistry[menu]
+    const action = shellConfig.actionRegistry[menu]
     if (action && typeof root[action] === "function") {
       root[action]()
       return true
@@ -606,7 +564,7 @@ ShellRoot {
     const entry = root.shellMenuEntry(menu)
     if (!entry) return false
     if (entry.toggle && typeof root[entry.toggle] === "function") {
-      root[entry.toggle]()
+      root[entry.toggle](payloadJson)
       return true
     }
     if (entry.openProperty) {
@@ -653,11 +611,22 @@ ShellRoot {
     }
   }
 
+  function hideRootMenu() { rootMenu.close() }
+
+  function toggleRootMenu(payloadJson) {
+    if (rootMenu.opened) {
+      rootMenu.close()
+      return
+    }
+    root.closeTransientPanels()
+    rootMenu.open(payloadJson || "{}")
+  }
+
   function togglePassmenu() {
     if (root.passMenuOpen)
       root.passMenuOpen = false
     else
-      root.openPassmenu(shellConfig.actions.copy, "username", "gopass")
+      root.openPassmenu(shellConfig.actions.copy, shellConfig.defaultPassUserKey, "gopass")
   }
 
   function toggleDefaultWebSearch() { root.toggleWebSearch(shellConfig.defaultWebSearchSite) }
@@ -1516,6 +1485,16 @@ ShellRoot {
 
     function ping(): string { return "ok" }
     function listMenus(): string { return JSON.stringify(shellConfig.menuIds) }
+    function listPlugins(): string {
+      const plugins = [{ id: "launcher", name: "launcher", kinds: ["menu"], enabled: true, active: true, canDisable: false, firstParty: true, clonedFrom: "" }]
+      for (let id in shellConfig.menuRegistry)
+        plugins.push({ id: id, name: id, kinds: ["menu"], enabled: true, active: true, canDisable: false, firstParty: true, clonedFrom: "" })
+      plugins.sort((left, right) => left.id.localeCompare(right.id))
+      return JSON.stringify(plugins)
+    }
+    function listShellConfig(): string {
+      return JSON.stringify({ menus: shellConfig.menuIds, aliases: shellConfig.menuAliases })
+    }
     function dndState(): string { return shellSettings.doNotDisturb ? "on" : "off" }
     function isDnd(): string { return dndState() }
     function toggleDnd(): string { root.toggleDnd(); return dndState() }
@@ -1529,6 +1508,7 @@ ShellRoot {
     function toggle(id: string, payloadJson: string): string { return root.toggleShellMenu(id, payloadJson) ? "ok" : "unknown" }
     function hide(id: string): string { return root.hideShellMenu(id) ? "ok" : "unknown" }
     function summon(id: string, payloadJson: string): string { return root.openShellMenu(id, payloadJson) ? "ok" : "unknown" }
+    function state(id: string): string { return root.shellMenuOpen(id) ? "open" : "closed" }
     function closePanels() { root.closeTransientPanels() }
   }
 
@@ -1614,6 +1594,7 @@ ShellRoot {
       shellRoot: root
       shellConfig: shellConfig
       wallpapersModel: wallpaperModel
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.wallpaper, "{}") : root.hideShellMenu(shellConfig.menuIds.wallpaper)
       panelOpen: root.wallpaperPanelOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.wallpaper)
       compactHeight: root.menuCompactHeightFor(shellConfig.menuIds.wallpaper)
@@ -1623,6 +1604,7 @@ ShellRoot {
       anchorWindow: bar
       shellRoot: root
       shellConfig: shellConfig
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.screen, "{}") : root.hideShellMenu(shellConfig.menuIds.screen)
       panelOpen: root.screenPanelOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.screen)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.screen)
@@ -1633,6 +1615,7 @@ ShellRoot {
       shellRoot: root
       shellConfig: shellConfig
       audioStreamsModel: audioStreams
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.media, "{}") : root.hideShellMenu(shellConfig.menuIds.media)
       panelOpen: root.mediaPanelOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.media)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.media)
@@ -1644,18 +1627,24 @@ ShellRoot {
       shellSettings: shellSettings
       shellConfig: shellConfig
       privacyRefresh: systemStatusService.privacyHandle
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.controls, "{}") : root.hideShellMenu(shellConfig.menuIds.controls)
       panelOpen: root.controlPanelOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.controls)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.controls)
     }
 
-    ShellRootMenuPanel {
-      anchorWindow: bar
-      shellRoot: root
-      shellConfig: shellConfig
-      panelOpen: root.rootMenuOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.rootMenu)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.rootMenu)
+    OmarchyMenu.Menu {
+      id: rootMenu
+      shell: root
+      defaultMenuPath: shellConfig.home + "/.config/quickshell/marcelof/omarchy-menu.jsonc"
+      fontFamily: shellTheme.fontFamily
+      background: shellTheme.panel
+      foreground: shellTheme.text
+      border: shellTheme.border
+      scrim: Qt.rgba(shellTheme.panel.r, shellTheme.panel.g, shellTheme.panel.b, 0.58)
+      selectedBackground: shellTheme.surfaceHigh
+      selectedText: shellSettings.primaryColor
+      selectedBorder: shellSettings.primaryColor
     }
 
     ShellSettingsPanel {
@@ -1664,6 +1653,7 @@ ShellRoot {
       shellSettings: shellSettings
       shellConfig: shellConfig
       weatherRefresh: calendarService.weatherRefresh
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.settings, "{}") : root.hideShellMenu(shellConfig.menuIds.settings)
       panelOpen: root.settingsOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.settings)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.settings)
@@ -1678,6 +1668,7 @@ ShellRoot {
       clock: clock
       agendaRefresh: calendarService.agendaRefresh
       reminderRefresh: calendarService.reminderRefresh
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.calendar, "{}") : root.hideShellMenu(shellConfig.menuIds.calendar)
       panelOpen: root.calendarOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.calendar)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.calendar)
@@ -1690,6 +1681,7 @@ ShellRoot {
       shellSettings: shellSettings
       shellConfig: shellConfig
       refresh: dashboardService.workInboxHandle
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.workInbox, "{}") : root.hideShellMenu(shellConfig.menuIds.workInbox)
       panelOpen: root.workInboxOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.workInbox)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.workInbox)
@@ -1700,6 +1692,7 @@ ShellRoot {
       shellRoot: root
       shellConfig: shellConfig
       refresh: dashboardService.personalDashboardHandle
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.personalDashboard, "{}") : root.hideShellMenu(shellConfig.menuIds.personalDashboard)
       panelOpen: root.personalDashboardOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.personalDashboard)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.personalDashboard)
@@ -1711,6 +1704,7 @@ ShellRoot {
       shellSettings: shellSettings
       historyModel: notificationHistory
       inboxModel: notificationInboxModel
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.notifications, "{}") : root.hideShellMenu(shellConfig.menuIds.notifications)
       panelOpen: root.notificationCenterOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.notifications)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.notifications)
@@ -1764,6 +1758,12 @@ ShellRoot {
     panelHeight: root.menuHeightFor(shellConfig.menuIds.launcher)
   }
 
+  OmarchyServices.AppLibrary {
+    id: appLibraryService
+    shellRoot: root
+    shellSettings: shellSettings
+  }
+
   ShellLauncherService {
     id: launcherService
     shellRoot: root
@@ -1771,6 +1771,7 @@ ShellRoot {
     shellSettings: shellSettings
     launcherPanel: launcher
     launcherModel: launcherModel
+    appLibrary: appLibraryService
   }
 
   ShellClipboardPanel {
@@ -1797,8 +1798,9 @@ ShellRoot {
 
 
     ShellKeybindingsPanel {
-      anchorWindow: bar
+      shellRoot: root
       keybindingsModel: keybindingModel
+      closeAction: () => root.hideShellMenu(shellConfig.menuIds.keybindings)
       panelOpen: root.keybindingsOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.keybindings)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.keybindings)
@@ -1819,6 +1821,7 @@ ShellRoot {
       shellRoot: root
       shellConfig: shellConfig
       statusRefresh: systemStatusService.networkHandle
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.network, "{}") : root.hideShellMenu(shellConfig.menuIds.network)
       panelOpen: root.networkPanelOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.network)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.network)
@@ -1828,6 +1831,7 @@ ShellRoot {
       anchorWindow: bar
       shellRoot: root
       shellConfig: shellConfig
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.power, "{}") : root.hideShellMenu(shellConfig.menuIds.power)
       panelOpen: root.powerMenuOpen
       panelHeight: root.menuHeightFor(shellConfig.menuIds.power)
     }
