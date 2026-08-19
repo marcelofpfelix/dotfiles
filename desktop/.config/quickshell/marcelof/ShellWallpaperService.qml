@@ -8,12 +8,7 @@ Item {
   required property var shellConfig
 
   function refreshAll() {
-    wallpaperCurrent.running = true
-    wallpaperListRefresh.running = true
-  }
-
-  function refreshListSoon() {
-    wallpaperListRefreshLater.restart()
+    if (!wallpaperCurrent.running) wallpaperCurrent.running = true
   }
 
   Process {
@@ -21,18 +16,5 @@ Item {
     command: wallpaperService.shellConfig.wallpaper("current")
     running: true
     stdout: StdioCollector { onStreamFinished: wallpaperService.shellRoot.applyWallpaperPath(this.text.trim()) }
-  }
-
-  Process {
-    id: wallpaperListRefresh
-    command: wallpaperService.shellConfig.wallpaper("list")
-    stdout: StdioCollector { onStreamFinished: wallpaperService.shellRoot.updateWallpaperRows(this.text) }
-  }
-
-  Timer {
-    id: wallpaperListRefreshLater
-    interval: 250
-    repeat: false
-    onTriggered: wallpaperListRefresh.running = true
   }
 }

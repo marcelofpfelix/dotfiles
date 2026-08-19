@@ -189,7 +189,7 @@ case "${1:-status}" in
   controls) menu_toggle controls ;;
   media|audio) ipc_target omarchy.audio toggle ;;
   screen|screenshot|record) menu_toggle screen ;;
-  wallpaper) menu_toggle wallpaper ;;
+  wallpaper) ipc_target bar wallpaper ;;
   calendar) menu_toggle calendar ;;
   work-inbox|work|inbox) menu_toggle work-inbox ;;
   personal-dashboard|dashboard|personal) menu_toggle personal-dashboard ;;

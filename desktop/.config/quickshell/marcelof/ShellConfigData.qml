@@ -138,7 +138,6 @@ QtObject {
     controls: { openProperty: "controlPanelOpen", refresh: "refreshControls" },
     emojis: { toggle: "toggleEmojis", hide: "hideEmojis" },
     screen: { openProperty: "screenPanelOpen", refresh: "refreshScreenState" },
-    wallpaper: { openProperty: "wallpaperPanelOpen", refresh: "refreshWallpapers" },
     calendar: { openProperty: "calendarOpen", refresh: "refreshCalendar" },
     "work-inbox": { openProperty: "workInboxOpen", refresh: "refreshWorkInbox" },
     "personal-dashboard": { openProperty: "personalDashboardOpen", refresh: "refreshPersonalDashboard" },

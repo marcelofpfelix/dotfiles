@@ -1358,6 +1358,7 @@ scripts where native Quickshell or an existing local command already works.
   - Acceptance: thumbnails, filtering/navigation, current selection, apply/cancel, repeated-hotkey close, one shell process, and archived old wallpaper panel.
   - Dependencies: host/overlay lifecycle; retain existing wallpaper apply command/settings.
   - Validation: upstream tests, `qmllint`, screenshots, select/cancel/repeated-summon, and process checks.
+  - Progress 2026-08-19: copied and statically mounted Image Picker/model/manifest/list helper; archived `ShellWallpaperPanel.qml`. One injected `pluginPath` locates copied data and one `applyAction` routes selection through the existing `setWallpaper`; generic selection-file behavior remains intact. The old wallpaper-list QML poller was removed, so scanning now occurs only while opening the picker. Model/list/QML checks, repeated toggle, central close, corrected full-overlay screenshot crop, runtime log, and one-process checks pass. The current `bkg2.png` is intentionally a single dark color, verified by ImageMagick, rather than a failed image render. Enter/click apply remains a manual check to avoid changing the active wallpaper during automation.
   - Stop: no Omarchy theme-management or polling scripts merely to adopt the picker.
 
 - [x] P2: Copy Omarchy Emoji overlay as the shell-native emoji picker.

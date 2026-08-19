@@ -14,6 +14,7 @@ import QtQuick.Controls
 import qs.Commons
 import "plugins/menu" as OmarchyMenu
 import "plugins/emojis" as EmojiPlugin
+import "plugins/image-picker" as ImagePickerPlugin
 import "plugins/panels/wifiqr" as WifiQrPlugin
 import "services" as OmarchyServices
 
@@ -299,7 +300,6 @@ ShellRoot {
   property var sessionConfirmCommand: []
   property bool controlPanelOpen: false
   property bool screenPanelOpen: false
-  property bool wallpaperPanelOpen: false
   property bool calendarOpen: false
   property bool workInboxOpen: false
   property bool personalDashboardOpen: false
@@ -477,6 +477,7 @@ ShellRoot {
   function closeTransientPanels() {
     root.hideLauncher()
     wifiQrOverlay.close()
+    imagePicker.close()
     if (bar.activePopout) bar.activePopout.close()
     for (let menu in shellConfig.menuRegistry) {
       const entry = shellConfig.menuRegistry[menu]
@@ -686,22 +687,18 @@ ShellRoot {
     screenService.runRecord(action)
   }
 
-  function updateWallpaperRows(output) {
-    wallpaperModel.clear()
-    const rows = output.trim().length > 0 ? output.trim().split("\n") : []
-    for (let i = 0; i < rows.length; i++) {
-      const parts = rows[i].split("\t")
-      if (parts.length >= 2)
-        wallpaperModel.append({ name: parts[0], path: parts[1], active: parts[2] === "*" })
-    }
-  }
-
-  function refreshWallpapers() {
-    wallpaperService.refreshAll()
-  }
-
   function toggleWallpaperPanel() {
-    root.toggleTransientPanel("wallpaperPanelOpen", function() { root.refreshWallpapers() })
+    if (imagePicker.opened) {
+      imagePicker.close()
+      return
+    }
+    root.closeTransientPanels()
+    imagePicker.open(JSON.stringify({
+      imageDirs: shellConfig.home + "/.local/share/backgrounds\n" + shellConfig.home + "/Pictures/Wallpapers\n" + shellConfig.home + "/Pictures/wallpapers",
+      selectedImage: shellSettings.wallpaperPath,
+      showLabels: true,
+      filterable: true
+    }))
   }
 
   function applyWallpaperPath(path) {
@@ -714,7 +711,6 @@ ShellRoot {
   function setWallpaper(path) {
     root.applyWallpaperPath(path)
     Quickshell.execDetached(shellConfig.wallpaper("set", path))
-    wallpaperService.refreshListSoon()
   }
 
   function toggleCalendar() {
@@ -1302,6 +1298,12 @@ ShellRoot {
     manifest: ({ id: "omarchy.wifiqr" })
   }
 
+  ImagePickerPlugin.ImagePicker {
+    id: imagePicker
+    pluginPath: shellConfig.home + "/.config/quickshell/marcelof/plugins/image-picker"
+    applyAction: function(path) { root.setWallpaper(path) }
+  }
+
   // Local settings own the palette; copied Omarchy components consume it here.
   Binding { target: Color; property: "foreground"; value: shellTheme.text }
   Binding { target: Color; property: "background"; value: shellTheme.panel }
@@ -1343,7 +1345,6 @@ ShellRoot {
   }
   ListModel { id: notificationHistory }
   ListModel { id: notificationInboxModel }
-  ListModel { id: wallpaperModel }
 
 
   NotificationServer {
@@ -1585,16 +1586,6 @@ ShellRoot {
     notificationHistoryModel: notificationHistory
   }
 
-    ShellWallpaperPanel {
-      anchorWindow: bar
-      shellRoot: root
-      shellConfig: shellConfig
-      wallpapersModel: wallpaperModel
-      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.wallpaper, "{}") : root.hideShellMenu(shellConfig.menuIds.wallpaper)
-      panelOpen: root.wallpaperPanelOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.wallpaper)
-      compactHeight: root.menuCompactHeightFor(shellConfig.menuIds.wallpaper)
-    }
 
     ShellScreenPanel {
       anchorWindow: bar

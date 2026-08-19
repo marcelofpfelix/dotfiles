@@ -53,7 +53,7 @@ qs_menu_crop_geometry() {
     emojis) width=$max_w; height=$max_h; x=0; y=0 ;;
     osd) width=360; height=140; x=$(((max_w - width) / 2)); y=0 ;;
     notifications) width=660; height=450; x=$((max_w - width)); y=0 ;;
-    wallpaper) width=720; height=430; x=$((max_w - width)); y=0 ;;
+    wallpaper) width=1900; height=900; x=$((max_w - width)); y=80 ;;
     controls) width=840; height=1020; x=$((max_w - width)); y=0 ;;
     calendar) width=780; height=840; x=$((max_w - width)); y=0 ;;
     personal-dashboard) width=720; height=620; x=$((max_w - width)); y=0 ;;
