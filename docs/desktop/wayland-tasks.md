@@ -1363,6 +1363,7 @@ scripts where native Quickshell or an existing local command already works.
 - [ ] P1: Bring Omarchy keybinding parsing improvements into the existing QML panel.
   - Sources: `bin/omarchy-menu-keybindings`; local `hypr-keys` and `ShellKeybindingsPanel.qml`.
   - Acceptance: resolve code binds, mouse buttons, Lua descriptions/dispatchers, and cached records while retaining Quickshell search/direct dispatch.
+  - Progress: copied Omarchy's code-key and mouse-button normalization into `hypr-keys` and expanded the existing `common.bind_direction_keys`/`common.bind_workspace_numbers` calls from source. The default output now has 92 rows, exactly matching live `hyprctl binds`; Omarchy output has 144 readable rows. Repo and installed self-tests plus live QML panel smoke pass. Cache/dispatch records remain deferred because the current panel is display-only and live Lua binds expose zero descriptions.
   - Validation: fixtures for normal/code/mouse/Lua/exec/sendshortcut binds, comparison with `hyprctl binds`, live search, and one harmless dispatch.
   - Stop: do not copy `omarchy-menu-select`, Walker UI, or Omarchy-only Lua assumptions.
 

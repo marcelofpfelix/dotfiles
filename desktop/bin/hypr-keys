@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ ${1:-} == --self-test ]]; then
+    profile_dir=${HYPR_KEYS_PROFILE_DIR:-$HOME/.config/hypr/profiles}
+    default=$(HYPR_KEYS_PROFILE_DIR="$profile_dir" "$0" default)
+    omarchy=$(HYPR_KEYS_PROFILE_DIR="$profile_dir" "$0" omarchy)
+    grep -Fqx $'Win+H\tFocus window' <<<"$default"
+    grep -Fqx $'Win+Shift+0\tMove window to workspace' <<<"$default"
+    grep -Fqx $'Win+Ctrl+MINUS\tResize window' <<<"$omarchy"
+    grep -Fqx $'Win+MouseLeft\tDrag window' <<<"$omarchy"
+    ! grep -Eq 'code:(20|21)|mouse:(272|273|274)' <<<"$omarchy"
+    printf 'hypr-keys self-test: ok\n'
+    exit 0
+fi
+
 detect_profile() {
     if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || ! command -v hyprctl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
         printf 'default'
@@ -64,6 +77,9 @@ pretty_key() {
     key=${key//mouse_up/WheelUp}
     key=${key//mouse:272/MouseLeft}
     key=${key//mouse:273/MouseRight}
+    key=${key//mouse:274/MouseMiddle}
+    key=${key//code:20/MINUS}
+    key=${key//code:21/EQUAL}
     printf '%s' "$key"
 }
 
@@ -203,8 +219,41 @@ pretty_action() {
 
 printf 'Profile\t%s\n' "$profile"
 seen=''
+profile_text=$(<"$file")
+emit_row() {
+    local row="$1\t$2"
+    case "$seen" in *$'\n'"$row"$'\n'*) return ;; esac
+    seen="$seen"$'\n'"$row"$'\n'
+    printf '%b\n' "$row"
+}
+
 while IFS= read -r line; do
     line=${line%%--*}
+    case "$line" in
+        *'common.bind_direction_keys('*)
+            prefix=Win
+            [[ $line == *' + SHIFT'* ]] && prefix+='+Shift'
+            [[ $line == *'vim_directions'* ]] && keys=(H J K L) || keys=(Left Down Up Right)
+            if [[ $line == *'window.swap'* ]]; then
+                action='Swap window'
+            elif [[ $line == *'window.move'* ]]; then
+                action='Move window'
+            else
+                action='Focus window'
+            fi
+            for key in "${keys[@]}"; do emit_row "$prefix+$key" "$action"; done
+            continue
+            ;;
+        *'common.bind_workspace_numbers('*)
+            for i in {1..10}; do
+                key=$i; (( i == 10 )) && key=0
+                [[ $profile_text == *'  focus = '* ]] && emit_row "Win+$key" 'Workspace'
+                [[ $profile_text == *'  move = '* ]] && emit_row "Win+Shift+$key" 'Move window to workspace'
+                [[ $profile_text == *'  move_no_follow = '* ]] && emit_row "Win+Shift+Alt+$key" 'Move window to workspace without following'
+            done
+            continue
+            ;;
+    esac
     [[ $line == *"function bind_app("* ]] && continue
     case "$line" in
         *'function bind_app('*) continue ;;
@@ -217,8 +266,5 @@ while IFS= read -r line; do
     [ "${key// /}" = keys ] && continue
     key=$(pretty_key "$key")
     [ -n "$key" ] || continue
-    row="$key	$(pretty_action "$line" "$action")"
-    case "$seen" in *$'\n'"$row"$'\n'*) continue ;; esac
-    seen="$seen"$'\n'"$row"$'\n'
-    printf '%b\n' "$row"
+    emit_row "$key" "$(pretty_action "$line" "$action")"
 done <"$file"
