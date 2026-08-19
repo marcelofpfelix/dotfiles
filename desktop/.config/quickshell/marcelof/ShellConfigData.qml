@@ -174,7 +174,7 @@ QtObject {
     calendar: { width: 640, height: 720 },
     "work-inbox": { width: 640, height: 320 },
     "personal-dashboard": { width: 640, height: 240 },
-    "root-menu": { width: 560, height: 780 },
+    "root-menu": { width: 440, height: 780 },
     notifications: { width: 640, height: 420 },
     keybindings: { width: 640, height: 560 },
     network: { width: 640, height: 320 },

@@ -1614,6 +1614,7 @@ ShellRoot {
       id: rootMenu
       shell: root
       menuWidth: root.menuWidthFor(shellConfig.menuIds.rootMenu)
+      rootRowHeight: 70
       defaultMenuPath: shellConfig.home + "/.config/quickshell/marcelof/omarchy-menu.jsonc"
       fontFamily: shellTheme.fontFamily
       background: shellTheme.panel

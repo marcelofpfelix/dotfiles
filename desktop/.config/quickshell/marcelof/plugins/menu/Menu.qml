@@ -60,6 +60,7 @@ Item {
   property string doneFile: ""
   property int dmenuWidth: 300
   property int menuWidth: 300
+  property int rootRowHeight: 0
   property int dmenuMaxHeight: 0
   property bool requestActive: false
   property bool rowsLoaded: false
@@ -100,7 +101,7 @@ Item {
   property int contentMargin: Style.spacing.panelPadding
   property int headerHeight: Math.max(Style.space(34), Style.font.title + Style.spacing.controlPaddingY * 2)
   property int contentSpacing: Style.spacing.md
-  property int baseRowHeight: Math.max(Style.space(50), Style.font.body + Style.spacing.rowPaddingX * 2)
+  property int baseRowHeight: Math.max(Style.space(root.activeMenu === "root" && root.rootRowHeight > 0 ? root.rootRowHeight : 50), Style.font.body + Style.spacing.rowPaddingX * 2)
   property int detailRowHeight: Math.max(Style.space(58), Style.font.body + Style.font.caption + Style.spacing.rowPaddingX * 2)
   // How much of the first hidden row stays visible at the fold — enough to
   // read as a cut-off row rather than a bottom border.
