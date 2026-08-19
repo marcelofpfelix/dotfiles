@@ -1230,7 +1230,7 @@ Provenance: the System naming and searchable-keybindings behavior were adapted f
   - Completed 2026-08-19: the copied System route checks login1 and omits Hibernate when CanHibernate is unavailable.
 - [x] P1: Replace the flat Super+Space list with shallow local routes.
   - Proposed root: Apps, Trigger, Status, Setup, Learn, System. Learn opens Keybindings; System opens the existing session panel. Preserve direct hotkeys and IPC aliases.
-  - Completed 2026-08-19: superseded by the copied Omarchy JSONC menu, which provides these routes and existing IPC aliases. The host now supplies a 440px root width instead of upstream's narrow 300px default.
+  - Completed 2026-08-19: superseded by the copied Omarchy JSONC menu, which provides these routes and existing IPC aliases. The host supplies a 560px root width instead of upstream's narrow 300px default.
 ## 2026-08-18 Omarchy Foundation Replacement Review
 
 Snapshot: `/tmp/omarchy-quattro` at `f32ebbd`. The review compared local callers and line counts against Omarchy `shell/Ui`, `shell/Commons`, `shell/services`, `shell/plugins/menu`, and `shell/plugins/bar`. Copy upstream code only when it replaces a local implementation in the same task. Keep copied files close to upstream and record unavoidable local changes; do not build a second UI toolkit beside `Shell*` components.
