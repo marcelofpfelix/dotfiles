@@ -62,13 +62,13 @@ Editable today: primary color, density, weather location, DND, tray behavior, hi
 
 `desktop/bin/omarchy-shell` is a local compatibility shim over `qbar`, not a second shell runtime. It supports the Omarchy-style `shell` IPC target for existing local menus, including `omarchy.menu` as the root menu and `omarchy.clock` as the calendar. Direct plugin targets are mapped only when backed by existing local state: panel open/close/toggle methods, notification DND/history/clear, helper-owned media play/pause/status, and lock. Unsupported targets still fail clearly.
 
-Built-in menus now share one declarative registry in `ShellConfigData.qml`. Omarchy-compatible clients can inspect it with `omarchy-shell shell listPlugins` and `omarchy-shell shell listShellConfig`; entries are read-only, first-party menu surfaces and cannot be disabled. This avoids a second registry runtime while keeping the useful Omarchy IPC contract.
+Built-in menus share one declarative registry in `ShellConfigData.qml`. Omarchy-compatible clients can inspect them with `omarchy-shell shell listPlugins` and `omarchy-shell shell listShellConfig`; these first-party menu surfaces remain read-only. The same plugin list includes reviewed schema-1 plugins discovered under `~/.config/omarchy/plugins`.
 
-Upstream Omarchy plugins are not drop-in compatible. Their QML imports Omarchy `Commons`, `Ui`, config mutators, and service objects that this shell intentionally does not ship. Loading those files without that runtime would fail, while importing the whole runtime would duplicate the local shell. Add dynamic loading only when a reviewed plugin provides enough value to justify its specific missing dependencies.
+Dynamic compatibility is intentionally limited to `overlay` entry points. Their enable state persists in `~/.local/state/quickshell/marcelof/settings.json`, and the shell exposes `rescanPlugins`, `enablePlugin`, and `disablePlugin`. Other plugin kinds are discoverable but cannot be enabled because this shell does not provide Omarchy's bar, service, or panel registries. Third-party QML is unsandboxed and disabled by default.
 
 Use `omarchy-plugin-review <plugin-dir>` before enabling any third-party plugin. It validates the manifest, rejects symlinks and unsafe entry points, and reminds that plugin QML is unsandboxed.
 
-Use `omarchy-plugin-add --yes <plugin-dir-or-git-url>` only to stage a reviewed plugin under `~/.config/omarchy/plugins/<id>`. It does not enable or execute plugin QML.
+Use `omarchy-plugin-add --yes <plugin-dir-or-git-url>` to stage a reviewed plugin under `~/.config/omarchy/plugins/<id>`. Add `--enable` only for a reviewed `overlay` plugin; the command rescans, waits for discovery, and enables it through the live shell.
 
 ### Omarchy replacement audit
 

@@ -1257,7 +1257,7 @@ Snapshot: `/tmp/omarchy-quattro` at `f32ebbd`. The review compared local callers
   - Dependencies: complete the copied menu slice first so one real plugin kind and loader path already exists; preserve `qbar` as the local entrypoint and the current shell process.
   - Validation: upstream plugin validate/add/registry tests, `omarchy-shell shell rescanPlugins`, `omarchy-shell shell listPlugins`, enable/disable round trip for the fixture, `desktop/tools/desktop-doctor`, and a live Quickshell restart.
   - Stop conditions: do not claim arbitrary plugin compatibility until every declared plugin kind has a loader. Do not copy update/catalog/network installation behavior in this task.
-  - Current blocker: upstream enablement assumes Omarchy's persistent `shell.json`, generic panel/service loaders, and bar registry. Copying only `PluginRegistry.qml` would report plugins enabled without loading them. Complete a real generic loader boundary before replacing the local compatibility list.
+  - Progress 2026-08-19: copied/adapted Omarchy's manifest trust checks, scan format, entry-point resolution, loader lifecycle, and IPC names into an overlay-only registry. `listPlugins` now reports real staged plugins; enable/disable state persists in the existing settings file; `rescanPlugins`, `enablePlugin`, and `disablePlugin` work; and `omarchy-plugin-add --enable` performs a bounded discovery wait instead of printing a placeholder. A repo fixture passed review, discovery, enable, visual summon, repeated toggle, central close, restart persistence, disable, and cleanup. Unsupported panel/service/menu/bar kinds remain discoverable but cannot be enabled. The broader task stays open for upstream remove/validate CLI convergence and any future kind only after its real loader exists.
 
 - [x] P0: Replace duplicated application search with Omarchy's shared AppLibrary foundation.
   - Sources: Omarchy `shell/services/AppSearch.js`, `AppLibrary.qml`, and `test/shell.d/app-search-test.sh`; local `ShellLauncherService.qml` and the copied menu Apps provider.
@@ -1377,6 +1377,7 @@ scripts where native Quickshell or an existing local command already works.
 
 - [ ] P2: Enable PluginRegistry only after one copied panel proves the host contract.
   - Acceptance: replace static mounting for one proven panel with discovery, enable/disable, rescan, and persistence without behavioral change; third-party code stays disabled by default and explicitly unsandboxed.
+  - Progress 2026-08-19: the overlay host contract is now proven by `desktop/tools/fixtures/plugin-overlay`, including live rendering and restart persistence. First-party copied panels remain statically mounted, so this task stays open until one can migrate without importing Omarchy's bar/service registries or changing behavior.
   - Dependencies: Power or Display working from a copied manifest and entry point.
   - Validation: upstream registry/CLI tests, enable-disable-rescan, restart persistence, `listPlugins`, full menu smoke, and CPU/RSS comparison.
   - Stop: no bar layout registry, catalog installer, or arbitrary-plugin claim until each supported kind has a loader.

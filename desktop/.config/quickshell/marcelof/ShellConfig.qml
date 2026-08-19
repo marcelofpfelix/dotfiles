@@ -23,6 +23,7 @@ QtObject {
   readonly property var batteryPolicy: configData.batteryPolicy
   readonly property var notificationToastPolicy: configData.notificationToastPolicy
   readonly property var menuIds: configData.menuIds
+  readonly property var pluginIds: configData.pluginIds
   readonly property var menuAliases: configData.menuAliases
   readonly property var menuRegistry: configData.menuRegistry
   readonly property var actionRegistry: configData.actionRegistry

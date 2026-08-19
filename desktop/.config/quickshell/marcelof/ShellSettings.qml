@@ -13,4 +13,5 @@ JsonAdapter {
   property string weatherLocation: "Palmela, Portugal"
   property var favoriteAppIds: []
   property var hiddenAppIds: []
+  property var enabledPluginIds: []
 }

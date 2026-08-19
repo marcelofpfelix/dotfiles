@@ -45,11 +45,14 @@ bindings.
 The root menu is the copied `plugins/menu/Menu.qml`, not a parallel local menu.
 Its engine and model remain upstream code while `shell.qml` injects the local
 theme and routes lifecycle through the existing `shell` IPC registry.
-`listPlugins` and `listShellConfig` expose read-only Omarchy-compatible
-inspection of those built-ins. Keep older `bar` and panel-specific IPC calls
-only where they are already stable compatibility shims. Do not copy a full
-third-party plugin manager until a reviewed plugin has a concrete dependency
-set worth supporting.
+`listPlugins` and `listShellConfig` expose Omarchy-compatible inspection of
+built-ins. `services/PluginRegistry.qml` also discovers reviewed schema-1
+plugins under `~/.config/omarchy/plugins`; the generic loader deliberately
+supports `overlay` entry points only. Enable state persists in the existing
+shell settings file, and `rescanPlugins`, `enablePlugin`, and `disablePlugin`
+are available through the `shell` IPC target. Unsupported kinds are listed but
+cannot be enabled. Keep older `bar` and panel-specific IPC calls only where
+they are already stable compatibility shims.
 
 ## Boundaries
 

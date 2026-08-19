@@ -61,10 +61,8 @@ done
 
 [ -n "$source_arg" ] || { usage; exit 2; }
 
-cat >&2 <<WARN
-Plugins are unsandboxed QML. This command only stages files; it does not enable
-or execute the plugin.
-WARN
+printf "Plugins are unsandboxed QML. This command will %s the reviewed plugin.\n" \
+  "$([[ $enable_after -eq 1 ]] && printf 'stage and enable' || printf 'stage without enabling')" >&2
 confirm "Stage this plugin source?"
 
 mkdir -p "$plugins_dir"
@@ -84,5 +82,18 @@ trap - EXIT
 
 printf "Added %s into %s\n" "$id" "$target"
 if (( enable_after )); then
-  printf "Enable skipped: local Quickshell plugin loading is not implemented yet.\n"
+  qbar shell rescanPlugins >/dev/null
+  found=0
+  for _ in {1..20}; do
+    plugins=$(qbar shell listPlugins 2>/dev/null || true)
+    if jq -e --arg id "$id" 'any(.[]; .id == $id)' <<<"$plugins" >/dev/null 2>&1; then
+      found=1
+      break
+    fi
+    sleep 0.1
+  done
+  (( found )) || fail "plugin '$id' was staged but the shell did not discover it"
+  result=$(qbar shell enablePlugin "$id" "{}")
+  [[ $result == ok ]] || fail "plugin '$id' was staged but could not be enabled: $result"
+  printf "Enabled %s\n" "$id"
 fi

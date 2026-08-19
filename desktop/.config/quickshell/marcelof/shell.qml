@@ -22,7 +22,11 @@ ShellRoot {
   id: root
 
   readonly property var pluginHost: pluginHostObject
-
+  property var dynamicPluginEntries: []
+  property string openDynamicPluginId: ""
+  property string pendingDynamicPluginId: ""
+  property string pendingDynamicPluginPayload: ""
+  property var dynamicPluginLoaders: ({})
   property string launcherSmokeHiddenId: ""
   readonly property var appLibrary: appLibraryService
   function menuSize(id) { return shellConfig.menuSize(id, shellSettings.denseUi) }
@@ -474,10 +478,89 @@ ShellRoot {
     return true
   }
 
+  function dynamicPluginKnown(id) {
+    return !!pluginRegistry.installedPlugins[String(id || "")]
+  }
+
+  function refreshDynamicPluginEntries() {
+    var entries = []
+    for (var id in pluginRegistry.installedPlugins) {
+      var manifest = pluginRegistry.installedPlugins[id]
+      if (!pluginRegistry.isEnabled(id)) continue
+      entries.push({ id: id, manifest: manifest, keepLoaded: manifest.keepLoaded === true })
+    }
+    dynamicPluginEntries = entries
+  }
+
+  function registerDynamicPluginLoader(id, loader) {
+    var next = ({})
+    for (var key in dynamicPluginLoaders) next[key] = dynamicPluginLoaders[key]
+    next[id] = loader
+    dynamicPluginLoaders = next
+    root.deliverDynamicPluginPayloads(id)
+  }
+
+  function unregisterDynamicPluginLoader(id) {
+    var next = ({})
+    for (var key in dynamicPluginLoaders) if (key !== id) next[key] = dynamicPluginLoaders[key]
+    dynamicPluginLoaders = next
+  }
+
+  function deliverDynamicPluginPayloads(id) {
+    var loader = dynamicPluginLoaders[id]
+    if (pendingDynamicPluginId !== id || !loader || !loader.item) return
+    if (typeof loader.item.open === "function") loader.item.open(pendingDynamicPluginPayload)
+    pendingDynamicPluginId = ""
+    pendingDynamicPluginPayload = ""
+  }
+
+  function dynamicPluginOpen(id) {
+    var loader = dynamicPluginLoaders[id]
+    if (loader && loader.item && loader.item.opened !== undefined)
+      return loader.item.opened === true
+    return openDynamicPluginId === id
+  }
+
+  function summonDynamicPlugin(id, payloadJson) {
+    if (!pluginRegistry.isEnabled(id)) return false
+    root.closeTransientPanels()
+    openDynamicPluginId = id
+    pendingDynamicPluginId = id
+    pendingDynamicPluginPayload = payloadJson || ""
+    root.deliverDynamicPluginPayloads(id)
+    return true
+  }
+
+  function hideDynamicPlugin(id) {
+    var loader = dynamicPluginLoaders[id]
+    if (loader && loader.item && typeof loader.item.close === "function") loader.item.close()
+    if (openDynamicPluginId === id) openDynamicPluginId = ""
+    if (pendingDynamicPluginId === id) {
+      pendingDynamicPluginId = ""
+      pendingDynamicPluginPayload = ""
+    }
+    return true
+  }
+
+  function setDynamicPluginEnabled(id, enabled) {
+    if (!root.dynamicPluginKnown(id)) return "unknown"
+    if (!pluginRegistry.supports(id)) return "unsupported"
+    var ids = shellSettings.enabledPluginIds.slice()
+    var index = ids.indexOf(id)
+    if (enabled && index === -1) ids.push(id)
+    if (!enabled && index !== -1) {
+      root.hideDynamicPlugin(id)
+      ids.splice(index, 1)
+    }
+    shellSettings.enabledPluginIds = ids
+    return "ok"
+  }
+
   function closeTransientPanels() {
     root.hideLauncher()
     wifiQrOverlay.close()
     imagePicker.close()
+    if (openDynamicPluginId) root.hideDynamicPlugin(openDynamicPluginId)
     if (bar.activePopout) bar.activePopout.close()
     for (let menu in shellConfig.menuRegistry) {
       const entry = shellConfig.menuRegistry[menu]
@@ -517,7 +600,9 @@ ShellRoot {
   }
 
   function shellMenuOpen(id) {
-    const menu = root.shellMenuId(id)
+    const raw = String(id || "")
+    if (root.dynamicPluginKnown(raw)) return root.dynamicPluginOpen(raw)
+    const menu = root.shellMenuId(raw)
     if (menu === "bar") return !root.barHidden
     if (menu === "launcher") return launcher.panelOpen
     if (menu === shellConfig.menuIds.rootMenu) return rootMenu.opened
@@ -528,7 +613,9 @@ ShellRoot {
   }
 
   function hideShellMenu(id) {
-    const menu = root.shellMenuId(id)
+    const raw = String(id || "")
+    if (root.dynamicPluginKnown(raw)) return root.hideDynamicPlugin(raw)
+    const menu = root.shellMenuId(raw)
     if (menu === "all" || menu === "panels") {
       root.closeTransientPanels()
       return true
@@ -555,7 +642,10 @@ ShellRoot {
   }
 
   function toggleShellMenu(id, payloadJson) {
-    const menu = root.shellMenuId(id)
+    const raw = String(id || "")
+    if (root.dynamicPluginKnown(raw))
+      return root.dynamicPluginOpen(raw) ? root.hideDynamicPlugin(raw) : root.summonDynamicPlugin(raw, payloadJson)
+    const menu = root.shellMenuId(raw)
     if (menu === "bar") {
       root.barHidden = !root.barHidden
       return true
@@ -1272,6 +1362,21 @@ ShellRoot {
   ShellConfig { id: shellConfig }
   ShellTheme { id: shellTheme }
 
+  OmarchyServices.PluginRegistry {
+    id: pluginRegistry
+    enabledPluginIds: shellSettings.enabledPluginIds
+  }
+
+  Connections {
+    target: pluginRegistry
+    function onPluginsChanged() { root.refreshDynamicPluginEntries() }
+  }
+
+  Connections {
+    target: shellSettings
+    function onEnabledPluginIdsChanged() { root.refreshDynamicPluginEntries() }
+  }
+
   QtObject {
     id: pluginHostObject
     function hide(pluginId) {
@@ -1281,6 +1386,41 @@ ShellRoot {
     function summon(pluginId, payloadJson) {
       if (String(pluginId) === shellConfig.pluginIds.wifiQr) { wifiQrOverlay.open(payloadJson || "{}"); return true }
       return root.openShellMenu(pluginId, payloadJson || "{}")
+    }
+  }
+
+  Instantiator {
+    model: root.dynamicPluginEntries
+
+    delegate: QtObject {
+      id: dynamicPluginEntry
+      required property var modelData
+      readonly property string pluginId: modelData.id
+      readonly property var manifest: modelData.manifest
+      readonly property string sourceUrl: pluginRegistry.entryPointUrl(manifest, "overlay")
+
+      property Loader pluginLoader: Loader {
+        source: dynamicPluginEntry.sourceUrl
+        active: source !== "" && (dynamicPluginEntry.modelData.keepLoaded
+          || root.openDynamicPluginId === dynamicPluginEntry.pluginId)
+        asynchronous: true
+        onLoaded: {
+          if (!item) return
+          if ("pluginPath" in item) item.pluginPath = dynamicPluginEntry.manifest.__sourceDir
+          if ("targetScreen" in item) item.targetScreen = root.laptopScreen
+          if ("shell" in item) item.shell = pluginHostObject
+          if ("manifest" in item) item.manifest = dynamicPluginEntry.manifest
+          if ("pluginRegistry" in item) item.pluginRegistry = pluginRegistry
+          root.registerDynamicPluginLoader(dynamicPluginEntry.pluginId, this)
+        }
+        onStatusChanged: {
+          if (status === Loader.Error) {
+            console.warn("overlay plugin " + dynamicPluginEntry.pluginId + " failed to load: " + errorString())
+            root.hideDynamicPlugin(dynamicPluginEntry.pluginId)
+          }
+        }
+        Component.onDestruction: root.unregisterDynamicPluginLoader(dynamicPluginEntry.pluginId)
+      }
     }
   }
 
@@ -1483,12 +1623,35 @@ ShellRoot {
     function ping(): string { return "ok" }
     function listMenus(): string { return JSON.stringify(shellConfig.menuIds) }
     function listPlugins(): string {
-      const plugins = [{ id: "launcher", name: "launcher", kinds: ["menu"], enabled: true, active: true, canDisable: false, firstParty: true, clonedFrom: "" }]
+      const plugins = [{ id: "launcher", name: "launcher", kinds: ["menu"], enabled: true, active: true, canDisable: false, canEnable: false, firstParty: true, clonedFrom: "" }]
       for (let id in shellConfig.menuRegistry)
-        plugins.push({ id: id, name: id, kinds: ["menu"], enabled: true, active: true, canDisable: false, firstParty: true, clonedFrom: "" })
+        plugins.push({ id: id, name: id, kinds: ["menu"], enabled: true, active: true, canDisable: false, canEnable: false, firstParty: true, clonedFrom: "" })
+      for (let pluginId in pluginRegistry.installedPlugins) {
+        const manifest = pluginRegistry.installedPlugins[pluginId]
+        const supported = pluginRegistry.supports(pluginId)
+        plugins.push({
+          id: pluginId,
+          name: manifest.name,
+          version: manifest.version,
+          kinds: manifest.kinds,
+          enabled: pluginRegistry.isEnabled(pluginId),
+          active: root.dynamicPluginOpen(pluginId),
+          canDisable: supported,
+          canEnable: supported,
+          firstParty: false,
+          clonedFrom: ""
+        })
+      }
       plugins.sort((left, right) => left.id.localeCompare(right.id))
       return JSON.stringify(plugins)
     }
+    function rescanPlugins(): string { pluginRegistry.rescan(); return "ok" }
+    function setPluginEnabled(id: string, value: string): string {
+      const normalized = String(value || "").toLowerCase()
+      return root.setDynamicPluginEnabled(id, normalized === "true" || normalized === "1" || normalized === "on" || normalized === "yes")
+    }
+    function enablePlugin(id: string, placementJson: string): string { return root.setDynamicPluginEnabled(id, true) }
+    function disablePlugin(id: string): string { return root.setDynamicPluginEnabled(id, false) }
     function listShellConfig(): string {
       return JSON.stringify({ menus: shellConfig.menuIds, aliases: shellConfig.menuAliases })
     }
