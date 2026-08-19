@@ -1,10 +1,10 @@
 import Quickshell
 import Quickshell.Hyprland
-import Quickshell.Services.UPower
 import Quickshell.Wayland
 import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts
+import "plugins/panels/power" as PowerPlugin
 
 PanelWindow {
   id: bar
@@ -15,65 +15,49 @@ PanelWindow {
   required property var barConfig
   required property var notificationHistoryModel
 
-    function batteryPolicy() {
-      return barConfig.batteryPolicy
-    }
+  readonly property string position: "top"
+  readonly property bool vertical: false
+  readonly property int barSize: barTheme.barHeight
+  readonly property color foreground: barTheme.text
+  readonly property color barForeground: foreground
+  readonly property color urgent: barTheme.error
+  readonly property color primary: barTheme.primary
+  readonly property color muted: barTheme.textMuted
+  readonly property color warning: barTheme.warning
+  readonly property string fontFamily: barTheme.fontFamily
+  readonly property bool foregroundAnimationEnabled: true
+  property var activePopout: null
+  property var clickTargets: []
 
-    function batteryPercent(device) {
-      return Math.round(device.percentage * 100)
-    }
+  function registerClickTarget(target) {
+    if (!target || clickTargets.indexOf(target) !== -1) return
+    clickTargets = clickTargets.concat([target])
+  }
 
-    function batteryCharging(device) {
-      return device.state === UPowerDeviceState.Charging || device.state === UPowerDeviceState.PendingCharge || device.changeRate > 0
-    }
+  function unregisterClickTarget(target) {
+    clickTargets = clickTargets.filter(function(item) { return item !== target })
+  }
 
-    function batteryDischarging(device) {
-      return UPower.onBattery || device.state === UPowerDeviceState.Discharging || device.state === UPowerDeviceState.PendingDischarge || device.changeRate < 0
-    }
+  function targetBelongsToWindow(target, window) {
+    return !!target && !!window && target.QsWindow && target.QsWindow.window === window
+  }
 
-    function batteryFull(device) {
-      return device.state === UPowerDeviceState.FullyCharged || batteryPercent(device) >= batteryPolicy().fullPercent
+  function requestPopout(owner) {
+    if (activePopout === owner) return
+    if (activePopout) {
+      if ("closeForPopoutSwitch" in activePopout) activePopout.closeForPopoutSwitch()
+      else if ("close" in activePopout) activePopout.close()
     }
+    activePopout = owner
+  }
 
-    function batteryVisible(device) {
-      return device.ready && !(batteryPolicy().hideFull && batteryFull(device))
-    }
+  function releasePopout(owner) {
+    if (activePopout === owner) activePopout = null
+  }
 
-    function batteryIcon(device) {
-      const policy = batteryPolicy()
-      if (batteryCharging(device))
-        return policy.chargingIcon
-      const pct = batteryPercent(device)
-      for (let i = 0; i < policy.icons.length; i++) {
-        if (pct <= policy.icons[i].max)
-          return policy.icons[i].icon
-      }
-      return policy.icons[policy.icons.length - 1].icon
-    }
-
-    function batteryThemeColor(role) {
-      if (role === "primary")
-        return barTheme.primary
-      if (role === "warning")
-        return barTheme.warning
-      if (role === "error")
-        return barTheme.error
-      return barTheme.textMuted
-    }
-
-    function batteryColor(device) {
-      const pct = batteryPercent(device)
-      const policy = batteryPolicy()
-      if (batteryDischarging(device) && pct <= policy.criticalPercent)
-        return batteryThemeColor(policy.criticalColor)
-      if (batteryDischarging(device) && pct <= policy.warningPercent)
-        return batteryThemeColor(policy.warningColor)
-      if (batteryCharging(device))
-        return batteryThemeColor(policy.chargingColor)
-      if (batteryDischarging(device))
-        return batteryThemeColor(policy.dischargingColor)
-      return batteryThemeColor(policy.fullColor)
-    }
+  function switchPanelFrom(owner, direction) { return false }
+  function showTooltip(target, text) { barRoot.showTooltip(target, text) }
+  function hideTooltip(target) { barRoot.hideTooltip() }
 
     screen: barRoot.laptopScreen
 
@@ -322,23 +306,9 @@ PanelWindow {
       StatusText { visible: text.length > 0 && text.indexOf("100%") < 0; command: barConfig.brightnessBar(); interval: 5000; leftClickCommand: barConfig.qs(barConfig.menuIds.controls); rightClickCommand: barConfig.qs(barConfig.menuIds.controls); wheelUpCommand: barConfig.brightnessSet("+5%"); wheelDownCommand: barConfig.brightnessSet("5%-") }
       StatusText { command: barConfig.network("bar"); interval: 10000; leftClickCommand: barConfig.qs(barConfig.menuIds.network); rightClickCommand: barConfig.networkEditor() }
 
-      Text {
+      PowerPlugin.Panel {
         Layout.alignment: Qt.AlignVCenter
-        visible: bar.batteryVisible(UPower.displayDevice)
-        color: bar.batteryColor(UPower.displayDevice)
-        font.family: barTheme.fontFamily
-              font.styleName: barTheme.fontStyle
-        font.pixelSize: barTheme.fontMd
-        text: UPower.displayDevice.ready ? bar.batteryIcon(UPower.displayDevice) + " " + bar.batteryPercent(UPower.displayDevice) + "%" : ""
-
-        MouseArea {
-          anchors.fill: parent
-          hoverEnabled: true
-          cursorShape: Qt.PointingHandCursor
-          onEntered: barRoot.showTooltip(parent, "Battery and power")
-          onExited: barRoot.hideTooltip()
-          onClicked: barRoot.toggleControlPanel()
-        }
+        bar: bar
       }
 
     }

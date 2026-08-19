@@ -1286,17 +1286,19 @@ statically; PluginRegistry is not a prerequisite. Keep copied files close to
 upstream and put Ubuntu command mapping in one host adapter. Do not add helper
 scripts where native Quickshell or an existing local command already works.
 
-- [ ] P0: Add one minimal host adapter for copied Omarchy panels.
+- [x] P0: Add one minimal host adapter for copied Omarchy panels.
   - Acceptance: supply anchoring, lifecycle, palette/settings, panel switching, and service lookup while preserving `qbar`, repeated-hotkey close, outside-click close, and one shell process.
   - Dependencies: commit the current copied `Commons`/`Ui` foundation first.
   - Validation: `qmllint`; live open/close/toggle/Escape/outside-click/`qbar close-panels` checks.
+  - Completed 2026-08-19: `ShellBar.qml` implements the narrow copied-panel contract; Power passed IPC toggle/close and outside-click popup behavior without a second shell or registry.
   - Stop: no plugin discovery, second registry, or per-panel adapters.
 
-- [ ] P0: Copy Omarchy Power as the battery and power-profile panel.
+- [x] P0: Copy Omarchy Power as the battery and power-profile panel.
   - Sources: `shell/plugins/panels/power/{Panel.qml,Model.js,manifest.json}`; local UPower, `power-status`, board status, Controls, and battery bar item.
-  - Acceptance: show charge state, capacity, cycles, rate, remaining/full time, battery size, profile, and system stats; replace overlapping Controls UI/polling; preserve local colors and hide-at-100-percent behavior.
+  - Acceptance: show charge state, health, cycles, rate, remaining/full time, battery size, and profile; replace overlapping Controls UI/polling; preserve local colors and hide-at-100-percent behavior.
   - Dependencies: host adapter; map Omarchy commands to native state or existing helpers.
   - Validation: upstream model tests, `qmllint`, charging/discharging screenshots, profile smoke, one-process and CPU/RSS checks.
+  - Completed 2026-08-19: copied `Panel.qml` and `Model.js`; mapped commands to `power-status`; preserved battery health, local state colors, and hide-at-100-percent; live screenshot had no clipping or overlap. Removed the upstream unused system-stats process and decorative phrase/pulse animations.
   - Stop: omit rotating phrases/animations and duplicate helpers.
 
 - [ ] P0: Finish the copied System route with local safe actions.
