@@ -1301,10 +1301,11 @@ scripts where native Quickshell or an existing local command already works.
   - Completed 2026-08-19: copied `Panel.qml` and `Model.js`; mapped commands to `power-status`; preserved battery health, local state colors, and hide-at-100-percent; live screenshot had no clipping or overlap. Removed the upstream unused system-stats process and decorative phrase/pulse animations.
   - Stop: omit rotating phrases/animations and duplicate helpers.
 
-- [ ] P0: Finish the copied System route with local safe actions.
+- [x] P0: Finish the copied System route with local safe actions.
   - Acceptance: Super+Space > System and `Win+Escape` expose Lock, Suspend, available Hibernate, Logout, Reboot, Shutdown, and Exit Hyprland; destructive/session-ending actions retain confirmation.
   - Dependencies: existing commands/confirmation state; query logind capability on open.
   - Validation: menu-model and lifecycle tests, safe Lock test, and non-executing command-plan assertions.
+  - Completed 2026-08-19: Super+Space > System now mirrors Omarchy's direct actions while routing through the existing Session confirmation flow; Logout uses the current logind session; Hibernate is hidden when `CanHibernate` is `na`. Live reboot testing stopped at confirmation.
   - Stop: no Arch shutdown scripts or second System panel.
 
 - [ ] P0: Copy Omarchy Display and replace overlapping screen controls.

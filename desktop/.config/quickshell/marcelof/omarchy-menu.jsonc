@@ -31,8 +31,13 @@
   "learn.hyprland": {"icon":"","label":"Hyprland manual","action":"$HOME/bin/chrome-wayland https://wiki.hypr.land/"},
   "learn.omarchy": {"icon":"","label":"Omarchy manual","action":"$HOME/bin/chrome-wayland https://omarchy.org/manual/"},
 
-  "system.power": {"icon":"","label":"Session and power","action":"$HOME/bin/qbar power"},
-  "system.lock": {"icon":"","label":"Lock","action":"$HOME/bin/omarchy-shell lock lock"},
+  "system.lock": {"icon":"","label":"Lock","action":"$HOME/bin/qbar session-action lock"},
+  "system.suspend": {"icon":"󰒲","label":"Suspend","action":"$HOME/bin/qbar session-action suspend"},
+  "system.hibernate": {"icon":"󰤁","label":"Hibernate","when":"busctl --system call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager CanHibernate | grep -Eq 'yes|challenge'","action":"$HOME/bin/qbar session-action hibernate"},
+  "system.logout": {"icon":"󰍃","label":"Logout","action":"$HOME/bin/qbar session-action logout"},
+  "system.reboot": {"icon":"󰜉","label":"Reboot","action":"$HOME/bin/qbar session-action reboot"},
+  "system.shutdown": {"icon":"󰐥","label":"Shutdown","action":"$HOME/bin/qbar session-action poweroff"},
+  "system.exit": {"icon":"󰍃","label":"Exit Hyprland","action":"$HOME/bin/qbar session-action exit"},
   "system.stay-awake": {"icon":"󰅶","label":"Stay awake","aliases":["inhibit"],"action":"$HOME/bin/qbar inhibit"},
   "system.notifications": {"icon":"󰂛","label":"Do not disturb","aliases":["dnd"],"action":"$HOME/bin/qbar dnd"}
 }

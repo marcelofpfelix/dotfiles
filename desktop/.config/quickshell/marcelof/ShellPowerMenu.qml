@@ -13,30 +13,31 @@ ShellPopup {
 
   readonly property var sessionActionRows: shellConfig.sessionActionRows
   readonly property var exitSessionAction: shellConfig.exitSessionAction
+  readonly property var logoutSessionAction: shellConfig.logoutSessionAction
+  property bool hibernateAvailable: false
 
   function triggerSessionAction(action) {
-    switch (action.action) {
-    case "hide":
-      powerMenu.shellRoot.hidePowerMenu()
-      break
-    case "lock":
-      powerMenu.shellRoot.lockSession()
-      break
-    case "suspend":
-      powerMenu.shellRoot.suspendSession()
-      break
-    default:
-      powerMenu.shellRoot.setSessionConfirm(action.label, action.icon, powerMenu.shellConfig.sessionCommand(action.action))
-      break
-    }
+    powerMenu.shellRoot.requestSessionAction(action.action)
   }
 
   IpcHandler {
     target: "session"
     function confirmExit() { powerMenu.shellRoot.togglePowerMenu() }
     function power() { powerMenu.shellRoot.togglePowerMenu() }
+    function request(action: string): string { return powerMenu.shellRoot.requestSessionAction(action) ? "ok" : "unknown" }
     function confirmReboot() { powerMenu.shellRoot.openSessionConfirm("Reboot", "󰜉", powerMenu.shellConfig.reboot()) }
     function hide() { powerMenu.hide() }
+  }
+
+  onPanelOpenChanged: if (panelOpen) hibernateCapability.running = true
+
+  Process {
+    id: hibernateCapability
+    command: powerMenu.shellConfig.hibernateCapability()
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: powerMenu.hibernateAvailable = /\"(yes|challenge)\"/.test(text)
+    }
   }
 
   ShellPanel {
@@ -63,6 +64,7 @@ ShellPopup {
               required property var modelData
 
               Layout.fillWidth: true
+              visible: modelData.action !== powerMenu.shellConfig.hibernateAction || powerMenu.hibernateAvailable
               icon: modelData.icon
               label: modelData.label
               tooltip: modelData.tooltip
@@ -83,13 +85,11 @@ ShellPopup {
         ShellActionButton { Layout.fillWidth: true; active: true; icon: powerMenu.shellRoot.sessionConfirmIcon; label: "Confirm"; tooltip: "Run " + powerMenu.shellRoot.sessionConfirmLabel; tooltipState: powerMenu.shellRoot; onTriggered: powerMenu.shellRoot.runSessionConfirm() }
       }
 
-      ShellActionButton {
-        Layout.preferredWidth: 180
-        icon: powerMenu.exitSessionAction.icon
-        label: powerMenu.exitSessionAction.label
-        tooltip: powerMenu.exitSessionAction.tooltip
-        tooltipState: powerMenu.shellRoot
-        onTriggered: powerMenu.triggerSessionAction(powerMenu.exitSessionAction)
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: theme.spacingLg
+        ShellActionButton { Layout.fillWidth: true; icon: powerMenu.logoutSessionAction.icon; label: powerMenu.logoutSessionAction.label; tooltip: powerMenu.logoutSessionAction.tooltip; tooltipState: powerMenu.shellRoot; onTriggered: powerMenu.triggerSessionAction(powerMenu.logoutSessionAction) }
+        ShellActionButton { Layout.fillWidth: true; icon: powerMenu.exitSessionAction.icon; label: powerMenu.exitSessionAction.label; tooltip: powerMenu.exitSessionAction.tooltip; tooltipState: powerMenu.shellRoot; onTriggered: powerMenu.triggerSessionAction(powerMenu.exitSessionAction) }
       }
   }
 }

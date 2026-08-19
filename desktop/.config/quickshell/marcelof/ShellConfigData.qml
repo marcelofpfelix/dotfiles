@@ -13,6 +13,7 @@ QtObject {
   readonly property string defaultWebSearchSite: "google"
   readonly property string defaultPassUserKey: "username"
   readonly property string statusAction: "status"
+  readonly property string hibernateAction: "hibernate"
   readonly property string networkWifiLabel: "Wi-Fi"
   readonly property string networkUnavailableText: "Network unavailable"
   readonly property string networkWifiToggleAction: "wifi-toggle"
@@ -223,13 +224,23 @@ QtObject {
       { icon: "󰒲", label: "Suspend", tooltip: "Suspend system", action: "suspend" }
     ],
     [
-      { icon: "󰒓", label: "Hibernate", tooltip: "Hibernate system", action: "hibernate" },
+      { icon: "󰒓", label: "Hibernate", tooltip: "Hibernate system", action: hibernateAction },
       { icon: "󰜉", label: "Reboot", tooltip: "Reboot system", action: "reboot" },
       { icon: "⏻", label: "Shutdown", tooltip: "Power off system", action: "poweroff" }
     ]
   ]
 
   readonly property var exitSessionAction: ({ icon: "󰍃", label: "Exit Hyprland", tooltip: "Exit the current Hyprland session", action: "exit" })
+  readonly property var logoutSessionAction: ({ icon: exitSessionAction.icon, label: "Logout", tooltip: "End the current login session", action: "logout" })
+
+  function sessionAction(action) {
+    for (let row of sessionActionRows)
+      for (let item of row)
+        if (item.action === action) return item
+    if (logoutSessionAction.action === action) return logoutSessionAction
+    if (exitSessionAction.action === action) return exitSessionAction
+    return null
+  }
 
   readonly property var personalDashboardSurfaces: [boardQuickshellSurface, "personal.today", "personal.money", "personal.health", "personal.habits"]
   readonly property var calendarWeekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]

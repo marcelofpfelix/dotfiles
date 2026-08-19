@@ -1443,6 +1443,16 @@ ShellRoot {
     Quickshell.execDetached(shellConfig.suspend())
   }
 
+  function requestSessionAction(action) {
+    const item = shellConfig.sessionAction(action)
+    if (!item) return false
+    if (action === "hide") root.hidePowerMenu()
+    else if (action === "lock") root.lockSession()
+    else if (action === "suspend") root.suspendSession()
+    else root.openSessionConfirm(item.label, item.icon, shellConfig.sessionCommand(action))
+    return true
+  }
+
   function setSessionConfirm(label, icon, command) {
     root.sessionConfirmLabel = label
     root.sessionConfirmIcon = icon

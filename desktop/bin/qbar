@@ -31,7 +31,7 @@ list_instances() {
 }
 
 usage() {
-  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|battery|power|inhibit|keybindings|clipboard|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
+  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|battery|power|session-action|inhibit|keybindings|clipboard|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
 }
 
 kill_all() {
@@ -205,6 +205,10 @@ case "${1:-status}" in
   websearch) ipc_target websearch toggle ;;
   lock) ipc_target lock lock ;;
   power|session) menu_toggle power ;;
+  session-action)
+    [ -n "${2:-}" ] || { usage; exit 2; }
+    ipc_target session request "$2"
+    ;;
   power-confirm) ipc_target session confirmReboot ;;
   inhibit|stay-awake) menu_toggle inhibit ;;
   keybindings|keys) menu_toggle keybindings ;;

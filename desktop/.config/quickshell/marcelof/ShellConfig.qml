@@ -14,6 +14,7 @@ QtObject {
   readonly property string textSeparator: configData.textSeparator
   readonly property string boardQuickshellSurface: configData.boardQuickshellSurface
   readonly property string statusAction: configData.statusAction
+  readonly property string hibernateAction: configData.hibernateAction
   readonly property string networkWifiLabel: configData.networkWifiLabel
   readonly property string networkUnavailableText: configData.networkUnavailableText
   readonly property string networkWifiToggleAction: configData.networkWifiToggleAction
@@ -95,12 +96,18 @@ QtObject {
   function systemctl(action) { return ["systemctl", action] }
   function suspend() { return systemctl("suspend") }
   function hibernate() { return systemctl("hibernate") }
+  function hibernateCapability() { return ["busctl", "--system", "call", "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", "CanHibernate"] }
+  function logout() {
+    const session = Quickshell.env("XDG_SESSION_ID")
+    return session ? ["loginctl", "terminate-session", session] : exitHyprland()
+  }
   function reboot() { return systemctl("reboot") }
   function poweroff() { return systemctl("poweroff") }
   function exitHyprland() { return ["hyprctl", "dispatch", "exit"] }
   function sessionCommand(action) {
     switch (action) {
-    case "hibernate": return hibernate()
+    case hibernateAction: return hibernate()
+    case "logout": return logout()
     case "reboot": return reboot()
     case "poweroff": return poweroff()
     case "exit": return exitHyprland()
@@ -159,6 +166,8 @@ function menuSize(id, dense) {
   readonly property var primaryColorRows: configData.primaryColorRows
   readonly property var sessionActionRows: configData.sessionActionRows
   readonly property var exitSessionAction: configData.exitSessionAction
+  readonly property var logoutSessionAction: configData.logoutSessionAction
+  function sessionAction(action) { return configData.sessionAction(action) }
 
   readonly property var personalDashboardSurfaces: configData.personalDashboardSurfaces
   readonly property var calendarWeekdays: configData.calendarWeekdays
