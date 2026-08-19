@@ -1201,8 +1201,9 @@ Use this pass to replace local custom glue only where Omarchy's structure makes 
   - Current behavior: live actions such as `Open` and `Done` render immediately. App focus and clear controls use explicit labels. Live visual verification passed with no overlap.
 - [x] P1: Give the launcher search field a visible prompt.
   - Current behavior: the shared search box displays `Search apps`. The launcher remains a centered floating popup, and launchability plus hide/unhide round-trip checks pass.
-- [ ] P1: Compact sparse calendar, tray, work inbox, and personal dashboard states.
+- [x] P1: Compact sparse calendar, tray, work inbox, and personal dashboard states.
   - Acceptance: empty or unavailable sections do not reserve large blank areas; populated states remain scrollable and unclipped. Reuse content-driven implicit heights instead of adding per-state fixed sizes.
+  - Current behavior: Tray height follows its live item count up to the existing maximum. Work Inbox uses a 320px shared size token and readable secondary text instead of a faint 420px sparse surface. Calendar keeps its required scrollable 720px content, and Personal Dashboard was already content-fit at 240px, so neither received speculative geometry. Focused before/after smoke inspection found no clipping or overlap.
 
 ## 2026-08-18 Omarchy System and Keybindings Review
 

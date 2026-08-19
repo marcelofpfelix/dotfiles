@@ -360,6 +360,6 @@ PanelWindow {
       visibilityAction: value => value ? barRoot.openShellMenu(barConfig.menuIds.tray, "{}") : barRoot.hideShellMenu(barConfig.menuIds.tray)
       panelOpen: barRoot.trayManageOpen
       panelWidth: barRoot.menuWidthFor(barConfig.menuIds.tray)
-      panelHeight: barRoot.menuHeightFor(barConfig.menuIds.tray)
+      panelHeight: Math.min(barRoot.menuHeightFor(barConfig.menuIds.tray), 84 + Math.max(1, barRoot.allTrayItems.length) * (barTheme.launcherRowHeight + barTheme.spacingMd))
     }
   }

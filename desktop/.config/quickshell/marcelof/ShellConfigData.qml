@@ -168,7 +168,7 @@ QtObject {
     controls: { width: 720, height: 960 },
     settings: { width: 640, height: 420 },
     calendar: { width: 640, height: 720 },
-    "work-inbox": { width: 640, height: 420 },
+    "work-inbox": { width: 640, height: 320 },
     "personal-dashboard": { width: 640, height: 240 },
     "root-menu": { width: 360, height: 780 },
     notifications: { width: 640, height: 420 },
