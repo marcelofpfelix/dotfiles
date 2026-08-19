@@ -7,6 +7,7 @@ import QtQuick.Layouts
 import "plugins/panels/power" as PowerPlugin
 import "plugins/panels/monitor" as MonitorPlugin
 import "plugins/panels/bluetooth" as BluetoothPlugin
+import "plugins/panels/network" as NetworkPlugin
 
 PanelWindow {
   id: bar
@@ -17,6 +18,7 @@ PanelWindow {
   required property var barConfig
   required property var notificationHistoryModel
 
+  readonly property var shell: barRoot.pluginHost
   readonly property string position: "top"
   readonly property bool vertical: false
   readonly property int barSize: barTheme.barHeight
@@ -58,6 +60,7 @@ PanelWindow {
   }
 
   function switchPanelFrom(owner, direction) { return false }
+  function toggleNetworkPanel() { networkPanel.toggle() }
   function showTooltip(target, text) { barRoot.showTooltip(target, text) }
   function hideTooltip(target) { barRoot.hideTooltip() }
 
@@ -307,7 +310,7 @@ PanelWindow {
 
       MonitorPlugin.Panel { Layout.alignment: Qt.AlignVCenter; bar: bar }
       BluetoothPlugin.Panel { Layout.alignment: Qt.AlignVCenter; bar: bar }
-      StatusText { command: barConfig.network("bar"); interval: 10000; leftClickCommand: barConfig.qs(barConfig.menuIds.network); rightClickCommand: barConfig.networkEditor() }
+      NetworkPlugin.Panel { id: networkPanel; Layout.alignment: Qt.AlignVCenter; bar: bar }
 
       PowerPlugin.Panel {
         Layout.alignment: Qt.AlignVCenter

@@ -31,7 +31,7 @@ list_instances() {
 }
 
 usage() {
-  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|display|battery|bluetooth|power|session-action|inhibit|keybindings|clipboard|emoji|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
+  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|display|battery|bluetooth|wifi-qr|power|session-action|inhibit|keybindings|clipboard|emoji|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
 }
 
 kill_all() {
@@ -203,7 +203,8 @@ case "${1:-status}" in
   display|monitor) ipc_target omarchy.monitor toggle ;;
   battery) ipc_target omarchy.power toggle ;;
   bluetooth) ipc_target omarchy.bluetooth toggle ;;
-  network) menu_toggle network ;;
+  wifi-qr|wifiqr) menu_toggle wifiqr ;;
+  network) ipc_target omarchy.network toggle ;;
   websearch) ipc_target websearch toggle ;;
   lock) ipc_target lock lock ;;
   power|session) menu_toggle power ;;

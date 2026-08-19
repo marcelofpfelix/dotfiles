@@ -14,10 +14,13 @@ import QtQuick.Controls
 import qs.Commons
 import "plugins/menu" as OmarchyMenu
 import "plugins/emojis" as EmojiPlugin
+import "plugins/panels/wifiqr" as WifiQrPlugin
 import "services" as OmarchyServices
 
 ShellRoot {
   id: root
+
+  readonly property var pluginHost: pluginHostObject
 
   property string launcherSmokeHiddenId: ""
   readonly property var appLibrary: appLibraryService
@@ -274,7 +277,6 @@ ShellRoot {
   property string passBackend: "gopass"
   readonly property bool rootMenuOpen: rootMenu.opened
   property bool keybindingsOpen: false
-  property bool networkPanelOpen: false
   property bool powerMenuOpen: false
   property bool webSearchOpen: false
   property string webSearchSite: shellConfig.defaultWebSearchSite
@@ -476,6 +478,7 @@ ShellRoot {
 
   function closeTransientPanels() {
     root.hideLauncher()
+    wifiQrOverlay.close()
     if (bar.activePopout) bar.activePopout.close()
     for (let menu in shellConfig.menuRegistry) {
       const entry = shellConfig.menuRegistry[menu]
@@ -520,6 +523,7 @@ ShellRoot {
     if (menu === "launcher") return launcher.panelOpen
     if (menu === shellConfig.menuIds.rootMenu) return rootMenu.opened
     if (menu === shellConfig.menuIds.emojis) return emojiOverlay.opened
+    if (menu === "wifiqr") return wifiQrOverlay.opened
     const entry = root.shellMenuEntry(menu)
     return !!(entry && entry.openProperty && root[entry.openProperty])
   }
@@ -536,6 +540,10 @@ ShellRoot {
     }
     if (menu === "launcher") {
       root.hideLauncher()
+      return true
+    }
+    if (menu === "wifiqr") {
+      wifiQrOverlay.close()
       return true
     }
     const entry = root.shellMenuEntry(menu)
@@ -555,6 +563,10 @@ ShellRoot {
     }
     if (menu === "launcher") {
       root.toggleLauncher()
+      return true
+    }
+    if (menu === "wifiqr") {
+      wifiQrOverlay.opened ? wifiQrOverlay.close() : wifiQrOverlay.open(payloadJson || "{}")
       return true
     }
     const action = shellConfig.actionRegistry[menu]
@@ -659,9 +671,7 @@ ShellRoot {
     root.toggleTransientPanel("controlPanelOpen", function() { systemStatusService.refreshControls() })
   }
 
-  function toggleNetworkPanel() {
-    root.toggleTransientPanel("networkPanelOpen", function() { systemStatusService.refreshNetwork() })
-  }
+  function toggleNetworkPanel() { bar.toggleNetworkPanel() }
 
   function toggleMediaPanel() {
     root.toggleTransientPanel("mediaPanelOpen", function() { root.refreshAudioState() })
@@ -1325,16 +1335,29 @@ ShellRoot {
   ShellTheme { id: shellTheme }
 
   QtObject {
-    id: emojiPluginHost
-    function hide(pluginId) { return root.hideShellMenu(pluginId) }
+    id: pluginHostObject
+    function hide(pluginId) {
+      if (String(pluginId) === "omarchy.wifiqr") { wifiQrOverlay.close(); return true }
+      return root.hideShellMenu(pluginId)
+    }
+    function summon(pluginId, payloadJson) {
+      if (String(pluginId) === "omarchy.wifiqr") { wifiQrOverlay.open(payloadJson || "{}"); return true }
+      return root.openShellMenu(pluginId, payloadJson || "{}")
+    }
   }
 
   EmojiPlugin.Emojis {
     id: emojiOverlay
     pluginPath: shellConfig.home + "/.config/quickshell/marcelof/plugins/emojis"
     targetScreen: root.laptopScreen
-    shell: emojiPluginHost
+    shell: pluginHostObject
     manifest: ({ id: "omarchy.emojis" })
+  }
+
+  WifiQrPlugin.Panel {
+    id: wifiQrOverlay
+    shell: pluginHostObject
+    manifest: ({ id: "omarchy.wifiqr" })
   }
 
   // Local settings own the palette; copied Omarchy components consume it here.
@@ -1849,16 +1872,6 @@ ShellRoot {
       panelHeight: root.menuHeightFor(shellConfig.menuIds.websearch)
     }
 
-    ShellNetworkPanel {
-      anchorWindow: bar
-      shellRoot: root
-      shellConfig: shellConfig
-      statusRefresh: systemStatusService.networkHandle
-      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.network, "{}") : root.hideShellMenu(shellConfig.menuIds.network)
-      panelOpen: root.networkPanelOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.network)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.network)
-    }
 
     ShellPowerMenu {
       anchorWindow: bar

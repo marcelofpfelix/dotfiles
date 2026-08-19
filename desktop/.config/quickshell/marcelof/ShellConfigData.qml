@@ -145,7 +145,6 @@ QtObject {
     "personal-dashboard": { openProperty: "personalDashboardOpen", refresh: "refreshPersonalDashboard" },
     settings: { openProperty: "settingsOpen" },
     notifications: { openProperty: "notificationCenterOpen" },
-    network: { openProperty: "networkPanelOpen", refresh: "refreshNetwork" },
     power: { openProperty: "powerMenuOpen", refresh: "refreshPower", hide: "hidePowerMenu" }
   })
 

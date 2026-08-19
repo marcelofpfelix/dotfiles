@@ -1331,6 +1331,7 @@ scripts where native Quickshell or an existing local command already works.
   - Acceptance: active interface, approved local/public details, signal, throughput, latency, Wi-Fi scan/connect/disconnect/forget, password prompt, radio toggle, and supported DNS choices; secrets never appear in logs or argv.
   - Dependencies: prove the installed Quickshell NetworkManager backend; map status/DNS/band/QR actions without duplicate helpers.
   - Validation: upstream model tests, `qmllint`, wired/no-radio, saved/new Wi-Fi, wrong-password, DNS dry-run, screenshot, and idle CPU checks.
+  - Progress 2026-08-19: copied and statically mounted the upstream Network panel/model/manifest; archived `ShellNetworkPanel.qml`. Native Quickshell NetworkManager now owns scan/connect/disconnect/forget/radio and password entry. The existing `network-status` gained the copied tab-separated telemetry contract for route, byte counters, throughput, and latency; one copied `network-dns` backend owns supported DNS choices. Band pinning and speed test are hidden because their private backends were intentionally not copied. QML/shell checks, live telemetry, one-process lifecycle, IPC toggle, 440-unit screenshot smoke, runtime-log check, and no-idle-helper check pass. Saved/new/wrong-password and DNS-changing manual checks remain unrun to avoid disrupting the active connection.
   - Stop: omit unsupported band control; archive the replaced panel rather than retaining a fallback.
 
 - [ ] P1: Copy Omarchy Audio mixer while preserving `audioctl` ownership.
@@ -1343,6 +1344,7 @@ scripts where native Quickshell or an existing local command already works.
   - Acceptance: show a decodable QR for the active shareable network without exposing its password in argv, logs, notifications, history, or screenshots outside the explicit panel.
   - Dependencies: copied Network and a secure NetworkManager secret-reading path.
   - Validation: upstream model tests, `qmllint`, QR decode, redaction, and process-list checks.
+  - Progress 2026-08-19: copied and statically mounted Wi-Fi QR with its upstream model and NetworkManager helpers. `qrencode` is tracked in homelab and installed. A live QR generated as a valid square 41x41 matrix; repeated toggle, central close, QML/shell checks, one-process lifecycle, and no-idle-helper checks pass. Password lookup remains click-only, stdout-pipe-only, and cleared on close. Camera decode remains a manual check.
   - Stop: no plaintext connection-file parsing or second network backend.
 
 - [ ] P2: Copy network and disk speed-test panels only when existing commands are reusable.
