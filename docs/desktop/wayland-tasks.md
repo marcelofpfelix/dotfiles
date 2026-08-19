@@ -1221,14 +1221,16 @@ Provenance: the System naming and searchable-keybindings behavior were adapted f
 - [x] P1: Route the battery bar item into the existing Controls power section.
   - Acceptance: clicking the visible battery opens Controls, current power profile is visibly selected, and no second battery/power panel or polling loop is added.
   - Current behavior: the battery item opens Controls, and exactly one of Save, Bal, or Perf reflects the active profile from the existing power-status refresh.
-- [ ] P1: Enrich the existing one-shot power status with useful battery details.
+- [x] P1: Enrich the existing one-shot power status with useful battery details.
   - Sources: Omarchy power panel battery size, charge cycles, time remaining/to full, rate, capacity, and profile controls.
   - Acceptance: show only values available from the existing UPower refresh; keep fan and profile controls in Controls; do not copy rotating phrases, animations, or a separate Omarchy runtime helper.
-- [ ] P1: Hide or disable Hibernate when logind reports it unavailable.
+  - Completed 2026-08-19: superseded by the copied Power panel, which shows charge state, health, cycles, rate, remaining/full time, battery size, and profile without a second poller.
+- [x] P1: Hide or disable Hibernate when logind reports it unavailable.
   - Acceptance: Lock and Suspend remain immediate; Hibernate, Reboot, Shutdown, and Exit Hyprland retain confirmation; unavailable Hibernate cannot be selected.
-- [ ] P1: Replace the flat Super+Space list with shallow local routes.
+  - Completed 2026-08-19: the copied System route checks login1 and omits Hibernate when CanHibernate is unavailable.
+- [x] P1: Replace the flat Super+Space list with shallow local routes.
   - Proposed root: Apps, Trigger, Status, Setup, Learn, System. Learn opens Keybindings; System opens the existing session panel. Preserve direct hotkeys and IPC aliases.
-  - Stop condition: do not copy the Omarchy JSONC provider engine or dynamic plugin menu until a user extension actually needs it.
+  - Completed 2026-08-19: superseded by the copied Omarchy JSONC menu, which provides these routes and existing IPC aliases. The host now supplies a 440px root width instead of upstream's narrow 300px default.
 ## 2026-08-18 Omarchy Foundation Replacement Review
 
 Snapshot: `/tmp/omarchy-quattro` at `f32ebbd`. The review compared local callers and line counts against Omarchy `shell/Ui`, `shell/Commons`, `shell/services`, `shell/plugins/menu`, and `shell/plugins/bar`. Copy upstream code only when it replaces a local implementation in the same task. Keep copied files close to upstream and record unavoidable local changes; do not build a second UI toolkit beside `Shell*` components.
@@ -1322,6 +1324,7 @@ scripts where native Quickshell or an existing local command already works.
   - Acceptance: list, scan, connect, disconnect, pair, forget, power-toggle, and select a connected audio sink; route existing actions here and remove superseded glue.
   - Dependencies: host adapter and native Quickshell Bluetooth/PipeWire; reuse existing commands.
   - Validation: upstream model tests, `qmllint`, adapter-off/scan states, and one manual connect/disconnect round trip.
+  - Progress 2026-08-19: copied the upstream panel/model/manifest and mounted it statically. Device and sink actions use native Quickshell BlueZ/PipeWire APIs; persistent radio power calls rfkill directly, so no helper scripts or poller were added. qbar bluetooth, Super+Ctrl+B, root-menu routing, close coordination, QML/model/profile checks, one-process lifecycle, and active-adapter visual smoke pass. BlueZ was restored to its Ubuntu preset enabled state. A manual device connect/disconnect remains intentionally unrun to avoid disrupting active input/audio hardware.
   - Stop: no second poller or copied hardware-specific scripts.
 
 - [ ] P1: Copy Omarchy Network and replace `ShellNetworkPanel`.

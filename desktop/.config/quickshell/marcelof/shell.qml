@@ -476,6 +476,7 @@ ShellRoot {
 
   function closeTransientPanels() {
     root.hideLauncher()
+    if (bar.activePopout) bar.activePopout.close()
     for (let menu in shellConfig.menuRegistry) {
       const entry = shellConfig.menuRegistry[menu]
       if (entry.hide && typeof root[entry.hide] === "function")
@@ -1667,6 +1668,7 @@ ShellRoot {
     OmarchyMenu.Menu {
       id: rootMenu
       shell: root
+      menuWidth: root.menuWidthFor(shellConfig.menuIds.rootMenu)
       defaultMenuPath: shellConfig.home + "/.config/quickshell/marcelof/omarchy-menu.jsonc"
       fontFamily: shellTheme.fontFamily
       background: shellTheme.panel

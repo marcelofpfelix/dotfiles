@@ -17,6 +17,7 @@
   "trigger.wallpaper": {"icon":"󰸉","label":"Wallpaper","aliases":["background"],"action":"$HOME/bin/qbar wallpaper"},
   "trigger.media": {"icon":"󰕾","label":"Media","aliases":["audio","music"],"action":"$HOME/bin/qbar media"},
 
+  "status.bluetooth": {"icon":"\uDB80\uDCAF","label":"Bluetooth","action":"$HOME/bin/qbar bluetooth"},
   "status.controls": {"icon":"󰒓","label":"Controls","action":"$HOME/bin/qbar controls"},
   "status.display": {"icon":"󰒓","label":"Displays","action":"$HOME/bin/qbar display"},
   "status.network": {"icon":"󰖩","label":"Network","aliases":["wifi"],"action":"$HOME/bin/qbar network"},

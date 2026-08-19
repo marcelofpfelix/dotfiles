@@ -6,6 +6,7 @@ import QtQuick
 import QtQuick.Layouts
 import "plugins/panels/power" as PowerPlugin
 import "plugins/panels/monitor" as MonitorPlugin
+import "plugins/panels/bluetooth" as BluetoothPlugin
 
 PanelWindow {
   id: bar
@@ -305,6 +306,7 @@ PanelWindow {
 
 
       MonitorPlugin.Panel { Layout.alignment: Qt.AlignVCenter; bar: bar }
+      BluetoothPlugin.Panel { Layout.alignment: Qt.AlignVCenter; bar: bar }
       StatusText { command: barConfig.network("bar"); interval: 10000; leftClickCommand: barConfig.qs(barConfig.menuIds.network); rightClickCommand: barConfig.networkEditor() }
 
       PowerPlugin.Panel {
