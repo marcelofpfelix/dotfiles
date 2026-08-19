@@ -11,6 +11,7 @@ Item {
 
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
   property string pluginPath: omarchyPath + "/shell/plugins/emojis"
+  property var targetScreen: null
   property var shell: null
   property var manifest: null
 
@@ -160,6 +161,7 @@ Item {
   }
   PanelWindow {
     id: panel
+    screen: root.targetScreen
     visible: root.opened
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"

@@ -11,6 +11,7 @@
 
   "trigger.web": {"icon":"󰇧","label":"Web search","aliases":["web","search"],"action":"$HOME/bin/qbar websearch"},
   "trigger.clipboard": {"icon":"󰅇","label":"Clipboard","aliases":["clip"],"action":"$HOME/bin/qbar clipboard"},
+  "trigger.emojis": {"icon":"󰞅","label":"Emojis","aliases":["emoji"],"action":"$HOME/bin/qbar emojis"},
   "trigger.passwords": {"icon":"󰌾","label":"Passwords","aliases":["pass"],"action":"$HOME/bin/qbar passmenu"},
   "trigger.capture": {"icon":"󰍹","label":"Capture","aliases":["screenshot","record"],"action":"$HOME/bin/qbar screen"},
   "trigger.wallpaper": {"icon":"󰸉","label":"Wallpaper","aliases":["background"],"action":"$HOME/bin/qbar wallpaper"},

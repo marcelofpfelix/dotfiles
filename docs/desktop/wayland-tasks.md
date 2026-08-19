@@ -1354,10 +1354,11 @@ scripts where native Quickshell or an existing local command already works.
   - Validation: upstream tests, `qmllint`, screenshots, select/cancel/repeated-summon, and process checks.
   - Stop: no Omarchy theme-management or polling scripts merely to adopt the picker.
 
-- [ ] P2: Copy Omarchy Emoji overlay as the shell-native emoji picker.
+- [x] P2: Copy Omarchy Emoji overlay as the shell-native emoji picker.
   - Acceptance: fuzzy search, keyboard/mouse selection, reliable close, standard-clipboard copy, and one default route.
   - Dependencies: host/overlay lifecycle and stable clipboard behavior.
   - Validation: `qmllint`, search/select, paste into Ghostty/Chrome, close, and process checks.
+  - Current behavior: the copied overlay is available through `qbar emojis`, Super+Space > Trigger > Emojis, Omarchy-compatible `shell summon/toggle/hide omarchy.emojis`, and Omarchy's Super+Ctrl+E binding in both profiles. Its manifest/search/data stay upstream-compatible. Three adaptations are retained: `pluginPath` lets the same entry point find data outside an Omarchy install, direct `wl-copy` removes the private insert-script dependency and uses the standard clipboard, and optional `targetScreen` prevents the fullscreen card from centering across this laptop's monitor seam. QML/model/manifest checks, open-close-open-close lifecycle, root-menu/overlay smoke, one-process check, hotkey registration, and live screenshot inspection passed at `~/.local/state/quickshell/menu-smoke/20260819-130603`.
   - Stop: no extra emoji database or clipboard synchronizer when copied data and `wl-copy` suffice.
 
 - [ ] P1: Bring Omarchy keybinding parsing improvements into the existing QML panel.

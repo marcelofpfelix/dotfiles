@@ -3,13 +3,14 @@
 
 qs_menu_panels=(
   root-menu launcher controls media notifications work-inbox personal-dashboard
-  calendar wallpaper screen settings keybindings clipboard passmenu websearch network tray power power-confirm
+  calendar wallpaper screen settings keybindings clipboard emojis passmenu websearch network tray power power-confirm
 )
 
 declare -gA qs_menu_labels=(
   [calendar]="Calendar"
   [clipboard]="Clipboard history"
   [controls]="Controls"
+  [emojis]="Emojis"
   [keybindings]="Keybindings"
   [launcher]="Apps"
   [media]="Media"
@@ -47,6 +48,7 @@ qs_menu_crop_geometry() {
     launcher) width=960; height=820; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     clipboard|passmenu) width=800; height=660; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     websearch) width=700; height=124; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
+    emojis) width=$max_w; height=$max_h; x=0; y=0 ;;
     osd) width=360; height=140; x=$(((max_w - width) / 2)); y=0 ;;
     notifications) width=660; height=450; x=$((max_w - width)); y=0 ;;
     wallpaper) width=720; height=430; x=$((max_w - width)); y=0 ;;

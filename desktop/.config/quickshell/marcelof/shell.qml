@@ -13,6 +13,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import qs.Commons
 import "plugins/menu" as OmarchyMenu
+import "plugins/emojis" as EmojiPlugin
 import "services" as OmarchyServices
 
 ShellRoot {
@@ -517,6 +518,7 @@ ShellRoot {
     if (menu === "bar") return !root.barHidden
     if (menu === "launcher") return launcher.panelOpen
     if (menu === shellConfig.menuIds.rootMenu) return rootMenu.opened
+    if (menu === shellConfig.menuIds.emojis) return emojiOverlay.opened
     const entry = root.shellMenuEntry(menu)
     return !!(entry && entry.openProperty && root[entry.openProperty])
   }
@@ -610,6 +612,17 @@ ShellRoot {
   }
 
   function hideRootMenu() { rootMenu.close() }
+
+  function hideEmojis() { emojiOverlay.close() }
+
+  function toggleEmojis(payloadJson) {
+    if (emojiOverlay.opened) {
+      emojiOverlay.close()
+      return
+    }
+    root.closeTransientPanels()
+    emojiOverlay.open(payloadJson || "{}")
+  }
 
   function toggleRootMenu(payloadJson) {
     if (rootMenu.opened) {
@@ -1309,6 +1322,19 @@ ShellRoot {
 
   ShellConfig { id: shellConfig }
   ShellTheme { id: shellTheme }
+
+  QtObject {
+    id: emojiPluginHost
+    function hide(pluginId) { return root.hideShellMenu(pluginId) }
+  }
+
+  EmojiPlugin.Emojis {
+    id: emojiOverlay
+    pluginPath: shellConfig.home + "/.config/quickshell/marcelof/plugins/emojis"
+    targetScreen: root.laptopScreen
+    shell: emojiPluginHost
+    manifest: ({ id: "omarchy.emojis" })
+  }
 
   // Local settings own the palette; copied Omarchy components consume it here.
   Binding { target: Color; property: "foreground"; value: shellTheme.text }

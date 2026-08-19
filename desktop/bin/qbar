@@ -31,7 +31,7 @@ list_instances() {
 }
 
 usage() {
-  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|display|battery|power|session-action|inhibit|keybindings|clipboard|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
+  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|display|battery|power|session-action|inhibit|keybindings|clipboard|emoji|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
 }
 
 kill_all() {
@@ -214,6 +214,7 @@ case "${1:-status}" in
   inhibit|stay-awake) menu_toggle inhibit ;;
   keybindings|keys) menu_toggle keybindings ;;
   clipboard) menu_toggle clipboard ;;
+  emoji|emojis) menu_toggle emojis ;;
   clipboard-update) ipc clipboardUpdate ;;
   passmenu) ipc_target passmenu open copy username gopass ;;
   close-panels) ipc_target shell closePanels ;;
