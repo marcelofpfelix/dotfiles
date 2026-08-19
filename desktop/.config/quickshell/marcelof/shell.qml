@@ -11,6 +11,7 @@ import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import qs.Commons
 import "plugins/menu" as OmarchyMenu
 import "services" as OmarchyServices
 
@@ -1308,6 +1309,15 @@ ShellRoot {
 
   ShellConfig { id: shellConfig }
   ShellTheme { id: shellTheme }
+
+  // Local settings own the palette; copied Omarchy components consume it here.
+  Binding { target: Color; property: "foreground"; value: shellTheme.text }
+  Binding { target: Color; property: "background"; value: shellTheme.panel }
+  Binding { target: Color; property: "accent"; value: shellSettings.primaryColor }
+  Binding { target: Color; property: "urgent"; value: shellTheme.error }
+  Binding { target: Color; property: "muted"; value: shellTheme.textMuted }
+  Binding { target: Style; property: "fontFamily"; value: shellTheme.fontFamily }
+  Binding { target: Style; property: "fontBaseSize"; value: shellTheme.fontMd }
 
   Component.onCompleted: Quickshell.execDetached(shellConfig.ensureStateDir())
 
