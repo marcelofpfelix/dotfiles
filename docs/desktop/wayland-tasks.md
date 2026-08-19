@@ -1375,6 +1375,7 @@ scripts where native Quickshell or an existing local command already works.
 
 - [ ] P1: Package local custom menus as portable Omarchy-compatible plugins.
   - Acceptance: each retained custom menu has a manifest, stable plugin id, standard entry point, explicit settings, and no dependency on `shell.qml` internals. The same plugin directory loads from this shell and an unmodified Omarchy host.
+  - Progress: the copied `omarchy.emojis` directory proves the unmodified schema-1 manifest and standard overlay entry-point package against local validation. Its manifest and search engine remain byte-identical to Omarchy `f32ebbd`, and the dataset differs only by the repository-required trailing newline; QML differs only by an injectable data path and direct `wl-copy`. A retained local custom menu still needs migration before this task can close.
   - Dependencies: shared host adapter and one copied first-party panel proving the contract; migrate one small local menu before the rest.
   - Validation: manifest validation, `qmllint`, enable/disable/rescan in both hosts, IPC summon/close, screenshots, and one-process checks.
   - Stop: no duplicate host variants, local-only manifest extensions, or migration of panels scheduled for Omarchy replacement.
