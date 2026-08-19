@@ -43,14 +43,6 @@ local function noop()
 end
 
 
-local function universal_paste()
-  if common.active_window_is_terminal() then
-    common.send_shortcut_once("SHIFT", "Insert")()
-  else
-    common.send_shortcut_once("CTRL", "V")()
-  end
-end
-
 common.apply_default_monitors()
 
 hl.config({
@@ -128,7 +120,9 @@ common.bind_direction_keys(mod .. " + SHIFT", common.vim_directions, hl.dsp.wind
 common.bind_direction_keys(mod .. " + SHIFT", common.arrow_directions, hl.dsp.window.move)
 
 hl.bind(mod .. " + Z", hl.dsp.layout("splith"))
-hl.bind(mod .. " + V", universal_paste)
+hl.bind(mod .. " + C", common.universal_clipboard_shortcut("CTRL", "C", "CTRL", "Insert"))
+hl.bind(mod .. " + V", common.universal_clipboard_shortcut("CTRL", "V", "SHIFT", "Insert"))
+hl.bind(mod .. " + X", common.send_shortcut_once("CTRL", "X"))
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mod .. " + E", hl.dsp.layout("togglesplit"))
 hl.bind(mod .. " + SHIFT + V", hl.dsp.layout("splitv"))

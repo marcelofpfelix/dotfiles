@@ -43,16 +43,6 @@ local function note(message)
 end
 
 
-local function universal_clipboard_shortcut(default_mods, default_key, terminal_mods, terminal_key)
-  return function()
-    if common.active_window_is_terminal() then
-      common.send_shortcut_once(terminal_mods, terminal_key)()
-    else
-      common.send_shortcut_once(default_mods, default_key)()
-    end
-  end
-end
-
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
@@ -145,8 +135,8 @@ hl.bind(mod .. " + SHIFT + RETURN", sh("xdg-open about:blank"))
 -- open root menu
 hl.bind(mod .. " + SPACE", sh(root_menu))
 hl.bind(mod .. " + D", sh(launcher))
-hl.bind(mod .. " + C", universal_clipboard_shortcut("CTRL", "C", "CTRL", "Insert"))
-hl.bind(mod .. " + V", universal_clipboard_shortcut("CTRL", "V", "SHIFT", "Insert"))
+hl.bind(mod .. " + C", common.universal_clipboard_shortcut("CTRL", "C", "CTRL", "Insert"))
+hl.bind(mod .. " + V", common.universal_clipboard_shortcut("CTRL", "V", "SHIFT", "Insert"))
 hl.bind(mod .. " + X", common.send_shortcut_once("CTRL", "X"))
 -- open clipboard history
 hl.bind(mod .. " + SHIFT + Q", hl.dsp.window.close())

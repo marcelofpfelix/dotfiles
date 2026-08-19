@@ -93,6 +93,16 @@ function M.active_window_is_terminal()
   return M.terminal_classes[window.class:lower()] == true
 end
 
+function M.universal_clipboard_shortcut(default_mods, default_key, terminal_mods, terminal_key)
+  return function()
+    if M.active_window_is_terminal() then
+      M.send_shortcut_once(terminal_mods, terminal_key)()
+    else
+      M.send_shortcut_once(default_mods, default_key)()
+    end
+  end
+end
+
 function M.apply_default_monitors()
   local preferred = "preferred"
   hl.monitor({ output = "eDP-1", mode = preferred, position = "auto", scale = 1 })
