@@ -47,6 +47,7 @@ qs_menu_crop_geometry() {
     root-menu) width=420; height=840; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     launcher) width=960; height=820; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     clipboard|passmenu) width=800; height=660; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
+    keybindings) width=1300; height=$max_h; x=$(((max_w - width) / 2)); y=0 ;;
     websearch) width=700; height=124; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     emojis) width=$max_w; height=$max_h; x=0; y=0 ;;
     osd) width=360; height=140; x=$(((max_w - width) / 2)); y=0 ;;
