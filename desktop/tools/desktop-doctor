@@ -362,6 +362,13 @@ check_board_status() {
   else
     fail board-plugins "missing plugin or embedded dashboard remains" "home -y && qbar restart"
   fi
+
+  if grep -Fq 'anchors.centerIn: parent' "$HOME/.config/omarchy/plugins/marcelof.board-status/BarWidget.qml" \
+      && grep -Fq 'textFormat: Text.RichText' "$HOME/.config/omarchy/plugins/marcelof.board-status/BarWidget.qml"; then
+    ok board-widget "centered rich text"
+  else
+    fail board-widget "alignment or rich text regressed"
+  fi
 }
 
 check_audio_status() {

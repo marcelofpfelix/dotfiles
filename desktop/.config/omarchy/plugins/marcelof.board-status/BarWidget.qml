@@ -28,15 +28,18 @@ BarWidget {
   }
 
   implicitWidth: status.implicitWidth
-  implicitHeight: status.implicitHeight
+  implicitHeight: bar ? bar.barSize : status.implicitHeight
 
   Text {
     id: status
+    anchors.centerIn: parent
     text: ""
     textFormat: Text.RichText
     color: root.bar ? root.bar.barForeground : Color.foreground
     font.family: root.bar ? root.bar.fontFamily : Style.font.family
     font.pixelSize: Style.font.body
+    horizontalAlignment: Text.AlignHCenter
+    verticalAlignment: Text.AlignVCenter
   }
 
   MouseArea {
