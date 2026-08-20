@@ -1502,6 +1502,8 @@ and local behavior that must survive replacement.
   - Validation: parsed JSONC catalog assertions and live root/Status screenshots found all 14 Status rows readable.
 
 - [ ] P0: Replace the reduced plugin host and static `ShellBar` with Omarchy's full `PluginRegistry`, `BarWidgetRegistry`, and dynamic `omarchy.bar` contract.
+  - Progress: the full upstream `PluginRegistry` and shared `BarWidgetRegistry` are live. A narrow compatibility adapter keeps the current enabled-plugin state until `shell.json` becomes canonical; recursive discovery and third-party hot reload now use upstream code.
+  - Remaining: copy the dynamic `omarchy.bar`, package the retained local status/center segments, switch discovery to the complete first-party tree, migrate ordering/settings into `shell.json`, and archive `ShellBar` only after live geometry and restart checks.
   - Why: upstream owns invisible-slot removal, widget ordering, bar placement, settings schemas, service/panel kinds, hot reload, clone routing, and one `shell.json`. Local code currently reimplements only overlays and bar widgets, which caused the spacing regression.
   - Preserve: penguin menu icon, center clock/notifications placement, Board status widget, laptop-screen default, primary color, and reviewed custom `marcelof.*` plugins.
   - Validation: upstream registry/bar tests, migrated `shell.json`, one/two-monitor screenshots, hidden-widget geometry, enable/disable/move/restart persistence, one-process and idle CPU/RSS checks.

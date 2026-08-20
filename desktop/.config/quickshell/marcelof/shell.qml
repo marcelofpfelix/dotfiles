@@ -1380,6 +1380,8 @@ ShellRoot {
     enabledPluginIds: shellSettings.enabledPluginIds
   }
 
+  OmarchyServices.BarWidgetRegistry { id: barWidgetRegistry }
+
   Connections {
     target: pluginRegistry
     function onPluginsChanged() { root.refreshDynamicPluginEntries() }
@@ -1425,6 +1427,7 @@ ShellRoot {
           if ("shell" in item) item.shell = pluginHostObject
           if ("manifest" in item) item.manifest = dynamicPluginEntry.manifest
           if ("pluginRegistry" in item) item.pluginRegistry = pluginRegistry
+          if ("barWidgetRegistry" in item) item.barWidgetRegistry = barWidgetRegistry
           root.registerDynamicPluginLoader(dynamicPluginEntry.pluginId, this)
         }
         onStatusChanged: {

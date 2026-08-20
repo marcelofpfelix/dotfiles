@@ -406,6 +406,13 @@ check_shell_layout_contract() {
   local root="$HOME/.config/quickshell/marcelof"
   local menu missing=()
 
+  if grep -Fq 'localPluginWatcher' "$root/services/PluginRegistry.qml" \
+      && grep -Fq 'BarWidgetRegistry { id: barWidgetRegistry }' "$root/shell.qml"; then
+    ok plugin-foundation "full registry and shared widget registry"
+  else
+    fail plugin-foundation "reduced registry remains"
+  fi
+
   if grep -Fq 'visible: status !== Loader.Ready || (item && item.visible)' "$root/ShellBar.qml" \
       && grep -Fq 'spacing: barTheme.spacingSm' "$root/ShellBar.qml"; then
     ok bar-plugin-spacing "hidden widgets collapse in compact group"
