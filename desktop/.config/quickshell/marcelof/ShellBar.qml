@@ -250,7 +250,6 @@ PanelWindow {
         }
       }
 
-      StatusText { command: barConfig.boardQuickshellBar(); interval: 1000; rich: true; watch: true }
       Rectangle {
         Layout.alignment: Qt.AlignVCenter
         visible: barRoot.privacyBarText().length > 0

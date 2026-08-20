@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "marcelof.board-status",
+  "name": "Board Status",
+  "version": "1.0.0",
+  "author": "Marcelo Felix",
+  "description": "Board-rendered system status for the shell bar",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": { "displayName": "Board Status", "category": "System", "allowMultiple": false }
+}

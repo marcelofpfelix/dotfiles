@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "marcelof.board-dashboard",
+  "name": "Board Dashboard",
+  "version": "1.0.0",
+  "author": "Marcelo Felix",
+  "description": "On-demand personal Board surfaces and refresh action",
+  "kinds": ["overlay"],
+  "entryPoints": { "overlay": "Overlay.qml" }
+}

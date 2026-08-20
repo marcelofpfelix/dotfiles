@@ -107,6 +107,7 @@ QtObject {
   })
 
   readonly property var pluginIds: ({
+    boardDashboard: "marcelof.board-dashboard",
     wifiQr: "omarchy.wifiqr"
   })
 
@@ -143,7 +144,7 @@ QtObject {
     screen: { openProperty: "screenPanelOpen", refresh: "refreshScreenState" },
     calendar: { openProperty: "calendarOpen", refresh: "refreshCalendar" },
     "work-inbox": { openProperty: "workInboxOpen", refresh: "refreshWorkInbox" },
-    "personal-dashboard": { openProperty: "personalDashboardOpen", refresh: "refreshPersonalDashboard" },
+    "personal-dashboard": { toggle: "togglePersonalDashboard", hide: "hidePersonalDashboard" },
     settings: { openProperty: "settingsOpen" },
     notifications: { openProperty: "notificationCenterOpen" },
     power: { openProperty: "powerMenuOpen", refresh: "refreshPower", hide: "hidePowerMenu" }

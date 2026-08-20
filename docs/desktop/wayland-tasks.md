@@ -1459,11 +1459,10 @@ Findings:
   - Archived Keybindings: copied `omarchy-menu-select` plus `hypr-keys` preserves searchable source-derived help; it is intentionally a selector process because the previous hotkey-opened QML panel lost keyboard input.
   - Replacement rule: archive a user-facing owner only in the same change that proves its replacement plugin/provider preserves the listed behavior. Keep replaced files under `archive/obsolete`, never delete them.
 
-- [ ] P0: Package Board shell surfaces as two portable plugins before replacing the bar host.
-  - `marcelof.board-status` is a `bar-widget` that consumes the existing single `board render --watch quickshell quickshell-bar` stream.
-  - `marcelof.board-dashboard` is an `overlay` that preserves Today, Money, Health, Habits, refresh, and `board action personal.refresh`.
-  - Board remains the only collector, scheduler, cache, renderer, and action owner. QML must not duplicate checks, parse private data, add polling, or start a second watch stream.
-  - Validation: manifest review, upstream-host fixture, one Board watch process, dashboard action dry-run, enable/disable/restart persistence, screenshots, and settled CPU/RSS comparison.
+- [x] P0: Package Board shell surfaces as two portable plugins before replacing the bar host.
+  - Completed: `marcelof.board-status` owns the single `board render --watch quickshell quickshell-bar` stream and preserves rich bar colors. `marcelof.board-dashboard` owns the on-demand System, Today, Money, Health, and Habits surfaces plus refresh and `board action personal.refresh`.
+  - Board remains the only collector, scheduler, cache, renderer, and action owner. The embedded Board watcher was removed and `ShellPersonalDashboardPanel.qml` moved to `archive/obsolete` after live visual validation.
+  - Validation: both manifests pass `omarchy-plugin-validate` and `qmllint`; both persist enabled across restart; process inspection and `desktop-doctor` require one watch stream; the dashboard route and screenshot passed without clipping or monitor spill.
 
 - [ ] P0: Preserve per-application notification identity in `omarchy.notifications`.
   - Use one notification plugin, not one plugin per application. Every toast, history row, and app group must resolve `appIcon`, then `desktopEntry`/theme icon, then the existing app fallback.

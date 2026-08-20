@@ -813,7 +813,18 @@ ShellRoot {
   }
 
   function togglePersonalDashboard() {
+    const id = shellConfig.pluginIds.boardDashboard
+    if (pluginRegistry.isEnabled(id)) {
+      if (root.dynamicPluginOpen(id)) root.hideDynamicPlugin(id)
+      else root.summonDynamicPlugin(id, "{}")
+      return
+    }
     root.toggleTransientPanel("personalDashboardOpen", function() { dashboardService.refreshPersonalDashboard() })
+  }
+
+  function hidePersonalDashboard() {
+    root.personalDashboardOpen = false
+    root.hideDynamicPlugin(shellConfig.pluginIds.boardDashboard)
   }
 
   function setPersonalDashboardSurface(surface) {
@@ -1389,6 +1400,7 @@ ShellRoot {
       if (String(pluginId) === shellConfig.pluginIds.wifiQr) { wifiQrOverlay.open(payloadJson || "{}"); return true }
       return root.openShellMenu(pluginId, payloadJson || "{}")
     }
+    function toggle(pluginId, payloadJson) { return root.toggleShellMenu(pluginId, payloadJson || "{}") }
   }
 
   Instantiator {
@@ -1832,17 +1844,6 @@ ShellRoot {
       panelOpen: root.workInboxOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.workInbox)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.workInbox)
-    }
-
-    ShellPersonalDashboardPanel {
-      anchorWindow: bar
-      shellRoot: root
-      shellConfig: shellConfig
-      refresh: dashboardService.personalDashboardHandle
-      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.personalDashboard, "{}") : root.hideShellMenu(shellConfig.menuIds.personalDashboard)
-      panelOpen: root.personalDashboardOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.personalDashboard)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.personalDashboard)
     }
 
     ShellNotificationCenter {

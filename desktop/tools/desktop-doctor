@@ -328,7 +328,7 @@ check_qs_menu_smoke_latest() {
 }
 
 check_board_status() {
-  local config="${BOARD_CONFIG:-$HOME/.config/board/board.toml}"
+  local config="${BOARD_CONFIG:-$HOME/.config/board/board.toml}" watch_count
   if [ -r "$config" ]; then
     ok board-config "$config"
   else
@@ -346,6 +346,21 @@ check_board_status() {
     ok board-run scheduler
   else
     fail board-run stopped "$HOME/bin/board --config $config run"
+  fi
+
+  watch_count=$(pgrep -fc "^board --config $config render --watch quickshell quickshell-bar$")
+  if [ "$watch_count" -eq 1 ]; then
+    ok board-watch "one plugin-owned stream"
+  else
+    fail board-watch "$watch_count streams"
+  fi
+
+  if [ -r "$HOME/.config/omarchy/plugins/marcelof.board-status/manifest.json" ] \
+      && [ -r "$HOME/.config/omarchy/plugins/marcelof.board-dashboard/manifest.json" ] \
+      && ! grep -Fq 'ShellPersonalDashboardPanel' "$HOME/.config/quickshell/marcelof/shell.qml"; then
+    ok board-plugins "status and dashboard own shell surfaces"
+  else
+    fail board-plugins "missing plugin or embedded dashboard remains" "home -y && qbar restart"
   fi
 }
 
