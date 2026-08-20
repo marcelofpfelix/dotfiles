@@ -1177,8 +1177,12 @@ Panel {
               return root.info.iface || (root.kind === "disconnected" ? "Disconnected" : "No connection")
             }
             readonly property string detail: root.headerDetail()
+            readonly property string signal: root.kind === "wifi" && root.signalStrength >= 0
+              ? root.signalStrength + "%" : ""
 
-            text: heroSsid.detail !== "" ? heroSsid.title + " (" + heroSsid.detail + ")" : heroSsid.title
+            text: heroSsid.title
+              + (heroSsid.signal !== "" ? " · " + heroSsid.signal : "")
+              + (heroSsid.detail !== "" ? " (" + heroSsid.detail + ")" : "")
             color: root.bar.foreground
             font.family: root.bar.fontFamily
             font.pixelSize: Style.font.title
@@ -1786,13 +1790,8 @@ Panel {
           width: parent.width
         }
         Text {
-          // Signal strength is conveyed by the wifi-bars icon and the
-          // right-edge glyph/buttons carry protection or forget affordances,
-          // so the second line only carries action status (Connecting…,
-          // Connected, Failed, etc.). Collapses to zero height when empty
-          // so rows without status keep a tight one-line look.
-          text: row.statusText
-          visible: row.statusText !== ""
+          text: row.net ? row.net.signal + "%" + (row.statusText !== "" ? " · " + row.statusText : "") : ""
+          visible: text !== ""
           height: visible ? implicitHeight : 0
           color: row.statusColor
           font.family: root.bar.fontFamily

@@ -434,6 +434,13 @@ check_shell_layout_contract() {
     fail battery-full-hidden "full battery remains in bar"
   fi
 
+  if grep -Fq 'root.signalStrength + "%"' "$root/plugins/panels/network/Panel.qml" \
+      && grep -Fq 'row.net.signal + "%"' "$root/plugins/panels/network/Panel.qml"; then
+    ok wifi-signal-percent "connected and scanned networks"
+  else
+    fail wifi-signal-percent "numeric signal strength hidden"
+  fi
+
   if grep -Eq '^  "learn("|\.)' "$root/omarchy-menu.jsonc"; then
     fail root-menu-learn "Learn category remains"
   else
