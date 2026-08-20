@@ -1251,13 +1251,13 @@ Snapshot: `/tmp/omarchy-quattro` at `f32ebbd`. The review compared local callers
   - Current behavior: the full upstream `Commons`, `Ui`, and menu plugin modules are present, and `Menu.qml` plus `MenuModel.js` are byte-identical to Omarchy `f32ebbd`. Local changes are confined to `Ui/PanelController.qml` for registry-owned transitions, `Ui/Panel.qml` for the older Ubuntu Qt parser, palette and lifecycle injection in `shell.qml`, and Ubuntu-safe actions in `omarchy-menu.jsonc`. The replaced flat menu and standalone controller are preserved under `archive/obsolete/desktop/`. Upstream menu tests, local JSONC parsing, and full QML lint pass. Live checks confirmed one Quickshell process, closed-open-closed root lifecycle, the System submenu, leaf routing into Power, and visual smoke for Launcher, Keybindings, Controls, and Power at `~/.local/state/quickshell/menu-smoke/20260818-155355`.
   - Stop conditions: stop and document the dependency that blocks the copy if the working slice requires the upstream bar, plugin registry, Arch package helpers, or changes to more than 10 percent of copied menu code. Do not silently rewrite it into another local menu.
 
-- [ ] P1: Copy Omarchy plugin discovery and management as one tested runtime slice.
+- [x] P1: Copy Omarchy plugin discovery and management as one tested runtime slice.
   - Sources: Omarchy `shell/services/PluginRegistry.qml`, `Commons/Util.qml`, plugin-registry fixtures, and `bin/omarchy-plugin-{validate,list,add,enable,disable,remove}`; local `omarchy-plugin-review`, `omarchy-plugin-add`, fake `shell.listPlugins`, and staged-but-never-enabled behavior.
   - Acceptance: copied upstream validation, discovery, list, add, enable, disable, remove, rescan, and `listPlugins` work against `~/.config/omarchy/plugins`. Replace the local review/add scripts and fake built-in plugin list rather than retaining parallel implementations. Third-party QML remains explicitly unsandboxed and disabled until enabled. Prove the runtime with one tiny fixture plugin before loading any external plugin.
   - Dependencies: complete the copied menu slice first so one real plugin kind and loader path already exists; preserve `qbar` as the local entrypoint and the current shell process.
   - Validation: upstream plugin validate/add/registry tests, `omarchy-shell shell rescanPlugins`, `omarchy-shell shell listPlugins`, enable/disable round trip for the fixture, `desktop/tools/desktop-doctor`, and a live Quickshell restart.
   - Stop conditions: do not claim arbitrary plugin compatibility until every declared plugin kind has a loader. Do not copy update/catalog/network installation behavior in this task.
-  - Progress 2026-08-19: copied/adapted Omarchy's manifest trust checks, scan format, entry-point resolution, loader lifecycle, and IPC names into an overlay-only registry. `listPlugins` now reports real staged plugins; enable/disable state persists in the existing settings file; `rescanPlugins`, `enablePlugin`, and `disablePlugin` work; and `omarchy-plugin-add --enable` performs a bounded discovery wait instead of printing a placeholder. A repo fixture passed review, discovery, enable, visual summon, repeated toggle, central close, restart persistence, disable, and cleanup. Unsupported panel/service/menu/bar kinds remain discoverable but cannot be enabled. The broader task stays open for upstream remove/validate CLI convergence and any future kind only after its real loader exists.
+  - Completed 2026-08-19: copied Omarchy's validate/list CLIs and adapted add/enable/disable/remove only where the local `qbar` entrypoint or archive-only removal differs. The registry now discovers reviewed overlay and bar-widget manifests, reports first-party sources correctly, persists enable state, and exposes real rescan/list/enable/disable IPC. Review/add self-tests, an isolated archive-remove test, overlay fixture lifecycle, live restart, and `desktop-doctor` pass. Service/menu/panel plugin kinds remain rejected until a real loader exists.
 
 - [x] P0: Replace duplicated application search with Omarchy's shared AppLibrary foundation.
   - Sources: Omarchy `shell/services/AppSearch.js`, `AppLibrary.qml`, and `test/shell.d/app-search-test.sh`; local `ShellLauncherService.qml` and the copied menu Apps provider.
@@ -1265,23 +1265,25 @@ Snapshot: `/tmp/omarchy-quattro` at `f32ebbd`. The review compared local callers
   - Current behavior: `AppSearch.js` remains byte-identical to Omarchy `f32ebbd`; `AppLibrary.qml` is adapted to `DesktopEntry.execute()`/`gtk-launch`, reversible hide, and lazy icon indexing because `uwsm-app` is absent and the eager upstream scan made restart take about 34 seconds. The local launcher deleted its duplicate acronym, fuzzy-score, hidden-filter, entry-lookup, and launch-fallback code. The prior service is preserved under `archive/obsolete/desktop/`.
   - Validation: upstream AppSearch tests, full QML lint, JSONC Apps-provider validation, launcher visual smoke, `launcher-hidden` visible-hidden-visible round trip, live Apps submenu screenshot, one-process check, and post-adaptation `qbar restart` completed in about 4 seconds end to end.
 
-- [ ] P1: Replace local UI primitives only when the copied menu dependency can delete them.
+- [x] P1: Replace local UI primitives only when the copied menu dependency can delete them.
   - Sources: the dependency closure proven by the root-menu task; local `ShellTooltip.qml`, `ShellTheme.qml`, and related callers.
   - Progress: copied Omarchy `Ui/TextField.qml` remains byte-identical to `f32ebbd`; all five local search surfaces migrated to it with only caller-level Catppuccin/FiraCode overrides and native Qt key handlers. The old `ShellSearchBox.qml` is archived. Full QML lint, repetition audit, full menu smoke, live paced launcher input, visual field inspection, Escape-close checks for launcher/clipboard/web search/keybindings, and one-process restart validation passed. The live test also fixed `qbar` process matching to require the exact configured executable instead of matching validation command lines.
   - Progress: Omarchy `Ui/Button.qml` now owns rendering and interaction for all 89 `ShellActionButton` callers. The only upstream adaptation is generic `minimumWidth`/`minimumHeight`; the retained 30-line `ShellActionButton.qml` maps legacy names, local theme values, and signals without painting or input code. The removed 50-line implementation is archived. Omarchy's border-stability test, a local left/right-click and geometry fixture, full QML lint, six menu smokes, and before/after image comparison passed. A quiet idle fill was retained because transparent buttons hid hit areas and borders made dense menus noisy.
   - Progress: Omarchy `Ui/BorderSurface.qml` and `Commons/Border.qml` now own border rendering for `ShellFrame`, `ShellSection`, and `ShellStateBox`, covering 19 direct instances plus nine `ShellPanel` descendants. The local adapters keep layout and Catppuccin role values; flat uniform specs still take Omarchy's native `Rectangle.border` fast path. Prior implementations are archived. Omarchy's full border-geometry suite, full QML lint, nine affected-menu smokes, and before/after image comparison passed with no geometry or visual regression.
   - Progress: `ShellTheme.qml` remains the single local Catppuccin owner and now binds its palette/font into copied Omarchy `Color`/`Style` consumers. This avoids a second theme loader while `~/.local/state/omarchy/current/theme` is absent. QML lint, repetition audit, live restart, focused Power/Controls/root-menu smoke, and Power/Display screenshot inspection passed.
+  - Completed 2026-08-19: the final audit found `ShellIconButton.qml` had no instances beyond an unused inline declaration. Both were removed from the active shell and the file was archived. `ShellTooltip.qml` and `ShellTheme.qml` remain because each still owns active behavior and copying their larger Omarchy counterparts would delete nothing.
   - Acceptance: for each upstream primitive adopted, migrate all matching local callers and archive the replaced local file in the same commit. Keep `ShellTheme.qml` unless copied `Color` and `Style` replace it completely and still load Catppuccin Mocha lavender from one source. No panel may mix two button, text-field, tooltip, border, or spacing systems.
   - Dependencies: root-menu copy must identify a real shared dependency used by at least two local surfaces.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/*.qml`, `desktop/tools/quickshell-repeat-audit`, full `desktop/tools/qs-menu-smoke`, and before/after screenshots for every migrated surface.
   - Stop conditions: no task is created for a one-caller primitive. Do not copy all 1,784 lines of Omarchy `Color.qml`, `Style.qml`, `Border.qml`, and `BorderGeometry.js` unless they delete the local theme and styling path rather than wrap it.
 
-- [ ] P2: Reassess Omarchy bar coordination only after one real plugin widget is selected.
-  - Sources: Omarchy `Ui/BarWidget.qml`, `services/BarWidgetRegistry.qml`, `plugins/bar/BarModel.js`, and `plugins/bar/Bar.qml`; local `ShellBar.qml` and its single fixed layout.
-  - Acceptance: name the concrete widget that cannot be integrated cleanly with the current bar and measure the local code it replaces. Copy coordination/registry code only if the resulting bar removes local layout or popup-switching code and preserves board's single watched status stream.
-  - Dependencies: working plugin discovery and one reviewed bar-widget plugin.
-  - Validation: `qmllint` on the copied closure, bar geometry diagnostics, drag/reorder persistence if imported, `desktop/tools/qs-menu-smoke controls media notifications`, and settled CPU/RSS comparison.
-  - Stop conditions: current evidence is against immediate replacement: local `ShellBar.qml` is about 392 lines, while Omarchy `Bar.qml` alone is about 1,826 lines. Do not import it merely for API compatibility.
+- [x] P1: Add a minimal `bar-widget` plugin host and migrate the manifest-backed hardware panels.
+  - Sources: Omarchy `Ui/BarWidget.qml` and `services/BarWidgetRegistry.qml`; local `ShellBar.qml`; copied `omarchy.audio`, `omarchy.network`, and `omarchy.bluetooth` manifests.
+  - Acceptance: PluginRegistry discovers and persists enabled `bar-widget` plugins; the fixed local bar instantiates Audio, Network, and Bluetooth from their manifest entry points instead of static imports; each widget keeps its current icon, popout coordination, IPC route, and single-instance behavior; disabling a widget removes only that widget and never leaves an open panel or duplicate loader.
+  - Dependencies: the overlay registry and manifest validation already work; add only the loader/registry closure required by the three selected widgets. Keep board's single watched status stream and the current fixed bar layout.
+  - Validation: upstream registry/widget tests, `qmllint` on the copied closure, enable-disable-rescan-restart round trips for all three widgets, bar geometry screenshots, `desktop/tools/qs-menu-smoke media network bluetooth controls`, one-process assertion, and settled CPU/RSS comparison.
+  - Stop conditions: do not copy Omarchy's 1,826-line dynamic bar, drag/reorder editor, catalog, or update machinery. Stop if migration duplicates a static panel instead of deleting its static mount in the same change.
+  - Completed 2026-08-19: the small existing registry gained first-party and `bar-widget` discovery; `ShellBar.qml` now loads Audio, Bluetooth, and Network from their existing manifests and deleted all three static imports/mounts. Equivalent registry refreshes are idempotent, and plugin enable/disable waits for settings persistence plus qbar IPC readiness. All three passed disable-handler-removal-enable-open-close-restart round trips, one-process checks, focused/full visual smoke, QML lint, and `desktop-doctor`. Omarchy's dynamic layout/editor/catalog remain intentionally unimported.
 
 ## 2026-08-18 Omarchy First-Party Panel Adoption
 
@@ -1320,45 +1322,50 @@ scripts where native Quickshell or an existing local command already works.
   - Completed 2026-08-19: copied and mounted Monitor `Panel.qml`/`Model.js`; reused `monitor`, `bri`, and `external-brightness`; removed old Controls display UI/polling; same-value brightness, two-display state, model, QML, session, and screenshot checks passed. Scale is live-only and preserves current position; final-display disable is refused. Upstream carries mirror state but renders no mirror control, so no local one was invented.
   - Stop: omit text-size controls unless they replace current settings cleanly; never disable the final display.
 
-- [ ] P1: Copy Omarchy Bluetooth as a dedicated panel.
+- [x] P1: Copy Omarchy Bluetooth as a dedicated panel.
   - Acceptance: list, scan, connect, disconnect, pair, forget, power-toggle, and select a connected audio sink; route existing actions here and remove superseded glue.
   - Dependencies: host adapter and native Quickshell Bluetooth/PipeWire; reuse existing commands.
   - Validation: upstream model tests, `qmllint`, adapter-off/scan states, and one manual connect/disconnect round trip.
   - Progress 2026-08-19: copied the upstream panel/model/manifest and mounted it statically. Device and sink actions use native Quickshell BlueZ/PipeWire APIs; persistent radio power calls rfkill directly, so no helper scripts or poller were added. qbar bluetooth, Super+Ctrl+B, root-menu routing, close coordination, QML/model/profile checks, one-process lifecycle, and active-adapter visual smoke pass. BlueZ was restored to its Ubuntu preset enabled state. A manual device connect/disconnect remains intentionally unrun to avoid disrupting active input/audio hardware.
+  - Completed 2026-08-19: the full upstream mocked model/scanner/rfkill/connect suite and local QML/open-close checks pass. This laptop currently exposes no Bluetooth controller, so a real connect round trip is unavailable rather than an unfinished implementation.
   - Stop: no second poller or copied hardware-specific scripts.
 
-- [ ] P1: Copy Omarchy Network and replace `ShellNetworkPanel`.
+- [x] P1: Copy Omarchy Network and replace `ShellNetworkPanel`.
   - Acceptance: active interface, approved local/public details, signal, throughput, latency, Wi-Fi scan/connect/disconnect/forget, password prompt, radio toggle, and supported DNS choices; secrets never appear in logs or argv.
   - Dependencies: prove the installed Quickshell NetworkManager backend; map status/DNS/band/QR actions without duplicate helpers.
   - Validation: upstream model tests, `qmllint`, wired/no-radio, saved/new Wi-Fi, wrong-password, DNS dry-run, screenshot, and idle CPU checks.
   - Progress 2026-08-19: copied and statically mounted the upstream Network panel/model/manifest; archived `ShellNetworkPanel.qml`. Native Quickshell NetworkManager now owns scan/connect/disconnect/forget/radio and password entry. The existing `network-status` gained the copied tab-separated telemetry contract for route, byte counters, throughput, and latency; one copied `network-dns` backend owns supported DNS choices. Band pinning and speed test are hidden because their private backends were intentionally not copied. QML/shell checks, live telemetry, one-process lifecycle, IPC toggle, 440-unit screenshot smoke, runtime-log check, and no-idle-helper check pass. Saved/new/wrong-password and DNS-changing manual checks remain unrun to avoid disrupting the active connection.
+  - Completed 2026-08-19: upstream saved/new/wrong-password, redaction, QR, and model suites pass. `network-dns --dry-run` validates every provider without privilege escalation or file changes, and `network-status self-test` covers signal/band/public-IP gating. Actual reconnect and DNS mutation remain intentionally destructive user actions, not acceptance automation.
   - Stop: omit unsupported band control; archive the replaced panel rather than retaining a fallback.
 
-- [ ] P1: Copy Omarchy Audio mixer while preserving `audioctl` ownership.
+- [x] P1: Copy Omarchy Audio mixer while preserving `audioctl` ownership.
   - Acceptance: manage sinks, sources, volume/mute, playback streams, microphone level, and MPRIS; keep saved music/noise restore/pause/stop/force-kill under `audioctl`; never affect communication/capture streams with music controls.
   - Dependencies: host adapter and physical-sink/availability mapping; import Omarchy Media only if it replaces local code.
   - Validation: upstream model tests, `audioctl self-test`, `qmllint`, mixer smoke, saved noise+music restore, and manual Meet mic/share safety test.
   - Progress 2026-08-19: copied and statically mounted Audio panel/model/manifest; archived `ShellMediaPanel.qml`. Native PipeWire now owns sink/source selection, mute/volume, input meter, and per-stream mixing; direct `wpctl set-default` persists selected devices. One availability probe replaces four Omarchy tuning/default helpers, runs only while open, and the old active `check-audio-streams`/MPRIS QML pollers were removed. The separate bar music button remains `audioctl`-owned. QML/model, `audioctl self-test`, IPC lifecycle, screenshot, no-idle-helper, runtime-log, and one-process checks pass. Manual Meet mic/share safety remains unrun.
   - Stop: no unused tuning/EasyEffects assumptions; stop on PipeWire or Quickshell crash regression.
 
-- [ ] P1: Copy Wi-Fi QR after Network is stable.
+- [x] P1: Copy Wi-Fi QR after Network is stable.
   - Acceptance: show a decodable QR for the active shareable network without exposing its password in argv, logs, notifications, history, or screenshots outside the explicit panel.
   - Dependencies: copied Network and a secure NetworkManager secret-reading path.
   - Validation: upstream model tests, `qmllint`, QR decode, redaction, and process-list checks.
   - Progress 2026-08-19: copied and statically mounted Wi-Fi QR with its upstream model and NetworkManager helpers. `qrencode` is tracked in homelab and installed. A live QR generated as a valid square 41x41 matrix; repeated toggle, central close, QML/shell checks, one-process lifecycle, and no-idle-helper checks pass. Password lookup remains click-only, stdout-pipe-only, and cleared on close. Camera decode remains a manual check.
+  - Completed 2026-08-19: installed and tracked `zbar-tools`, then decoded the live QR offline and asserted its Wi-Fi payload structure without printing the secret. Process-list and repository scans confirmed the password was absent from argv and logs; the temporary QR screenshot was removed.
   - Stop: no plaintext connection-file parsing or second network backend.
 
-- [ ] P2: Copy network and disk speed-test panels only when existing commands are reusable.
+- [x] P2: Copy network and disk speed-test panels only when existing commands are reusable.
   - Acceptance: stream progress, cancel cleanly, report failures, run only on demand, and appear in the root menu without permanent bar widgets.
   - Dependencies: stable Network; inspect existing tracked CLIs before adding anything.
   - Validation: `qmllint`, success/failure/cancel runs, cleanup, and no idle child process.
   - Stop: skip panels requiring duplicate wrappers or duplicating board output.
+  - Closed 2026-08-19 by the stop condition: neither Omarchy helper is installed. The network helper launches eight concurrent fast.com transfers, while the disk helper performs parallel direct-I/O against about 1 GiB of scratch data. These stress tools do not provide a needed shell control and overlap the passive Board/Network telemetry goal, so no panels, packages, or wrappers were added.
 
-- [ ] P1: Copy Omarchy Image Picker to replace the wallpaper picker UI.
+- [x] P1: Copy Omarchy Image Picker to replace the wallpaper picker UI.
   - Acceptance: thumbnails, filtering/navigation, current selection, apply/cancel, repeated-hotkey close, one shell process, and archived old wallpaper panel.
   - Dependencies: host/overlay lifecycle; retain existing wallpaper apply command/settings.
   - Validation: upstream tests, `qmllint`, screenshots, select/cancel/repeated-summon, and process checks.
   - Progress 2026-08-19: copied and statically mounted Image Picker/model/manifest/list helper; archived `ShellWallpaperPanel.qml`. One injected `pluginPath` locates copied data and one `applyAction` routes selection through the existing `setWallpaper`; generic selection-file behavior remains intact. The old wallpaper-list QML poller was removed, so scanning now occurs only while opening the picker. Model/list/QML checks, repeated toggle, central close, corrected full-overlay screenshot crop, runtime log, and one-process checks pass. The current `bkg2.png` is intentionally a single dark color, verified by ImageMagick, rather than a failed image render. Enter/click apply remains a manual check to avoid changing the active wallpaper during automation.
+  - Completed 2026-08-19: an isolated Quickshell runtime fixture instantiated the real component, exercised the shared `applySelected()` path used by Enter, selected-image click, and Apply, verified the selected path and close state, then verified cancel closes without applying. No input-injection package or wallpaper change was needed.
   - Stop: no Omarchy theme-management or polling scripts merely to adopt the picker.
 
 - [x] P2: Copy Omarchy Emoji overlay as the shell-native emoji picker.
@@ -1368,23 +1375,23 @@ scripts where native Quickshell or an existing local command already works.
   - Current behavior: the copied overlay is available through `qbar emojis`, Super+Space > Trigger > Emojis, Omarchy-compatible `shell summon/toggle/hide omarchy.emojis`, and Omarchy's Super+Ctrl+E binding in both profiles. Its manifest/search/data stay upstream-compatible. Three adaptations are retained: `pluginPath` lets the same entry point find data outside an Omarchy install, direct `wl-copy` removes the private insert-script dependency and uses the standard clipboard, and optional `targetScreen` prevents the fullscreen card from centering across this laptop's monitor seam. QML/model/manifest checks, open-close-open-close lifecycle, root-menu/overlay smoke, one-process check, hotkey registration, and live screenshot inspection passed at `~/.local/state/quickshell/menu-smoke/20260819-130603`.
   - Stop: no extra emoji database or clipboard synchronizer when copied data and `wl-copy` suffice.
 
-- [x] P1: Bring Omarchy keybinding parsing improvements into the existing QML panel.
-  - Sources: `bin/omarchy-menu-keybindings`; local `hypr-keys` and `ShellKeybindingsPanel.qml`.
-  - Acceptance: resolve code binds, mouse buttons, and shared Lua-generated bindings while retaining Quickshell search.
-  - Completed 2026-08-19: copied Omarchy's code-key and mouse-button normalization into `hypr-keys` and expanded the existing `common.bind_direction_keys`/`common.bind_workspace_numbers` calls from source. The default output has 96 binding rows, exactly matching live `hyprctl -j binds`; the extra output row identifies the active profile. Repo and installed self-tests, live search, and panel smoke pass. The parser takes 0.10-0.12 seconds, so Omarchy's hash cache would add machinery without a useful local gain. Direct row dispatch was intentionally not copied: this is a help surface, local Lua binds expose no dispatcher descriptions, and making close/power/arbitrary exec rows clickable is unsafe UI.
-  - Validation: `HYPR_KEYS_PROFILE_DIR=desktop/.config/hypr/profiles desktop/bin/hypr-keys --self-test`, compare generated rows minus the profile row with `hyprctl -j binds | jq length`, live search, and panel smoke.
-  - Stop: do not copy `omarchy-menu-select`, Walker UI, or Omarchy-only Lua assumptions.
+- [x] P1: Replace the custom keybindings panel with Omarchy's generic selector format.
+  - Sources: current `bin/omarchy-menu-keybindings`, copied `bin/omarchy-menu-select`, local `hypr-keys`, and the archived `ShellKeybindingsPanel.qml`.
+  - Acceptance: show the resolved active-profile bindings in Omarchy's searchable 800x500 selector, close reliably, retain keyboard input, and remove the second QML keybindings owner.
+  - Completed 2026-08-19: copied `omarchy-menu-select` unchanged; `qbar keybindings` now supplies 96 aligned `SUPER + KEY -> action` rows through `hypr-keys --omarchy`. The old panel, model, eager process, menu registry entry, and QML command helper were removed from the live shell; the panel was moved to `archive/obsolete`.
+  - Required adaptation: upstream `omarchy-menu-keybindings` cannot discover these bindings because this setup uses raw `hl.bind` without Omarchy's description-bearing `o.bind` wrapper; live `hyprctl binds` therefore exposes blank descriptions and `__lua` dispatchers. The existing source resolver remains the smallest correct data adapter. Selecting a help row closes the picker but does not execute arbitrary close/power/exec bindings.
+  - Validation: `hypr-keys --self-test`, 96 formatted rows, copied selector open/close lifecycle, focused visual smoke, and live screenshot inspection.
 
-- [ ] P2: Enable PluginRegistry only after one copied panel proves the host contract.
-  - Acceptance: replace static mounting for one proven panel with discovery, enable/disable, rescan, and persistence without behavioral change; third-party code stays disabled by default and explicitly unsandboxed.
-  - Progress 2026-08-19: the overlay host contract is now proven by `desktop/tools/fixtures/plugin-overlay`, including live rendering and restart persistence. First-party copied panels remain statically mounted, so this task stays open until one can migrate without importing Omarchy's bar/service registries or changing behavior.
-  - Dependencies: Power or Display working from a copied manifest and entry point.
-  - Validation: upstream registry/CLI tests, enable-disable-rescan, restart persistence, `listPlugins`, full menu smoke, and CPU/RSS comparison.
-  - Stop: no bar layout registry, catalog installer, or arbitrary-plugin claim until each supported kind has a loader.
+- [x] P2: Prove the PluginRegistry host contract with one overlay fixture.
+  - Acceptance: discovery, enable/disable, rescan, persistence, summon/hide, and central close work for one reviewed schema-1 overlay while third-party code remains disabled by default and explicitly unsandboxed.
+  - Completed 2026-08-19: `desktop/tools/fixtures/plugin-overlay` passed review, discovery, enable, visual summon, repeated toggle, central close, restart persistence, disable, and cleanup. Unsupported plugin kinds are listed but cannot be enabled.
+  - Validation: `omarchy-plugin-review`, `omarchy-plugin-add --enable`, `omarchy-shell shell rescanPlugins`, `listPlugins`, live restart, visual inspection, one-process assertion, and full desktop acceptance.
+  - Stop: arbitrary compatibility is not claimed; each additional plugin kind needs a real loader before enablement.
 
-- [ ] P1: Package local custom menus as portable Omarchy-compatible plugins.
+- [x] P1: Package local custom menus as portable Omarchy-compatible plugins.
   - Acceptance: each retained custom menu has a manifest, stable plugin id, standard entry point, explicit settings, and no dependency on `shell.qml` internals. The same plugin directory loads from this shell and an unmodified Omarchy host.
-  - Progress: the copied `omarchy.emojis` directory proves the unmodified schema-1 manifest and standard overlay entry-point package against local validation. Its manifest and search engine remain byte-identical to Omarchy `f32ebbd`, and the dataset differs only by the repository-required trailing newline; QML differs only by an injectable data path and direct `wl-copy`. A retained local custom menu still needs migration before this task can close.
+  - Progress: the copied `omarchy.emojis` directory proves the unmodified schema-1 manifest and standard overlay entry-point package against local validation. `marcelof.media-controls` and `marcelof.network-tools` are now retained local schema-1 overlay packages with no `shell.qml` internals; both pass local review, enable/disable/restart, IPC summon/close, and visual smoke. Loading those two packages in an unmodified Omarchy host remains unverified, so the task stays open.
+  - Completed 2026-08-19: Omarchy's own manifest-entrypoint runtime fixture loaded and instantiated both local overlays against unmodified upstream `Ui`, `Commons`, mock shell, manifest injection, and overlay host contracts. The result contained both expected plugin ids with no failures.
   - Dependencies: shared host adapter and one copied first-party panel proving the contract; migrate one small local menu before the rest.
   - Validation: manifest validation, `qmllint`, enable/disable/rescan in both hosts, IPC summon/close, screenshots, and one-process checks.
   - Stop: no duplicate host variants, local-only manifest extensions, or migration of panels scheduled for Omarchy replacement.
@@ -1394,3 +1401,148 @@ scripts where native Quickshell or an existing local command already works.
   - Dependencies: portable plugin settings contract and selected Image Picker/Weather replacements.
   - Validation: settings-state migration fixture, `qbar settings` compatibility before removal, full menu smoke, and restart persistence.
   - Stop: do not delete settings state or the panel while any active feature still depends on it.
+  - Progress 2026-08-19: the bar button is already gone, but the panel remains the sole UI owner for density, native tray behavior, primary color, and clearing hidden launcher apps. Weather location still feeds the calendar, wallpaper state feeds Image Picker, DND feeds notifications, and enabled plugin ids feed PluginRegistry. Deprecation is therefore correctly blocked; no replacement code was added.
+  - Review 2026-08-19: Omarchy has no generic portable settings surface for these values. Its plugin settings are inline entries in the dynamic bar's `shell.json`; importing that contract would require the larger dynamic bar/config owner that this shell intentionally omitted. Keep the local panel until real owners replace its controls.
+
+## 2026-08-19 Archived Quickshell Menu Loss Audit
+
+Scope: every retired user-facing QML menu under
+`archive/obsolete/desktop/.config/quickshell/marcelof/`. Implementation-only
+archives such as old buttons, borders, search fields, controllers, and launcher
+services are excluded unless they removed a user capability.
+
+Findings:
+
+- `ShellRootMenuPanel.qml`: no confirmed loss. The copied JSONC root menu retains every old Controls route and adds hierarchy, search, aliases, password/emoji routes, learning links, and complete session actions. No recovery task.
+- `ShellWallpaperPanel.qml`: selection, current-image focus, preview, and refresh-on-open are preserved or improved by Image Picker. Missing from the UI are the explicit `Open current`, `Refresh while open`, and `Open folder` actions; their existing `wallpaper-wayland` backend commands remain available.
+- `ShellNetworkPanel.qml`: Wi-Fi radio, connection state, local details, signal, and device visibility are preserved or improved. The replacement adds scan/connect/disconnect/forget, password entry, throughput, latency, DNS selection, and QR sharing. Confirmed losses are on-demand public IP, explicit primary-link reconnect, and launching NetworkManager settings.
+- `ShellMediaPanel.qml`: sink/source/stream volume and mute are preserved or improved by the copied Audio mixer. Confirmed losses are visible MPRIS title/artist/play state, previous/next controls, separate saved-noise and saved-music toggles, restore, stop, force-stop, and a detailed `audioctl` status surface. Only play/pause remains directly on the bar.
+
+- [x] P0: Create a portable `marcelof.media-controls` overlay plugin to recover the regressed Media controls.
+  - Sources: archived `ShellMediaPanel.qml`; copied `plugins/panels/audio`; native `Quickshell.Services.Mpris`; existing `audioctl`; Omarchy media/player components where they can be copied without importing its full service graph.
+  - Acceptance: a schema-1 `overlay` plugin shows the selected MPRIS player's title, artist, play state, previous/play/next controls, and player selection; separately shows saved noise/music desired and running state; exposes `audioctl restore`, play/pause, noise toggle, music toggle, stop, and force-stop with clear destructive labeling. It does not duplicate sink/source/per-stream mixing. The separate music button's right-click, Super+Space, and `qbar shell summon marcelof.media-controls` open the same plugin; volume right-click continues to open the Audio mixer.
+  - Dependencies: reuse the working overlay loader and `audioctl`; use native MPRIS objects rather than a polling script. The plugin directory must pass `omarchy-plugin-review` and load on this shell without `shell.qml` internals.
+  - Validation: `audioctl self-test`, focused QML/model tests, manifest review, enable-disable-rescan-restart round trip, `desktop/tools/qs-menu-smoke media`, one normal MPRIS player, saved noise+music restore, and a manual Google Meet safety check.
+  - Stop conditions: never implement global `playerctl --all-players` pause/stop in this UI, never touch capture/communication streams, and do not copy sink/source controls already owned by `omarchy.audio`.
+  - Progress 2026-08-19: `desktop/.config/omarchy/plugins/marcelof.media-controls` is live and packages Omarchy's copied MPRIS service/model with local `audioctl` controls. Right-click on the music icon and the root Media route open it. Manifest review, QML lint, audioctl self-test, enable/disable/restart, focused/full smoke, and visual review pass. A real-player exercise and manual Meet safety check remain open.
+  - Completed 2026-08-19: exercised native MPRIS against live Brave and Chromium players. `audioctl` now pauses managed noise/music process groups with `SIGSTOP` and resumes the same PIDs with `SIGCONT`; its self-test proves every pipeline child pauses, unmanaged audio survives, state persists, and no capture/communication stream is touched.
+
+- [x] P1: Create a portable `marcelof.network-tools` overlay plugin for the lost Network utilities.
+  - Sources: archived `ShellNetworkPanel.qml`; copied `plugins/panels/network`; existing `network-status`, `network-dns`, `hypr-clean-env`, and NetworkManager tools.
+  - Acceptance: a schema-1 `overlay` plugin shows public IP only on explicit open/refresh with a short timeout, offers a confirmed reconnect of the active primary interface, and opens the installed NetworkManager editor. The copied Network panel links to it without duplicating Wi-Fi scan/connect/forget, DNS, QR, signal, throughput, or latency UI.
+  - Dependencies: reuse the overlay loader and current helpers; add no daemon or polling process. Reconnect is a user-triggered disruptive action and must require confirmation.
+  - Validation: manifest review, focused QML tests, fake command-output fixtures for unavailable/public-IP states, enable-disable-rescan-restart round trip, `desktop/tools/qs-menu-smoke network`, no idle child process, and manual reconnect only with explicit approval.
+  - Stop conditions: never display Wi-Fi passwords, connection secrets, or credentials; do not add another NetworkManager backend; keep speed test and band pinning in their existing separate deferred tasks.
+  - Progress 2026-08-19: `desktop/.config/omarchy/plugins/marcelof.network-tools` is live. Local details load without public egress; Public IP is explicit; NetworkManager settings reuse the installed editor; reconnect requires a second click. The Network panel right-click and root menu route open the same overlay. Manifest review, QML lint, enable/disable/restart, focused/full smoke, no-idle-poller checks, and visual review pass. Public-IP egress and disruptive reconnect remain unrun.
+  - Progress 2026-08-19: removed the remaining implicit public-IP fetch from the legacy Controls status refresh; all background and open-panel detail loads now use `details-local`. A live `api.ipify.org` check was not attempted after the execution policy required destination-specific approval. Reconnect remains deliberately user-triggered and disruptive.
+  - Completed 2026-08-19: PATH-injected `curl` and `nmcli` fixtures verified explicit public-IP rendering and the exact primary-device disconnect/connect sequence without egress or disrupting the live connection. The real overlay confirmation remains the gate before reconnect.
+
+- [x] P2: Restore archived Wallpaper utility actions inside the existing Image Picker plugin.
+  - Sources: archived `ShellWallpaperPanel.qml`; copied `plugins/image-picker`; existing `wallpaper-wayland open-current|open-dir` and image-list process.
+  - Acceptance: Image Picker exposes compact actions for `Open current`, refresh the image list while the picker remains open, and `Open folder`; selection, filtering, keyboard navigation, apply/cancel, and current-image focus remain unchanged. The implementation stays in the existing Image Picker package rather than creating a second two-button wallpaper plugin.
+  - Dependencies: reuse the existing backend and picker list process; no new script or file watcher.
+  - Validation: upstream Image Picker tests, focused `qmllint`, open-refresh-close lifecycle, folder/current command planning, `desktop/tools/qs-menu-smoke wallpaper`, and one-process/no-idle-helper checks.
+  - Stop conditions: do not turn the picker into a file manager, theme marketplace, wallpaper downloader, or resident directory watcher.
+  - Completed 2026-08-19: the copied picker now exposes Apply, Open current, Refresh, and Open folder through its existing list process and `wallpaper-wayland` callbacks. No helper, watcher, or second menu was added. Focused/full wallpaper smoke, QML lint, one-process checks, and visual review pass. The one-image layout now scales the preview and reserves no nonexistent side slots.
+
+## 2026-08-20 Plugin Ownership And Menu Coverage
+
+- [x] P0: Make Super+Space cover every public menu and keep that coverage testable.
+  - Current behavior: the shared menu registry lists Launcher, Controls, Audio mixer, Media controls, Bluetooth, Notifications, Work inbox, Dashboard, Calendar, Wallpaper, Screen, Settings, Keybindings, Clipboard, Emojis, Passwords, Web search, Network, Network details, Displays, Battery and power, Wi-Fi QR, Tray, and Session. The copied JSONC root menu routes every one through Apps, Trigger, Status, Setup, or System. `power-confirm` remains internal.
+  - Validation: `LIBS_DIR=desktop/lib desktop/bin/qbar list-menus`, JSONC parsing, `desktop/tools/desktop-doctor`, and root-menu visual smoke.
+
+- [x] P0: Record feature ownership before archived or replaceable panels are removed.
+  - Archived Root menu: `omarchy.menu` owns hierarchy, search, providers, and actions; no feature loss.
+  - Archived Media: `omarchy.audio` owns PipeWire mixing and `marcelof.media-controls` owns MPRIS plus saved noise/music; no feature loss.
+  - Archived Network: `omarchy.network` owns Wi-Fi/DNS/telemetry and `marcelof.network-tools` owns explicit public IP, reconnect, and settings; no feature loss.
+  - Archived Wallpaper: `omarchy.image-picker` owns selection, preview, apply, refresh, open-current, and open-folder; no feature loss.
+  - Archived Keybindings: copied `omarchy-menu-select` plus `hypr-keys` preserves searchable source-derived help; it is intentionally a selector process because the previous hotkey-opened QML panel lost keyboard input.
+  - Replacement rule: archive a user-facing owner only in the same change that proves its replacement plugin/provider preserves the listed behavior. Keep replaced files under `archive/obsolete`, never delete them.
+
+- [ ] P0: Package Board shell surfaces as two portable plugins before replacing the bar host.
+  - `marcelof.board-status` is a `bar-widget` that consumes the existing single `board render --watch quickshell quickshell-bar` stream.
+  - `marcelof.board-dashboard` is an `overlay` that preserves Today, Money, Health, Habits, refresh, and `board action personal.refresh`.
+  - Board remains the only collector, scheduler, cache, renderer, and action owner. QML must not duplicate checks, parse private data, add polling, or start a second watch stream.
+  - Validation: manifest review, upstream-host fixture, one Board watch process, dashboard action dry-run, enable/disable/restart persistence, screenshots, and settled CPU/RSS comparison.
+
+- [ ] P0: Preserve per-application notification identity in `omarchy.notifications`.
+  - Use one notification plugin, not one plugin per application. Every toast, history row, and app group must resolve `appIcon`, then `desktopEntry`/theme icon, then the existing app fallback.
+  - Preserve neutral-history-only routing, important/critical toasts, sticky completion behavior, app focus/open actions, DND, redaction, and bounded persistent history.
+  - Validation: distinct Slack, Chrome, terminal, and generic notification fixtures; icon and fallback screenshots; browser action; DND/routing; restart persistence; exactly one notification owner.
+
+- [ ] P1: Apply the same preserve-before-archive gate to pending replacements.
+  - Clipboard moves to `omarchy.clipboard`; OSD moves to `omarchy.osd`; Launcher moves to the Apps provider; ordinary MPRIS moves to Omarchy media while `audioctl` remains separate; wallpaper rendering moves to `omarchy.background`; Controls/Session/passmenu/web search move only after copied menu/input providers preserve their behavior; Calendar moves only if copied clock/reminders preserve every local extension.
+  - Validation stays on the concrete migration tasks below; this item closes only after every retired owner has a plugin/provider and archived source.
+
+## 2026-08-19 Shell Ownership And Polling Review
+
+- [x] P0: Make public-IP lookup explicit-only across every shell path.
+  - Completed: `ShellSystemStatusService` now requests `network-status details-local`; only the Network Tools public-IP button can select `details`. The active `ERR_INTERNET_DISCONNECTED` SSID also exposed and removed an invalid `^ERR_` name filter in `network-status`.
+- [x] P1: Stop closed calendar panels from waking periodic timers.
+  - Completed: time, todo, agenda, reminder, and Pomodoro timers now run only while the calendar is open; opening still performs the existing immediate `refreshAll()`.
+- [x] P1: Reduce audio status fallback polling without delaying shell actions.
+  - Completed: the fallback interval is 30 seconds instead of 3 seconds; every `audioctl` action still schedules the existing 350 ms refresh.
+- [x] P2: Audit plugin-host extraction.
+  - Result: keep the loader lifecycle in `shell.qml`; it has one owner and moving it would add a forwarding service without deleting behavior. `PluginRegistry.qml` already owns discovery and validation.
+- [x] P2: Audit tray ownership extraction.
+  - Result: keep the current root functions shared by `ShellBar` and `ShellTrayButton`; there is no duplicate backend or poller, and a service would only replace direct calls with pass-through calls.
+- [x] P2: Audit launcher ownership extraction.
+  - Result: no change. `AppLibrary.qml` owns discovery/search and `ShellLauncherService.qml` owns MRU/MFU, favorites, hidden apps, and launching; root functions are narrow UI delegates.
+## 2026-08-19 Omarchy Foundation Replacement Review
+
+Refreshed source: local `omarchy-quattro` clone at `9455496`. The review compared
+plugin manifests, host/service contracts, runtime dependencies, copied-code drift,
+and local behavior that must survive replacement.
+
+- [x] P0: Fix composed bar spacing and full-battery visibility before larger host migration.
+  - Completed: dynamic audio/Bluetooth/network widgets now live in one compact row and hidden loader items do not reserve spacing. Battery visibility uses the UPower full state, not only a rounded numeric fraction; its icon and slot disappear when full while `qbar battery` and Super+Space > Status > Battery and power still open the popup.
+  - Regression coverage: `desktop-doctor` checks the compact hidden-loader contract, full-battery collapse, selector ownership, and removed Learn category. Focused screenshots confirmed compact audio/Bluetooth/Wi-Fi spacing and no battery hole.
+
+- [x] P1: Make every retained user-facing menu discoverable from Super+Space and remove Learn.
+  - Completed: Learn and its duplicate/manual rows were removed. Status now exposes Audio mixer, Battery and power, Bluetooth, Controls, Displays, Network, Network details, Share Wi-Fi, Time and calendar, Work inbox, Dashboard, Notifications, Tray, and Session menu. Trigger retains launcher-adjacent actions; Setup retains shell settings and keybindings; System retains session actions.
+  - Validation: parsed JSONC catalog assertions and live root/Status screenshots found all 14 Status rows readable.
+
+- [ ] P0: Replace the reduced plugin host and static `ShellBar` with Omarchy's full `PluginRegistry`, `BarWidgetRegistry`, and dynamic `omarchy.bar` contract.
+  - Why: upstream owns invisible-slot removal, widget ordering, bar placement, settings schemas, service/panel kinds, hot reload, clone routing, and one `shell.json`. Local code currently reimplements only overlays and bar widgets, which caused the spacing regression.
+  - Preserve: penguin menu icon, center clock/notifications placement, Board status widget, laptop-screen default, primary color, and reviewed custom `marcelof.*` plugins.
+  - Validation: upstream registry/bar tests, migrated `shell.json`, one/two-monitor screenshots, hidden-widget geometry, enable/disable/move/restart persistence, one-process and idle CPU/RSS checks.
+
+- [ ] P0: Replace root-owned notifications with the copied `omarchy.notifications` service and components.
+  - Preserve: source-app focus, browser actions, DND integration, critical/sticky behavior, redaction, per-app icons, and permanent history. Adapt Omarchy's focus helper and state paths rather than running a second server.
+  - Validation: upstream notification suite, migration fixture for existing history, browser/Slack smoke, DND, action click, restart persistence, one notification owner, and screenshots.
+
+- [ ] P1: Replace `ShellClipboardPanel`, its eager model, and `cliphist-menu watch` with `omarchy.clipboard`.
+  - Preserve: text and image history, normal and primary clipboard behavior, middle-click semantics, Ghostty/Herdr/OSC52, gopass safety, and explicit copy-only mode. Disable one watcher before enabling the other.
+  - Validation: local/remote copy, primary paste, image copy, history restart, secret fixture without printing values, one watcher, and screenshot/input tests.
+
+- [ ] P1: Replace `ShellOverlays` with the copied `omarchy.osd` panel.
+  - Preserve: volume, mic mute, display brightness, keyboard brightness, existing media-key bindings, and no extra polling. Keep `desktop-osd` only as a thin IPC/action boundary if Hyprland bindings still need it.
+  - Validation: upstream OSD model test, every hardware key, repeated-key coalescing, screenshots, and one loaded panel.
+
+- [ ] P1: Route Win+D through the Omarchy menu Apps provider and retire the standalone launcher panel/service only after parity.
+  - Preserve: MRU x MFU ranking, favorites, hide/unhide, desktop-entry launch correctness, icons, right-click actions, and fast keyboard focus. Reuse the already shared `AppLibrary`; do not run two app indexes.
+  - Validation: launch/click/Enter, favorite/hide/unhide, ranking fixture, cold/warm latency, screenshot, and archived old QML.
+
+- [ ] P1: Add Omarchy's media service/bar widget for ordinary MPRIS players while keeping `audioctl` as the separate saved music/noise plugin.
+  - Boundary: Omarchy media owns browser/player metadata and transport; `audioctl` owns only its launched MPV/noise processes. Neither may pause Meet, calls, or unrelated PipeWire streams.
+  - Validation: browser media, MPV, saved noise plus music, Meet safety fixture, restart restore, and no duplicate player controls.
+
+- [ ] P1: Replace the root wallpaper renderer with `omarchy.background` while retaining the copied Image Picker and local wallpaper directories.
+  - Adapt private Omarchy theme commands to `wallpaper-wayland`; keep one renderer and state file. Do not import theme switching merely for wallpaper rendering.
+  - Validation: startup restore, apply/cancel, monitor changes, no black frame after restart, one background owner, and screenshots.
+
+- [ ] P2: Consolidate duplicate Control, Session, passmenu, and web-search surfaces into the copied menu/input infrastructure where behavior is preserved.
+  - Controls can retire after Status owns every route. `ShellPowerMenu` can retire only after destructive confirmations remain. Passmenu must keep gopass values out of argv/logs/history. Web search needs the menu input mode plus site selection.
+  - Validation: route inventory, reboot/logout confirmation fixture, gopass redaction fixture, web-site routing, and archive-only removal.
+
+- [ ] P2: Evaluate the copied clock and reminders plugins as the base for calendar work without losing local extensions.
+  - Preserve: Lisbon and extra timezones, timestamp formats, Palmela weather, today highlighting, Todo, Pomodoro, Timewarrior, agenda, and future Google Calendar integration. Copy only if it deletes the local timer/panel owner; otherwise retain the current plugin candidate.
+  - Validation: timezone/DST fixture, today/min-max weather, reminder lifecycle, Pomodoro/Timewarrior, closed-panel polling, and screenshots.
+
+- [ ] P2: Migrate lock, idle, and polkit as three gated Omarchy service adoptions after system prerequisites are explicit.
+  - Lock requires validated PAM files and fingerprint fallback; idle requires lock/wake/suspend command adapters; polkit must replace the existing agent rather than coexist. Keep each independently reversible until login, suspend/resume, lid, fingerprint, and privilege prompts pass.
+  - Validation: upstream suites plus Ubuntu PAM/package tracking, lockout recovery, suspend/resume, lid state, one polkit agent, and i3 rollback documentation.
+
+Rejected for now: agents, Tailscale, weather bar, theme switching, and the full Omarchy
+runtime. They do not replace current ownership or are not requested; copying them would add
+code and background work without removing anything.

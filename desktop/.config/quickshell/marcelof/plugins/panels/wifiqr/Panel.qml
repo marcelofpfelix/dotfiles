@@ -18,6 +18,8 @@ import "Model.js" as Model
 Item {
   id: root
 
+  property var targetScreen: null
+
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
   property var shell: null
   property var manifest: null
@@ -211,6 +213,7 @@ Item {
   }
 
   PanelWindow {
+    screen: root.targetScreen
     visible: root.opened
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"

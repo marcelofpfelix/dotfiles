@@ -387,8 +387,54 @@ check_notification_smoke_status() {
   fi
 }
 
+check_shell_layout_contract() {
+  local root="$HOME/.config/quickshell/marcelof"
+  local menu missing=()
+
+  if grep -Fq 'visible: status !== Loader.Ready || (item && item.visible)' "$root/ShellBar.qml" \
+      && grep -Fq 'spacing: barTheme.spacingSm' "$root/ShellBar.qml"; then
+    ok bar-plugin-spacing "hidden widgets collapse in compact group"
+  else
+    fail bar-plugin-spacing "dynamic widgets can reserve empty spacing"
+  fi
+
+  if grep -Fq 'barVisible: batteryPresent && !batteryFull' "$root/plugins/panels/power/Panel.qml" \
+      && grep -Fq 'visible: barVisible' "$root/plugins/panels/power/Panel.qml"; then
+    ok battery-full-hidden "fully charged battery collapses"
+  else
+    fail battery-full-hidden "full battery remains in bar"
+  fi
+
+  if grep -Eq '^  "learn("|\.)' "$root/omarchy-menu.jsonc"; then
+    fail root-menu-learn "Learn category remains"
+  else
+    ok root-menu-learn absent
+  fi
+
+  if grep -Fq 'omarchy-menu-select" Keybindings' "$HOME/bin/qbar"; then
+    ok keybindings-menu "Omarchy selector"
+  else
+    fail keybindings-menu "custom panel route remains"
+  fi
+
+  while read -r menu; do
+    case "$menu" in
+      root-menu|power-confirm) continue ;;
+      launcher) grep -Fq '"provider":"apps"' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
+      media-controls) grep -Fq 'qbar shell toggle marcelof.media-controls' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
+      network-tools) grep -Fq 'qbar shell toggle marcelof.network-tools' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
+      *) grep -Fq "\$HOME/bin/qbar $menu" "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
+    esac
+  done < <(qbar list-menus)
+  if ((${#missing[@]} == 0)); then
+    ok root-menu-coverage "all public menus reachable"
+  else
+    fail root-menu-coverage "missing: ${missing[*]}"
+  fi
+}
+
 section "required commands"
-for cmd in hypr-session hypr-keys hypr-term qbar omarchy-shell omarchy-plugin-review omarchy-plugin-add qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app notificationctl reminderctl work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
+for cmd in hypr-session hypr-keys hypr-term qbar omarchy-shell omarchy-menu-select omarchy-plugin-validate omarchy-plugin-review omarchy-plugin-list omarchy-plugin-add omarchy-plugin-enable omarchy-plugin-disable omarchy-plugin-remove qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app notificationctl reminderctl work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes
@@ -415,6 +461,7 @@ section "quickshell"
 run_required qbar qbar status
 check_board_status
 check_qs_menu_smoke_latest
+check_shell_layout_contract
 
 section "audio"
 check_audio_status

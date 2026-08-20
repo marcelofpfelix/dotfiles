@@ -68,7 +68,7 @@ Item {
 
   Process {
     id: networkStatusRefresh
-    command: systemStatusService.shellConfig.network("details")
+    command: systemStatusService.shellConfig.network("details-local")
     running: true
     stdout: StdioCollector { onStreamFinished: systemStatusService.shellRoot.networkStatusText = this.text.trim() }
   }

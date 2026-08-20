@@ -954,6 +954,11 @@ Panel {
     text: root.icon
 
     onPressed: function(b) {
+      if (b === Qt.RightButton) {
+        root.close()
+        root.bar.shell.summon("marcelof.network-tools", "{}")
+        return
+      }
       if (root.opened) root.close()
       // open() is enough: onOpenedChanged runs refresh(true), which defers the
       // PHY scan past the first frame. The bare refresh() that used to follow

@@ -23,6 +23,7 @@ ShellRoot {
 
   readonly property var pluginHost: pluginHostObject
   property var dynamicPluginEntries: []
+  property var dynamicBarWidgetEntries: []
   property string openDynamicPluginId: ""
   property string pendingDynamicPluginId: ""
   property string pendingDynamicPluginPayload: ""
@@ -95,7 +96,8 @@ ShellRoot {
   }
 
   function toggleKeybindings() {
-    root.toggleTransientPanel("keybindingsOpen", function() { menuDataService.refreshKeybindings() })
+    root.closeTransientPanels()
+    Quickshell.execDetached(shellConfig.qs("keybindings"))
   }
 
   function clipboardScore(entry, query) {
@@ -205,20 +207,6 @@ ShellRoot {
     root.rebuildPassModel()
   }
 
-  function updateKeybindingRows(output) {
-    keybindingModel.clear()
-    const lines = String(output || "").split(/\n+/)
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (line.length === 0)
-        continue
-      const parts = line.split(/\t+/)
-      if (parts.length < 2)
-        continue
-      keybindingModel.append({ shortcut: parts[0], action: parts.slice(1).join(" ") })
-    }
-  }
-
   function openClipboard() {
     root.closeTransientPanels()
     root.clipboardOpen = true
@@ -281,7 +269,6 @@ ShellRoot {
   property string passUserKey: shellConfig.defaultPassUserKey
   property string passBackend: "gopass"
   readonly property bool rootMenuOpen: rootMenu.opened
-  property bool keybindingsOpen: false
   property bool powerMenuOpen: false
   property bool webSearchOpen: false
   property string webSearchSite: shellConfig.defaultWebSearchSite
@@ -482,14 +469,29 @@ ShellRoot {
     return !!pluginRegistry.installedPlugins[String(id || "")]
   }
 
+  function samePluginEntries(left, right) {
+    if (left.length !== right.length) return false
+    for (var i = 0; i < left.length; i++)
+      if (left[i].id !== right[i].id || left[i].sourceUrl !== right[i].sourceUrl
+          || left[i].manifest.version !== right[i].manifest.version) return false
+    return true
+  }
+
   function refreshDynamicPluginEntries() {
-    var entries = []
+    var overlays = []
+    var widgets = []
     for (var id in pluginRegistry.installedPlugins) {
       var manifest = pluginRegistry.installedPlugins[id]
       if (!pluginRegistry.isEnabled(id)) continue
-      entries.push({ id: id, manifest: manifest, keepLoaded: manifest.keepLoaded === true })
+      if (pluginRegistry.supportsKind(id, pluginRegistry.overlayKind))
+        overlays.push({ id: id, manifest: manifest, sourceUrl: pluginRegistry.entryPointUrl(manifest, pluginRegistry.overlayKind), keepLoaded: manifest.keepLoaded === true })
+      if (pluginRegistry.supportsKind(id, pluginRegistry.barWidgetKind))
+        widgets.push({ id: id, manifest: manifest, sourceUrl: pluginRegistry.entryPointUrl(manifest, "barWidget") })
     }
-    dynamicPluginEntries = entries
+    overlays.sort(function(left, right) { return left.id.localeCompare(right.id) })
+    widgets.sort(function(left, right) { return left.id.localeCompare(right.id) })
+    if (!root.samePluginEntries(dynamicPluginEntries, overlays)) dynamicPluginEntries = overlays
+    if (!root.samePluginEntries(dynamicBarWidgetEntries, widgets)) dynamicBarWidgetEntries = widgets
   }
 
   function registerDynamicPluginLoader(id, loader) {
@@ -601,7 +603,7 @@ ShellRoot {
 
   function shellMenuOpen(id) {
     const raw = String(id || "")
-    if (root.dynamicPluginKnown(raw)) return root.dynamicPluginOpen(raw)
+    if (pluginRegistry.supportsKind(raw, pluginRegistry.overlayKind)) return root.dynamicPluginOpen(raw)
     const menu = root.shellMenuId(raw)
     if (menu === "bar") return !root.barHidden
     if (menu === "launcher") return launcher.panelOpen
@@ -614,7 +616,7 @@ ShellRoot {
 
   function hideShellMenu(id) {
     const raw = String(id || "")
-    if (root.dynamicPluginKnown(raw)) return root.hideDynamicPlugin(raw)
+    if (pluginRegistry.supportsKind(raw, pluginRegistry.overlayKind)) return root.hideDynamicPlugin(raw)
     const menu = root.shellMenuId(raw)
     if (menu === "all" || menu === "panels") {
       root.closeTransientPanels()
@@ -643,7 +645,7 @@ ShellRoot {
 
   function toggleShellMenu(id, payloadJson) {
     const raw = String(id || "")
-    if (root.dynamicPluginKnown(raw))
+    if (pluginRegistry.supportsKind(raw, pluginRegistry.overlayKind))
       return root.dynamicPluginOpen(raw) ? root.hideDynamicPlugin(raw) : root.summonDynamicPlugin(raw, payloadJson)
     const menu = root.shellMenuId(raw)
     if (menu === "bar") {
@@ -744,7 +746,6 @@ ShellRoot {
 
   function toggleDefaultWebSearch() { root.toggleWebSearch(shellConfig.defaultWebSearchSite) }
 
-  function refreshKeybindings() { menuDataService.refreshKeybindings() }
   function refreshControls() { systemStatusService.refreshControls() }
   function refreshNetwork() { systemStatusService.refreshNetwork() }
   function refreshPower() { systemStatusService.refreshPower() }
@@ -1364,6 +1365,7 @@ ShellRoot {
 
   OmarchyServices.PluginRegistry {
     id: pluginRegistry
+    firstPartyDir: shellConfig.home + "/.config/quickshell/marcelof/plugins/panels"
     enabledPluginIds: shellSettings.enabledPluginIds
   }
 
@@ -1397,7 +1399,7 @@ ShellRoot {
       required property var modelData
       readonly property string pluginId: modelData.id
       readonly property var manifest: modelData.manifest
-      readonly property string sourceUrl: pluginRegistry.entryPointUrl(manifest, "overlay")
+      readonly property string sourceUrl: pluginRegistry.entryPointUrl(manifest, pluginRegistry.overlayKind)
 
       property Loader pluginLoader: Loader {
         source: dynamicPluginEntry.sourceUrl
@@ -1434,14 +1436,18 @@ ShellRoot {
 
   WifiQrPlugin.Panel {
     id: wifiQrOverlay
+    targetScreen: root.laptopScreen
     shell: pluginHostObject
     manifest: ({ id: shellConfig.pluginIds.wifiQr })
   }
 
   ImagePickerPlugin.ImagePicker {
     id: imagePicker
+    targetScreen: root.laptopScreen
     pluginPath: shellConfig.home + "/.config/quickshell/marcelof/plugins/image-picker"
     applyAction: function(path) { root.setWallpaper(path) }
+    openCurrentAction: function() { Quickshell.execDetached(shellConfig.wallpaper("open-current")) }
+    openFolderAction: function() { Quickshell.execDetached(shellConfig.wallpaper("open-dir")) }
   }
 
   // Local settings own the palette; copied Omarchy components consume it here.
@@ -1611,8 +1617,6 @@ ShellRoot {
     Quickshell.execDetached(command)
   }
 
-  component IconButton: ShellIconButton { tooltipState: root }
-
   component ActionButton: ShellActionButton { tooltipState: root }
 
   component TrayButton: ShellTrayButton { shellRoot: root }
@@ -1638,7 +1642,7 @@ ShellRoot {
           active: root.dynamicPluginOpen(pluginId),
           canDisable: supported,
           canEnable: supported,
-          firstParty: false,
+          firstParty: manifest.__isFirstParty === true,
           clonedFrom: ""
         })
       }
@@ -1746,6 +1750,7 @@ ShellRoot {
     barTheme: shellTheme
     barSettings: shellSettings
     barConfig: shellConfig
+    barPluginEntries: root.dynamicBarWidgetEntries
     notificationHistoryModel: notificationHistory
   }
 
@@ -1883,7 +1888,6 @@ ShellRoot {
   ListModel { id: launcherModel }
   ListModel { id: clipboardModel }
   ListModel { id: passModel }
-  ListModel { id: keybindingModel }
 
   ShellMenuDataService {
     id: menuDataService
@@ -1938,15 +1942,6 @@ ShellRoot {
     panelHeight: root.menuHeightFor(shellConfig.menuIds.passmenu)
   }
 
-
-    ShellKeybindingsPanel {
-      shellRoot: root
-      keybindingsModel: keybindingModel
-      closeAction: () => root.hideShellMenu(shellConfig.menuIds.keybindings)
-      panelOpen: root.keybindingsOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.keybindings)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.keybindings)
-    }
 
     ShellWebSearchPanel {
       id: webSearchPanel

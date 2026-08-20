@@ -75,36 +75,36 @@ Item {
 
   Timer {
     interval: 1000
-    running: true
+    running: calendarService.shellRoot.calendarOpen
     repeat: true
-    onTriggered: timePanelRefresh.running = calendarService.shellRoot.calendarOpen
+    onTriggered: timePanelRefresh.running = true
   }
 
   Timer {
     interval: 60000
-    running: true
+    running: calendarService.shellRoot.calendarOpen
     repeat: true
-    onTriggered: todoPanelRefresh.running = calendarService.shellRoot.calendarOpen
+    onTriggered: todoPanelRefresh.running = true
   }
 
   Timer {
     interval: 60000
-    running: true
+    running: calendarService.shellRoot.calendarOpen
     repeat: true
-    onTriggered: agendaPanelRefresh.running = calendarService.shellRoot.calendarOpen
+    onTriggered: agendaPanelRefresh.running = true
   }
 
   Timer {
     interval: 60000
-    running: true
+    running: calendarService.shellRoot.calendarOpen
     repeat: true
-    onTriggered: reminderPanelRefresh.running = calendarService.shellRoot.calendarOpen
+    onTriggered: reminderPanelRefresh.running = true
   }
 
   Timer {
     interval: 1000
-    running: true
+    running: calendarService.shellRoot.calendarOpen
     repeat: true
-    onTriggered: pomodoroRefresh.running = calendarService.shellRoot.calendarOpen
+    onTriggered: pomodoroRefresh.running = true
   }
 }

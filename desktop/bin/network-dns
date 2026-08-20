@@ -210,8 +210,14 @@ reload_dns_stack() {
 }
 
 usage() {
-  echo "Usage: network-dns [Cloudflare|Google|DHCP|Custom]" >&2
+  echo "Usage: network-dns [--dry-run] [Cloudflare|Google|DHCP|Custom]" >&2
 }
+
+dry_run=false
+if [[ ${1:-} == "--dry-run" ]]; then
+  dry_run=true
+  shift
+fi
 
 if (( $# == 0 )); then
   current_dns_provider
@@ -226,6 +232,11 @@ fi
 if ! provider=$(provider_from_arg "$1"); then
   usage
   exit 1
+fi
+
+if $dry_run; then
+  printf 'Would change DNS from %s to %s; no changes applied.\n' "$(current_dns_provider)" "$provider"
+  exit 0
 fi
 
 require_root "$provider"

@@ -9,12 +9,30 @@ if [[ ${1:-} == --self-test ]]; then
     grep -Fqx $'Win+Shift+0\tMove window to workspace' <<<"$default"
     grep -Fqx $'Win+Ctrl+MINUS\tResize window' <<<"$omarchy"
     grep -Fqx $'Win+MouseLeft\tDrag window' <<<"$omarchy"
+    grep -Fqx 'SUPER + CTRL + MINUS                → Resize window' < <(HYPR_KEYS_PROFILE_DIR="$profile_dir" "$0" --omarchy omarchy)
     ! grep -Eq 'code:(20|21)|mouse:(272|273|274)' <<<"$omarchy"
     printf 'hypr-keys self-test: ok\n'
     exit 0
 fi
 
+if [[ ${1:-} == --omarchy ]]; then
+    selected_profile=${2:-}
+    args=()
+    [ -z "$selected_profile" ] || args+=("$selected_profile")
+    "$0" "${args[@]}" | awk -F '\t' '
+      NR == 1 && $1 == "Profile" { next }
+      NF >= 2 {
+        key = toupper($1)
+        gsub(/^WIN/, "SUPER", key)
+        gsub(/[+]/, " + ", key)
+        printf "%-35s → %s\n", key, $2
+      }
+    '
+    exit 0
+fi
+
 detect_profile() {
+
     if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || ! command -v hyprctl >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
         printf 'default'
         return

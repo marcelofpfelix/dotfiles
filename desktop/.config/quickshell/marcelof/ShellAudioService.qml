@@ -30,7 +30,7 @@ Item {
   }
 
   Timer {
-    interval: 3000
+    interval: 30000
     running: true
     repeat: true
     onTriggered: audioService.refreshState()

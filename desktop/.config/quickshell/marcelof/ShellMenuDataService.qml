@@ -23,10 +23,6 @@ Item {
     passEntriesRefresh.running = true
   }
 
-  function refreshKeybindings() {
-    keybindingsRefresh.running = true
-  }
-
   Process {
     id: launcherMruRefresh
     command: menuDataService.shellConfig.launcherMruLoad()
@@ -44,12 +40,5 @@ Item {
     id: passEntriesRefresh
     command: menuDataService.shellConfig.passList(menuDataService.shellRoot.passBackend)
     stdout: StdioCollector { onStreamFinished: menuDataService.shellRoot.updatePassEntries(this.text) }
-  }
-
-  Process {
-    id: keybindingsRefresh
-    command: menuDataService.shellConfig.hyprKeys()
-    running: true
-    stdout: StdioCollector { onStreamFinished: menuDataService.shellRoot.updateKeybindingRows(this.text) }
   }
 }

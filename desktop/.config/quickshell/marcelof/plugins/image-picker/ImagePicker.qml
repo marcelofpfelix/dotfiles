@@ -5,15 +5,20 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Shapes
 import qs.Commons
+import qs.Ui
 import "ImagePickerModel.js" as ImagePickerModel
 
 Item {
   id: root
 
+  property var targetScreen: null
+
   // Injected by omarchy-shell; defaults to the session OMARCHY_PATH.
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
   property string pluginPath: ""
   property var applyAction: null
+  property var openCurrentAction: null
+  property var openFolderAction: null
   property string stateHome: Quickshell.env("HOME") + "/.local/state"
   property string imageDirs: Quickshell.env("OMARCHY_IMAGE_SELECTOR_DIRS") || Quickshell.env("OMARCHY_IMAGE_SELECTOR_DIR") || Quickshell.env("OMARCHY_STOCK_BACKGROUNDS_DIR") || (stateHome + "/omarchy/current/theme/backgrounds")
   property string imageRows: ""
@@ -46,7 +51,9 @@ Item {
   property int sliceHeight: 432
   property int sliceSpacing: -30
   property int skewOffset: 28
-  property int bottomChromeHeight: showLabels ? (filterable ? 104 : 74) : (filterable ? 60 : 30)
+  readonly property bool hasUtilityActions: typeof openCurrentAction === "function" || typeof openFolderAction === "function"
+  property int bottomChromeHeight: (showLabels ? (filterable ? 104 : 74) : (filterable ? 60 : 30))
+    + (hasUtilityActions ? Style.space(50) : 0)
 
   onOpenedChanged: if (!opened) layoutSettled = false
 
@@ -135,6 +142,16 @@ Item {
       var first = ImagePickerModel.nextSelectedIndexForFilter(imageArray, selectedIndex, filterText)
       if (first >= 0) selectedIndex = first
     }
+  }
+
+  function refreshImages() {
+    imageRows = ""
+    loadedImageRows = ""
+    imageArray = []
+    selectedIndex = 0
+    imagesLoaded = false
+    layoutSettled = false
+    startImageScan(requestSerial, imageDirs)
   }
 
   function releaseNextDoneFile() {
@@ -373,6 +390,7 @@ Item {
   PanelWindow {
     id: panel
 
+    screen: root.targetScreen
     visible: root.opened
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
@@ -395,9 +413,14 @@ Item {
 
     Item {
       id: card
+      readonly property int sideSlotCount: Math.min(13, Math.max(0, root.imageArray.length - 1))
+      readonly property int previewWidth: root.imageArray.length === 1 ? Math.min(1100, panel.width - 160) : root.expandedWidth
+      readonly property int previewHeight: root.imageArray.length === 1
+        ? Math.min(Math.round(previewWidth * root.expandedHeight / root.expandedWidth), panel.height - root.bottomChromeHeight - Style.space(100))
+        : root.expandedHeight
       visible: root.opened && root.imagesLoaded && root.layoutSettled && root.imageArray.length > 0
-      width: Math.min(parent.width - 80, root.expandedWidth + 13 * (root.sliceWidth + root.sliceSpacing) + 40)
-      height: root.expandedHeight + Style.space(30) + root.bottomChromeHeight
+      width: Math.min(parent.width - 80, previewWidth + sideSlotCount * (root.sliceWidth + root.sliceSpacing) + 40)
+      height: previewHeight + Style.space(30) + root.bottomChromeHeight
       anchors.centerIn: parent
 
         MouseArea { anchors.fill: parent; onClicked: {} }
@@ -409,12 +432,12 @@ Item {
           anchors.bottom: parent.bottom
           anchors.bottomMargin: root.bottomChromeHeight
           anchors.horizontalCenter: parent.horizontalCenter
-          width: root.expandedWidth + 13 * (root.sliceWidth + root.sliceSpacing)
+          width: card.previewWidth + card.sideSlotCount * (root.sliceWidth + root.sliceSpacing)
           clip: false
           focus: true
 
           readonly property real itemStep: root.sliceWidth + root.sliceSpacing
-          readonly property real previewX: (width - root.expandedWidth) / 2
+          readonly property real previewX: (width - card.previewWidth) / 2
 
           Keys.priority: Keys.BeforeItem
           Keys.onPressed: function(event) {
@@ -465,10 +488,10 @@ Item {
               onNearbyChanged: if (nearby) sourceActivated = true
 
               visible: nearby
-              x: selected ? carousel.previewX : (relativeIndex < 0 ? carousel.previewX + relativeIndex * carousel.itemStep : carousel.previewX + root.expandedWidth + root.sliceSpacing + (relativeIndex - 1) * carousel.itemStep)
-              width: selected ? root.expandedWidth : root.sliceWidth
-              height: selected ? root.expandedHeight : root.sliceHeight
-              y: selected ? 0 : (root.expandedHeight - root.sliceHeight) / 2
+              x: selected ? carousel.previewX : (relativeIndex < 0 ? carousel.previewX + relativeIndex * carousel.itemStep : carousel.previewX + card.previewWidth + root.sliceSpacing + (relativeIndex - 1) * carousel.itemStep)
+              width: selected ? card.previewWidth : root.sliceWidth
+              height: selected ? card.previewHeight : root.sliceHeight
+              y: selected ? 0 : (card.previewHeight - root.sliceHeight) / 2
               z: selected ? 100 : 50 - Math.min(Math.abs(relativeIndex), 40)
 
               readonly property real skAbs: Math.abs(root.skewOffset)
@@ -560,7 +583,7 @@ Item {
           anchors.top: carousel.bottom
           anchors.topMargin: Style.space(16)
           anchors.horizontalCenter: carousel.horizontalCenter
-          width: root.expandedWidth
+          width: card.previewWidth
           text: root.currentLabel()
           color: root.foreground
           style: Text.Outline
@@ -576,7 +599,7 @@ Item {
           anchors.top: selectedLabel.bottom
           anchors.topMargin: Style.space(8)
           anchors.horizontalCenter: carousel.horizontalCenter
-          width: root.expandedWidth
+          width: card.previewWidth
           text: root.filterText
           color: root.foreground
           opacity: 0.85
@@ -585,6 +608,18 @@ Item {
           font.pixelSize: Style.font.title
           horizontalAlignment: Text.AlignHCenter
           elide: Text.ElideRight
+        }
+
+        Row {
+          visible: root.hasUtilityActions
+          anchors.bottom: parent.bottom
+          anchors.horizontalCenter: parent.horizontalCenter
+          spacing: Style.spacing.controlGap
+
+          Button { iconText: "󰄬"; text: "Apply"; tooltipText: "Apply selected wallpaper"; foreground: root.foreground; minimumHeight: Style.space(40); onClicked: root.applySelected() }
+          Button { iconText: "󰈙"; text: "Current"; tooltipText: "Open current wallpaper"; foreground: root.foreground; minimumHeight: Style.space(40); visible: typeof root.openCurrentAction === "function"; onClicked: root.openCurrentAction() }
+          Button { iconText: "󰑐"; text: "Refresh"; tooltipText: "Refresh wallpapers"; foreground: root.foreground; minimumHeight: Style.space(40); onClicked: root.refreshImages() }
+          Button { iconText: "󰉋"; text: "Folder"; tooltipText: "Open wallpaper folder"; foreground: root.foreground; minimumHeight: Style.space(40); visible: typeof root.openFolderAction === "function"; onClicked: root.openFolderAction() }
         }
     }
   }

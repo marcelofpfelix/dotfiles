@@ -140,7 +140,6 @@ QtObject {
   function fanStatus() { return [bin("fan-status")] }
   function inhibitStatus() { return inhibit(statusAction) }
   function privacyStatus() { return [bin("desktop-privacy-status"), statusAction] }
-  function hyprKeys() { return [bin("hypr-keys")] }
 
 function menuSize(id, dense) {
   const sizes = configData.menuSizes

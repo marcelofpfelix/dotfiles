@@ -89,7 +89,6 @@ QtObject {
     clipboard: "clipboard",
     controls: "controls",
     emojis: "emojis",
-    keybindings: "keybindings",
     launcher: "launcher",
     media: "media",
     network: "network",
@@ -138,7 +137,6 @@ QtObject {
     clipboard: { openProperty: "clipboardOpen", toggle: "toggleClipboard" },
     passmenu: { openProperty: "passMenuOpen", toggle: "togglePassmenu" },
     websearch: { openProperty: "webSearchOpen", toggle: "toggleDefaultWebSearch" },
-    keybindings: { openProperty: "keybindingsOpen", refresh: "refreshKeybindings" },
     tray: { openProperty: "trayManageOpen" },
     controls: { openProperty: "controlPanelOpen", refresh: "refreshControls" },
     emojis: { toggle: "toggleEmojis", hide: "hideEmojis" },
@@ -176,7 +174,6 @@ QtObject {
     "personal-dashboard": { width: 640, height: 240 },
     "root-menu": { width: 440, height: 780 },
     notifications: { width: 640, height: 420 },
-    keybindings: { width: 640, height: 560 },
     network: { width: 640, height: 320 },
     power: { width: 640, height: 360 },
     tray: { width: 640, height: 420 }

@@ -6,9 +6,6 @@ import QtQuick
 import QtQuick.Layouts
 import "plugins/panels/power" as PowerPlugin
 import "plugins/panels/monitor" as MonitorPlugin
-import "plugins/panels/bluetooth" as BluetoothPlugin
-import "plugins/panels/audio" as AudioPlugin
-import "plugins/panels/network" as NetworkPlugin
 
 PanelWindow {
   id: bar
@@ -17,6 +14,7 @@ PanelWindow {
   required property var barTheme
   required property var barSettings
   required property var barConfig
+  required property var barPluginEntries
   required property var notificationHistoryModel
 
   readonly property var shell: barRoot.pluginHost
@@ -33,6 +31,7 @@ PanelWindow {
   readonly property bool foregroundAnimationEnabled: true
   property var activePopout: null
   property var clickTargets: []
+  property var pluginWidgets: ({})
 
   function registerClickTarget(target) {
     if (!target || clickTargets.indexOf(target) !== -1) return
@@ -61,8 +60,27 @@ PanelWindow {
   }
 
   function switchPanelFrom(owner, direction) { return false }
-  function toggleNetworkPanel() { networkPanel.toggle() }
-  function toggleMediaPanel() { audioPanel.toggle() }
+  function registerPluginWidget(id, item) {
+    var next = ({})
+    for (var key in pluginWidgets) next[key] = pluginWidgets[key]
+    next[id] = item
+    pluginWidgets = next
+  }
+
+  function unregisterPluginWidget(id, item) {
+    if (pluginWidgets[id] !== item) return
+    var next = ({})
+    for (var key in pluginWidgets) if (key !== id) next[key] = pluginWidgets[key]
+    pluginWidgets = next
+  }
+
+  function togglePluginWidget(id) {
+    var widget = pluginWidgets[id]
+    if (widget && widget.toggle) widget.toggle()
+  }
+
+  function toggleNetworkPanel() { togglePluginWidget("omarchy.network") }
+  function toggleMediaPanel() { togglePluginWidget("omarchy.audio") }
   function showTooltip(target, text) { barRoot.showTooltip(target, text) }
   function hideTooltip(target) { barRoot.hideTooltip() }
 
@@ -269,7 +287,7 @@ PanelWindow {
           onExited: barRoot.hideTooltip()
           onClicked: mouse => {
             if (mouse.button === Qt.RightButton)
-              barRoot.toggleMediaPanel()
+              barRoot.toggleShellMenu("marcelof.media-controls", "{}")
             else
               barRoot.runAudioctl("play-pause-all")
           }
@@ -277,10 +295,31 @@ PanelWindow {
       }
 
 
-      AudioPlugin.Panel { id: audioPanel; Layout.alignment: Qt.AlignVCenter; bar: bar }
       MonitorPlugin.Panel { Layout.alignment: Qt.AlignVCenter; bar: bar }
-      BluetoothPlugin.Panel { Layout.alignment: Qt.AlignVCenter; bar: bar }
-      NetworkPlugin.Panel { id: networkPanel; Layout.alignment: Qt.AlignVCenter; bar: bar }
+
+      Row {
+        spacing: barTheme.spacingSm
+        Layout.alignment: Qt.AlignVCenter
+
+        Repeater {
+          model: bar.barPluginEntries
+
+          Loader {
+            id: pluginLoader
+            required property var modelData
+            readonly property string pluginId: modelData.id
+            visible: status !== Loader.Ready || (item && item.visible)
+            asynchronous: true
+            Component.onCompleted: setSource(modelData.sourceUrl, { "bar": bar })
+            onLoaded: bar.registerPluginWidget(pluginId, item)
+            onStatusChanged: {
+              if (status === Loader.Error)
+                console.warn("ShellBar: failed to load " + pluginId + " from " + modelData.sourceUrl)
+            }
+            Component.onDestruction: bar.unregisterPluginWidget(pluginId, item)
+          }
+        }
+      }
 
       PowerPlugin.Panel {
         Layout.alignment: Qt.AlignVCenter

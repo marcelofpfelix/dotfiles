@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "marcelof.network-tools",
+  "name": "Network Tools",
+  "version": "1.0.0",
+  "author": "Marcelo Felix",
+  "description": "On-demand network details, reconnect, and settings",
+  "kinds": ["overlay"],
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  }
+}

@@ -158,8 +158,8 @@ Panel {
 
   onBatteryPresentChanged: if (!batteryPresent) close()
 
-  readonly property bool barVisible: batteryPresent && batteryFraction < 1
-  visible: batteryPresent
+  readonly property bool barVisible: batteryPresent && !batteryFull
+  visible: barVisible
   implicitWidth: barVisible ? button.implicitWidth : 0
   implicitHeight: barVisible ? button.implicitHeight : 0
 
