@@ -77,7 +77,7 @@ pause_audio() {
     local paused=0
     helper_running || return 1
     save_current
-    if noise_running; then signal_pid_group STOP "$noise_pid"; paused=1; fi
+    if noise_running; then stop_noise_processes; paused=1; fi
     if music_running; then signal_pid_group STOP "$music_pid"; paused=1; fi
     [ "$paused" -eq 1 ] || return 1
     touch "$paused_state"
@@ -100,11 +100,9 @@ cleanup_stale_helpers() {
     if [ "$signal" != KILL ]; then
         pkill -CONT -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
         pkill -CONT -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
-        pkill -CONT -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
     fi
     pkill "-$signal" -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
     pkill "-$signal" -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
-    pkill "-$signal" -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
 }
 
 cleanup_stale_music() {
@@ -337,7 +335,8 @@ PACTL_AUDIOCTL_SELF_TEST
 
     PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" pause
     sleep 0.2
-    ps -eo pgid=,stat= | awk -v pgid="$self_test_noise_pid" '$1 == pgid { seen=1; if ($2 !~ /^T/) bad=1 } END { exit !(seen && !bad) }' || { printf 'noise process group was not paused\n' >&2; rc=1; }
+    ! pid_running "$self_test_noise_pid" || { printf 'noise process group was not stopped on pause\n' >&2; rc=1; }
+    [ ! -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise PID file survived pause\n' >&2; rc=1; }
     ps -eo pgid=,stat= | awk -v pgid="$self_test_music_pid" '$1 == pgid { seen=1; if ($2 !~ /^T/) bad=1 } END { exit !(seen && !bad) }' || { printf 'music process group was not paused\n' >&2; rc=1; }
     pid_running "$self_test_child_other" || { printf 'unmanaged process was stopped\n' >&2; rc=1; }
     [ -e "$self_test_tmp/audioctl/paused" ] || { printf 'paused marker was not written\n' >&2; rc=1; }
@@ -346,9 +345,10 @@ PACTL_AUDIOCTL_SELF_TEST
 
     PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" resume
     sleep 0.2
-    [ "$(cat "$self_test_tmp/audioctl/brown-noise.pid")" = "$self_test_noise_pid" ] || { printf 'noise PID changed on resume\n' >&2; rc=1; }
+    self_test_resumed_noise_pid=$(cat "$self_test_tmp/audioctl/brown-noise.pid")
+    [ "$self_test_resumed_noise_pid" != "$self_test_noise_pid" ] || { printf 'noise PID was reused on resume\n' >&2; rc=1; }
+    pid_running "$self_test_resumed_noise_pid" || { printf 'noise was not restarted on resume\n' >&2; rc=1; }
     [ "$(cat "$self_test_tmp/audioctl/music.pid")" = "$self_test_music_pid" ] || { printf 'music PID changed on resume\n' >&2; rc=1; }
-    ps -eo pgid=,stat= | awk -v pgid="$self_test_noise_pid" '$1 == pgid { seen=1; if ($2 ~ /^T/) bad=1 } END { exit !(seen && !bad) }' || { printf 'noise process group was not resumed\n' >&2; rc=1; }
     ps -eo pgid=,stat= | awk -v pgid="$self_test_music_pid" '$1 == pgid { seen=1; if ($2 ~ /^T/) bad=1 } END { exit !(seen && !bad) }' || { printf 'music process group was not resumed\n' >&2; rc=1; }
 
     self_test_noise_pid=$(cat "$self_test_tmp/audioctl/brown-noise.pid")
