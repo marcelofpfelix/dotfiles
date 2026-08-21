@@ -86,7 +86,7 @@ crop_panel_region() {
       geometry=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | "\(.width)x\(.height)+\(.x)+\(.y)"' | sed -n '1p')
       ;;
     *)
-      geometry=$(jq -n -r --slurpfile monitors <(hyprctl monitors -j 2>/dev/null) --slurpfile layers <(hyprctl layers -j 2>/dev/null) '($layers[0] | to_entries[] | select(.value.levels["2"][]? | .namespace == "quickshell" and .h <= 80) | .key) as $bar | $monitors[0][] | select(.name == $bar) | "\(.width)x\(.height)+\(.x)+\(.y)"' | sed -n '1p')
+      geometry=$(jq -n -r --slurpfile monitors <(hyprctl monitors -j 2>/dev/null) --slurpfile layers <(hyprctl layers -j 2>/dev/null) '($layers[0] | to_entries[] | select(.value.levels["2"][]? | .namespace == "omarchy-bar" or (.namespace == "quickshell" and .h <= 80)) | .key) as $bar | $monitors[0][] | select(.name == $bar) | "\(.width)x\(.height)+\(.x)+\(.y)"' | sed -n '1p')
       ;;
   esac
   if [ -z "$geometry" ]; then

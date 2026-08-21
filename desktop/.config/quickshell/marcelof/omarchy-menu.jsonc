@@ -35,6 +35,10 @@
   "setup.shell": {"icon":"󰒓","label":"Shell settings","action":"$HOME/bin/qbar settings"},
   "setup.keybindings": {"icon":"󰌌","label":"Keybindings","aliases":["keys","hotkeys"],"action":"$HOME/bin/qbar keybindings"},
 
+  "setup.plugin": {"icon":"󰐱","label":"Plugins","aliases":["plugin","plugins"]},
+  "setup.plugin.enable": {"icon":"󰄬","label":"Enable plugin","action":"$HOME/bin/omarchy-menu-plugin enable"},
+  "setup.plugin.disable": {"icon":"󰅖","label":"Disable plugin","action":"$HOME/bin/omarchy-menu-plugin disable"},
+
 
   "system.lock": {"icon":"","label":"Lock","action":"$HOME/bin/qbar session-action lock"},
   "system.suspend": {"icon":"󰒲","label":"Suspend","action":"$HOME/bin/qbar session-action suspend"},

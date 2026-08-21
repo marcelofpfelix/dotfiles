@@ -29,9 +29,8 @@ Item {
   // toast appears, moved into historyDir when it expires, is dismissed, or is
   // acted upon.
   readonly property string popupStateDir: stateDir + "notifications/"
-  // The notifications that already left the screen, one file each, trimmed to
-  // the newest historyLimit. This directory IS the history: `showHistory`
-  // replays exactly what has been moved in here.
+  // Notifications that already left the screen, one file each. Automatic
+  // cleanup is age-based; user deletes remain explicit.
   readonly property string historyDir: popupStateDir + "history/"
   // Copies of the avatars/images persisted entries reference — the sender's
   // originals don't outlive the notification (see persistablePopup). Each
@@ -66,10 +65,17 @@ Item {
     id: persisted
     reloadableId: "omarchy-notifications"
     property bool doNotDisturb: false
+    property int retentionDays: 30
     onDoNotDisturbChanged: {
-      // Suppress the write that load-time hydration would otherwise trigger.
       if (service._hydrating) return
       service.scheduleSettingsSave()
+    }
+    onRetentionDaysChanged: {
+      if (service._hydrating) return
+      service.scheduleSettingsSave()
+      service.pruneHistory(function() {
+        if (service.historyPanelOpen) service.refreshHistoryPanel()
+      })
     }
   }
 
@@ -78,9 +84,14 @@ Item {
   property bool _hydrating: false
 
   readonly property alias doNotDisturb: persisted.doNotDisturb
+  readonly property alias retentionDays: persisted.retentionDays
 
   function setDoNotDisturb(value) {
     persisted.doNotDisturb = !!value
+  }
+
+  function setRetentionDays(value) {
+    persisted.retentionDays = NotificationLogic.normalizedRetentionDays(value, persisted.retentionDays)
   }
 
   // popupModel feeds the on-screen toast stack — the only model the service
@@ -95,7 +106,7 @@ Item {
     var count = 0
     for (var i = 0; i < popupModel.count; i++) {
       var row = popupModel.get(i)
-      if (row && row.originalId >= 0) count++
+      if (row && row.originalId >= 0 && !row.read) count++
     }
     return count
   }
@@ -114,9 +125,8 @@ Item {
     }
   }
 
-  // How many notifications the history directory keeps, and therefore how
-  // many `showHistory` can replay.
-  readonly property int historyLimit: 50
+  // Keep the legacy toast replay bounded; stored history itself is age-based.
+  readonly property int historyReplayLimit: 50
 
   readonly property int lowPopupDuration: 5000
   readonly property int normalPopupDuration: 8000
@@ -387,9 +397,18 @@ Item {
   // persistence files preserve, so restored toasts stay clickable. Third-party
   // clients register a libnotify action under the canonical identifier
   // "default" instead; that one only works while the sender is still live.
+  function markPopupRead(index) {
+    if (index < 0 || index >= popupModel.count) return
+    var row = popupModel.get(index)
+    if (!row || row.read) return
+    popupModel.setProperty(index, "read", true)
+    persistPopupFile(popupModel.get(index))
+  }
+
   function invokePopupDefault(index) {
     if (index < 0 || index >= popupModel.count) return
     var entry = popupModel.get(index)
+    markPopupRead(index)
     var command = entry ? String(entry.exec || "") : ""
     if (command) {
       // Detached so the launched command outlives the shell process, which the
@@ -430,7 +449,8 @@ Item {
   function focusApp(entry) {
     if (!entry || !entry.app) return
     focusAppProc.command = [
-      service.home + "/bin/omarchy-hyprland-focus-app",
+      service.home + "/bin/notification-focus-app",
+      String(entry.appIcon || ""),
       String(entry.app)
     ]
     focusAppProc.running = true
@@ -558,26 +578,30 @@ Item {
 
   // ---------------------------------------------------- history
   //
-  // A popup that leaves the screen keeps its file — it just moves one level
-  // down, into historyDir. Trimming happens right there in the same shell
-  // job: the names sort numerically by their leading millisecond timestamp,
-  // so everything but the newest historyLimit files is the tail to drop,
-  // image copies included. Callers set $hist, $limit and $imgs first.
-  readonly property string trimHistoryScript:
-    "ls -1 \"$hist\" 2>/dev/null | sort -n | head -n \"-$limit\" | while IFS= read -r stale; do rm -f \"$hist/$stale\" \"$imgs/${stale%.json}\"-*; done"
+  // History filenames begin with their millisecond timestamp. Remove only
+  // entries older than the configured retention window, together with images.
+  // Callers set $hist, $days and $imgs first.
+  readonly property string pruneHistoryScript:
+    "cutoff=$(( ($(date +%s) - days * 86400) * 1000 ))\n" +
+    "for stale in \"$hist\"/*.json; do\n" +
+    "  [[ -e $stale ]] || continue\n" +
+    "  name=\"${stale##*/}\" ts=\"${name%%-*}\"\n" +
+    "  [[ $ts =~ ^[0-9]+$ ]] || continue\n" +
+    "  (( ts < cutoff )) && rm -f \"$stale\" \"$imgs/${name%.json}\"-*\n" +
+    "done"
 
   function archivePopupFileFor(row) {
     if (!row) return
     // A history replay or the empty-history placeholder has no file to move;
-    // the failed mv leaves the history untouched, trimming included. Image
+    // the failed mv leaves the history untouched, cleanup included. Image
     // copies stay put — live and archived entries share imagesDir.
     enqueuePopupFileJob(["bash", "-c",
       "mkdir -p \"$1\" || exit 0\n" +
-      "hist=\"$1\" limit=\"$2\" imgs=\"$5\"\n" +
+      "hist=\"$1\" days=\"$2\" imgs=\"$5\"\n" +
       "mv -f \"$4/$3\" \"$1/$3\" 2>/dev/null || exit 0\n" +
-      trimHistoryScript, "--",
+      pruneHistoryScript, "--",
       historyDir,
-      String(historyLimit),
+      String(retentionDays),
       NotificationLogic.popupFileName(row),
       popupStateDir,
       imagesDir])
@@ -590,7 +614,7 @@ Item {
   // A silenced notification is untracked the moment it arrives, so the server
   // has nothing left for a later replaces_id to replace and hands the sender a
   // fresh id instead. Every update from a chatty thread is therefore its own
-  // notification here, and several can sit in the ten slots together — there
+  // notification here, and several can coexist until retention cleanup — there
   // is no id to recognize them by, and guessing from app and summary would
   // merge genuinely separate messages.
   function writeHistoryFile(entry, done) {
@@ -601,19 +625,25 @@ Item {
     var persistable = NotificationLogic.persistablePopup(entry, imagesDir)
     var command = ["bash", "-c",
       "mkdir -p \"$1\" \"$5\" || exit 0\n" +
-      "hist=\"$1\" limit=\"$2\" name=\"$3\" json=\"$4\" imgs=\"$5\"\n" +
+      "hist=\"$1\" days=\"$2\" name=\"$3\" json=\"$4\" imgs=\"$5\"\n" +
       "shift 5\n" +
       copyImagesScript +
       "printf '%s\\n' \"$json\" > \"$hist/$name\" || exit 0\n" +
-      trimHistoryScript, "--",
+      pruneHistoryScript, "--",
       historyDir,
-      String(historyLimit),
+      String(retentionDays),
       NotificationLogic.popupFileName(entry),
       NotificationLogic.serializePopup(persistable.entry, NotificationUrgency.Normal),
       imagesDir]
     for (var i = 0; i < persistable.copies.length; i++)
       command.push(persistable.copies[i].from, persistable.copies[i].to)
     enqueuePopupFileJob(command, done)
+  }
+
+  function pruneHistory(done) {
+    enqueuePopupFileJob(["bash", "-c",
+      "hist=\"$1\" days=\"$2\" imgs=\"$3\"\n" + pruneHistoryScript,
+      "--", historyDir, String(retentionDays), imagesDir], done)
   }
 
   function clearHistory() {
@@ -717,6 +747,9 @@ Item {
       body: String(entry.body || ""),
       image: String(entry.image || ""),
       glyph: String(entry.glyph || ""),
+      exec: String(entry.exec || ""),
+      read: !!entry.read,
+      unread: 0,
       urgency: Number(entry.urgency || NotificationUrgency.Normal)
     }
   }
@@ -731,12 +764,13 @@ Item {
       var row = panelRow(rows[i])
       var key = "$" + row.app
       if (!groups[key]) {
-        groups[key] = { icon: row.appIcon, rows: [] }
+        groups[key] = { icon: row.appIcon, rows: [], unread: 0 }
         order.push(row.app)
       } else if (!groups[key].icon && row.appIcon) {
         groups[key].icon = row.appIcon
       }
       groups[key].rows.push(row)
+      if (!row.read) groups[key].unread++
     }
 
     for (var g = 0; g < order.length; g++) {
@@ -753,6 +787,9 @@ Item {
         body: "",
         image: "",
         glyph: "",
+        exec: "",
+        read: false,
+        unread: group.unread,
         urgency: NotificationUrgency.Normal
       })
       for (var r = 0; r < group.rows.length; r++)
@@ -765,7 +802,7 @@ Item {
   function loadHistoryPanel(raw) {
     if (!historyPanelOpen) return
     var rows = NotificationLogic.historyRows(
-      raw, liveRowsForReplay(), NotificationUrgency.Normal, historyLimit)
+      raw, liveRowsForReplay(), NotificationUrgency.Normal, -1)
     populateHistoryPanel(rows)
   }
 
@@ -810,11 +847,43 @@ Item {
     return rows
   }
 
+  function updateHistoryEntryFile(originalId, timestamp, read) {
+    enqueuePopupFileJob(["bash", "-c",
+      "file=\"$1/$2.json\" tmp=\"$1/$2.json.tmp\"\n" +
+      "[[ -f $file ]] || exit 0\n" +
+      "jq --argjson read \"$3\" '.read = $read' \"$file\" > \"$tmp\" && mv -f \"$tmp\" \"$file\"",
+      "--", historyDir, NotificationLogic.imageStem({ originalId: originalId, timestamp: timestamp }),
+      read ? "true" : "false"])
+  }
+
+  function markHistoryEntryRead(originalId, timestamp) {
+    var rows = visiblePanelRows("", -1, 0)
+    var changed = false
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].originalId !== originalId || rows[i].timestamp !== timestamp || rows[i].read) continue
+      rows[i].read = true
+      changed = true
+    }
+    if (!changed) return
+    updateHistoryEntryFile(originalId, timestamp, true)
+    populateHistoryPanel(rows)
+  }
+
   function deleteHistoryEntryFile(originalId, timestamp) {
     var row = { originalId: originalId, timestamp: timestamp }
     enqueuePopupFileJob(["bash", "-c",
       "rm -f \"$1/$2.json\" \"$3/$2\"-*", "--",
       historyDir, NotificationLogic.imageStem(row), imagesDir])
+  }
+
+  function deleteHistoryAppFiles(app) {
+    enqueuePopupFileJob(["bash", "-c",
+      "for file in \"$1\"/*.json; do\n" +
+      "  [[ -e $file ]] || continue\n" +
+      "  jq -e --arg app \"$3\" '.app == $app' \"$file\" >/dev/null 2>&1 || continue\n" +
+      "  name=\"${file##*/}\"\n" +
+      "  rm -f \"$file\" \"$2/${name%.json}\"-*\n" +
+      "done", "--", historyDir, imagesDir, app])
   }
 
   function clearHistoryApp(app) {
@@ -825,11 +894,7 @@ Item {
       if (popup && String(popup.app || "Notification") === target)
         dismissPopup(i)
     }
-    for (var j = 0; j < historyPanelModel.count; j++) {
-      var row = historyPanelModel.get(j)
-      if (row && row.kind === "notification" && row.app === target)
-        deleteHistoryEntryFile(row.originalId, row.timestamp)
-    }
+    deleteHistoryAppFiles(target)
     populateHistoryPanel(visiblePanelRows(target, -1, 0))
   }
 
@@ -843,8 +908,12 @@ Item {
     populateHistoryPanel(visiblePanelRows("", originalId, timestamp))
   }
 
-  function focusHistoryEntry(originalId, timestamp, app) {
-    focusApp({ app: app })
+  function focusHistoryEntry(originalId, timestamp, app, appIcon, exec) {
+    markHistoryEntryRead(originalId, timestamp)
+    var command = String(exec || "")
+    if (command) Util.execDetached(command)
+    else focusApp({ app: app, appIcon: appIcon })
+    closeHistoryPanel()
   }
 
   function clearHistoryPanel() {
@@ -853,7 +922,7 @@ Item {
 
   function replayHistory(raw) {
     var rows = NotificationLogic.historyRows(
-      raw, service.replayCarryOver, NotificationUrgency.Normal, service.historyLimit)
+      raw, service.replayCarryOver, NotificationUrgency.Normal, service.historyReplayLimit)
     service.replayCarryOver = []
 
     // Replaying nothing at all looks like a dead keybinding, so say so.
@@ -1005,21 +1074,27 @@ Item {
     var parsed = NotificationLogic.parseSettings(raw)
     if (parsed.error) console.warn("notifications: settings parse failed:", parsed.errorMessage || "")
 
-    if (parsed.dnd !== null) {
-      service._hydrating = true
-      persisted.doNotDisturb = parsed.dnd
-      service._hydrating = false
-    }
+    service._hydrating = true
+    if (parsed.dnd !== null) persisted.doNotDisturb = parsed.dnd
+    if (parsed.retentionDays !== null) persisted.retentionDays = parsed.retentionDays
+    service._hydrating = false
 
     service.settingsLoaded = true
+    service.pruneHistory(function() {
+      if (service.historyPanelOpen) service.refreshHistoryPanel()
+    })
     // Versions before the history moved into its own directory kept every
     // notification in here. Rewrite once so that dead payload doesn't sit in
     // the file until the next DND toggle happens to clear it.
-    if (parsed.legacy) service.scheduleSettingsSave()
+    if (parsed.legacy || parsed.retentionDays === null) service.scheduleSettingsSave()
   }
 
   function flushSettings() {
-    settingsFile.setText(JSON.stringify({ version: 3, dnd: persisted.doNotDisturb }, null, 2) + "\n")
+    settingsFile.setText(JSON.stringify({
+      version: 4,
+      dnd: persisted.doNotDisturb,
+      retentionDays: persisted.retentionDays
+    }, null, 2) + "\n")
   }
 
   Component.onCompleted: {
@@ -1093,6 +1168,22 @@ Item {
 
     function panelCount(): string {
       return String(service.historyEntryCount)
+    }
+
+    function retention(): string {
+      return String(service.retentionDays)
+    }
+
+    function setRetention(days: string): string {
+      service.setRetentionDays(Number(days))
+      return String(service.retentionDays)
+    }
+
+    function markRead(key: string): string {
+      var parts = String(key || "").split(":")
+      if (parts.length !== 2) return "invalid"
+      service.markHistoryEntryRead(Number(parts[1]), Number(parts[0]))
+      return "ok"
     }
 
     function clearApp(app: string): string {

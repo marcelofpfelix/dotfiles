@@ -26,6 +26,8 @@ BorderSurface {
   property int urgency: 1
   property double timestamp: 0
   property int cornerRadius: 0
+  property bool historyMode: false
+  property bool read: false
 
   // System monospace font injected by the container.
   property string fontFamily: ""
@@ -34,6 +36,7 @@ BorderSurface {
 
   signal closeRequested()
   signal cardClicked()
+  signal markReadRequested()
   // Prefer per-notification media/avatar data, then fall back to the app icon.
   // The `check` flag avoids Qt's missing-texture placeholder for unknown names.
   readonly property string smallIconSource: image.length > 0 ? image : iconSource(appIcon)
@@ -71,6 +74,7 @@ BorderSurface {
   color: Color.notifications.background
   borderSpec: cardBorderSpec
   clip: true
+  opacity: historyMode && read ? 0.65 : 1
 
   HoverHandler { id: hoverTracker }
 
@@ -185,6 +189,33 @@ BorderSurface {
           maximumLineCount: 3
         }
       }
+    }
+  }
+
+  // History-only read control. It shares the hover affordance with delete.
+  Item {
+    anchors.top: parent.top
+    anchors.right: parent.right
+    anchors.topMargin: root.borderTop + Style.space(3)
+    anchors.rightMargin: root.borderRight + Style.space(24)
+    width: Style.space(18)
+    height: Style.space(18)
+    visible: root.historyMode && !root.read && root.hovered
+
+    Text {
+      anchors.centerIn: parent
+      text: String.fromCodePoint(0xF012C)
+      color: readArea.containsMouse ? Color.notifications.text : root.dimColor
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+    }
+
+    MouseArea {
+      id: readArea
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: root.markReadRequested()
     }
   }
 

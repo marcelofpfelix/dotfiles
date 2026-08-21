@@ -92,6 +92,35 @@ PopupWindow {
         }
       }
 
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: Style.spacing.md
+
+        Text {
+          text: "Keep history for"
+          color: Color.muted
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.bodySmall
+        }
+
+        NumberField {
+          value: root.service.retentionDays
+          from: 1
+          to: 3650
+          fieldWidth: Style.space(72)
+          fontFamily: root.fontFamily
+          onModified: function(days) { root.service.setRetentionDays(days) }
+        }
+
+        Text {
+          Layout.fillWidth: true
+          text: "days"
+          color: Color.muted
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.bodySmall
+        }
+      }
+
       Rectangle {
         Layout.fillWidth: true
         implicitHeight: 1
@@ -141,6 +170,9 @@ PopupWindow {
             required property string body
             required property string image
             required property string glyph
+            required property string exec
+            required property bool read
+            required property int unread
             required property int urgency
 
             readonly property bool group: kind === "group"
@@ -188,8 +220,8 @@ PopupWindow {
               }
 
               Text {
-                text: String(row.count)
-                color: Color.muted
+                text: row.unread > 0 ? (String(row.unread) + " unread / " + String(row.count)) : String(row.count)
+                color: row.unread > 0 ? Color.accent : Color.muted
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.bodySmall
               }
@@ -215,8 +247,11 @@ PopupWindow {
               timestamp: row.timestamp
               cornerRadius: Style.cornerRadius
               fontFamily: root.fontFamily
+              historyMode: true
+              read: row.read
+              onMarkReadRequested: root.service.markHistoryEntryRead(row.originalId, row.timestamp)
               onCloseRequested: root.service.removeHistoryEntry(row.originalId, row.timestamp, row.app)
-              onCardClicked: root.service.focusHistoryEntry(row.originalId, row.timestamp, row.app)
+              onCardClicked: root.service.focusHistoryEntry(row.originalId, row.timestamp, row.app, row.appIcon, row.exec)
             }
           }
         }

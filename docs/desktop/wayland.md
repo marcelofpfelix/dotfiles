@@ -62,7 +62,7 @@ Editable today: primary color, density, weather location, DND, tray behavior, hi
 
 `desktop/bin/omarchy-shell` is a local compatibility shim over `qbar`, not a second shell runtime. It supports the Omarchy-style `shell` IPC target for existing local menus, including `omarchy.menu` as the root menu and `omarchy.clock` as the calendar. Direct plugin targets are mapped only when backed by existing local state: panel open/close/toggle methods, notification DND/history/clear, helper-owned media play/pause/status, and lock. Unsupported targets still fail clearly.
 
-Built-in menus share one declarative registry in `ShellConfigData.qml`. Omarchy-compatible clients can inspect them with `omarchy-shell shell listPlugins` and `omarchy-shell shell listShellConfig`; these first-party menu surfaces remain read-only. The same plugin list includes reviewed schema-1 plugins discovered under `~/.config/omarchy/plugins`.
+Built-in menus share one declarative registry in `ShellConfigData.qml`. Omarchy-compatible clients can inspect them with `omarchy-shell shell listPlugins` and `omarchy-shell shell listShellConfig`; these first-party menu surfaces remain read-only. Super+Space > Setup > Plugins exposes enable/disable for toggleable manifests. The same plugin list includes reviewed schema-1 plugins discovered under `~/.config/omarchy/plugins`.
 
 Dynamic compatibility now uses Omarchy's manifest contract for `overlay`, `service`, and `bar-widget` plugins. `~/.config/omarchy/shell.json` is canonical for enablement, bar placement, ordering, and inline widget settings; reviewed third-party plugins remain under `~/.config/omarchy/plugins`. The copied service and bar-widget hosts load those kinds without a second shell process. Generic `panel`, `menu`, and alternate `bar` entry points remain unsupported until their upstream hosts replace local ownership. Third-party QML is unsandboxed and disabled by default.
 
@@ -97,7 +97,7 @@ Bar interactions:
 - Brightness text: left/right-click opens Controls; scroll changes brightness.
 - Network text: left-click opens Network; right-click opens `nmtui`.
 - Clock: left-click opens Calendar.
-- Notifications: the badge counts real visible notifications; left-click opens the plugin-owned history menu grouped by application with per-app icons/counts and per-app/all clearing; right-click clears visible and stored notifications. `qbar notifications-clear` exposes the same clear-all action.
+- Notifications: the badge counts unread visible notifications; left-click opens age-retained history grouped by application with per-app icons/counts, a custom retention-days control, mark-read, app activation, and per-entry/app/all deletion; right-click clears visible and stored notifications. `qbar notifications-clear` exposes the same clear-all action.
 
 ### Codex image workaround
 

@@ -1506,7 +1506,7 @@ and local behavior that must survive replacement.
   - Preserved: Linux menu, workspaces, center Lisbon clock/notifications, Board status, privacy, audioctl, tray, Bluetooth, network, audio, display, power, primary color, and laptop-screen-only ownership through one `marcelof.status-actions` plugin.
   - Validation: QML/JSON checks, live overlay and bar-widget enable/disable persistence, one Quickshell process, and screenshots confirmed one bar, correct menu anchoring, no clipping, and no missing widgets. Ubuntu uses the installed `FiraCode Nerd Font` directly and the menu keeps the requested `nf-md-linux` glyph instead of depending on Omarchy private logo font.
 - [x] P0: Replace root-owned notifications with the copied `omarchy.notifications` service and components.
-  - Completed: upstream now owns the only `NotificationServer`, DND, actions, app focus, crash restoration, per-app icons, and 50-entry disk history. The old notification center/cards were archived.
+  - Completed: upstream now owns the only `NotificationServer`, DND, actions, app focus, crash restoration, per-app icons, age-based disk history, persisted read state, and per-app grouping. The old notification center/cards were archived.
   - Local adapters: Ubuntu focus-helper path, Qt 6.6 reserved-word rename, and laptop-screen-only toast surfaces.
   - Validation: one-server audit, IPC/DND/action smoke, Slack app-icon screenshot, restart persistence, one-output visual confirmation, and live popup/history screenshots without overlap.
 - [ ] P1: Replace `ShellClipboardPanel`, its eager model, and `cliphist-menu watch` with `omarchy.clipboard`.
@@ -1590,3 +1590,35 @@ Source: refreshed `/tmp/omarchy-quattro` branch `quattro` at `ed7bae4`. Compatib
   - Dependencies: dynamic bar and `omarchy.notifications`; install/track `hyprsunset` before enabling night light.
   - Acceptance: copy `omarchy.indicators`, `Dnd`, `NightLight`, `StayAwake`, `ScreenRecording`, and `Reminder`; DND writes silenced notifications to history; night light toggles 4000K/6500K through one service; inactive indicators remain compact and become discoverable on hover.
   - Validation: upstream indicator/night-light tests, DND history, toggle/menu/hotkey parity, one `hyprsunset`, bar screenshots, restart persistence, and idle CPU/RSS comparison.
+
+
+## 2026-08-21 Plugin Management And Notification History
+
+Source: Omarchy Quattro `default/omarchy/omarchy-menu.jsonc`,
+`bin/omarchy-menu-plugin`, the live plugin registry, and the local grouped
+notification center.
+
+- [x] P0: Expose plugin enable/disable from Super+Space.
+  - Completed: copied Omarchy's `Setup > Plugins` hierarchy and selector flow, adapted only unsupported notification/terminal helpers, and limited choices to registry entries that report `canEnable` or `canDisable`.
+  - Acceptance: Super+Space > Setup > Plugins opens Enable plugin and Disable plugin; displayed names include stable plugin IDs; actions persist through `shell.json`.
+  - Validation: shell syntax, live registry JSON, root-menu smoke, plugin selector launch, and Quickshell reload.
+
+- [x] P0: Replace count-based notification deletion with age-based retention and read state.
+  - Completed: history defaults to 30 days, accepts a custom 1-3650 day value in the notification center, prunes JSON and image pairs by timestamp, persists unread/read state, marks a row read without deleting it, deletes individual or per-app history explicitly, and opens/focuses the source app when a card is clicked.
+  - Validation: focused Node regression, inherited Omarchy notification suite, QML lint, live archive/read/delete persistence, corrected notification screenshot crop, and visual inspection.
+
+- [ ] P1: Convert remaining synthetic local menus into real manifests.
+  - Scope: `calendar`, `clipboard`, `controls`, `launcher`, `passmenu`, `personal-dashboard`, `power`, `screen`, `settings`, `tray`, `websearch`, and `work-inbox` currently appear in registry output as fixed compatibility menus and cannot be independently disabled.
+  - Acceptance: each retained customization has one manifest, one owner, and a truthful enable/disable contract; disabling it removes only that feature and its menu route. Replaced QML moves to `archive/`, never deletion.
+  - Dependencies: complete the existing parity tasks before converting clipboard, launcher, power, and calendar.
+  - Validation: registry list, enable-disable-restart round trip per plugin, Super+Space route inventory, one owner/process, and focused menu smoke.
+
+- [ ] P1: Add a unified plugin status panel after synthetic-menu conversion.
+  - Acceptance: one Setup > Plugins view lists all manifests with icon, name, ID, kind, enabled state, and an inline toggle; fixed infrastructure is visible but disabled with a reason. Keep the copied Enable/Disable selectors as scriptable fallback.
+  - Dependency: real manifests for retained customizations; do not build a second plugin registry.
+  - Validation: keyboard and mouse toggles, persistence, disabled-plugin route removal, no shell crash when disabling a loaded panel, and screenshot review.
+
+- [ ] P1: Audit root-menu completeness from plugin metadata.
+  - Acceptance: every enabled public panel is reachable from Super+Space, disabled plugins leave no dead action, and private services/bar-only helpers do not create useless menu rows.
+  - Dependency: manifests must declare whether they expose a public menu action.
+  - Validation: generated registry/menu comparison and full `qs-menu-smoke`.

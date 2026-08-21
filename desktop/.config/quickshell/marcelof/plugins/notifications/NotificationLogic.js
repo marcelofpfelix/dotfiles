@@ -86,6 +86,7 @@ function snapshotOf(notification, timestamp) {
     image: n.image || "",
     glyph: glyphFromHints(n.hints),
     exec: execFromHints(n.hints),
+    read: false,
     urgency: n.urgency,
     expireTimeout: expireTimeout,
     timestamp: timestamp === undefined ? Date.now() : timestamp
@@ -137,6 +138,7 @@ function historyEntry(value, normalUrgency) {
     image: e.image || "",
     glyph: e.glyph || "",
     exec: e.exec || "",
+    read: !!e.read,
     urgency: typeof e.urgency === "number" ? e.urgency : normalUrgency,
     expireTimeout: 0,
     timestamp: e.timestamp || 0
@@ -147,19 +149,29 @@ function historyEntry(value, normalUrgency) {
 // history is a directory of files. Older versions kept `pending`/`past`
 // (and, older still, `entries`) arrays in there; their presence is reported
 // so the service can rewrite the file without the dead payload.
+function normalizedRetentionDays(value, fallback) {
+  var fallbackDays = Number(fallback)
+  if (!isFinite(fallbackDays) || fallbackDays < 1) fallbackDays = 30
+  var days = Number(value)
+  if (!isFinite(days)) return Math.round(fallbackDays)
+  return Math.max(1, Math.min(3650, Math.round(days)))
+}
+
 function parseSettings(raw) {
   var text = String(raw || "").trim()
-  if (!text) return { error: false, dnd: null, legacy: false }
+  if (!text) return { error: false, dnd: null, retentionDays: null, legacy: false }
 
   try {
     var parsed = JSON.parse(text)
     return {
       error: false,
       dnd: parsed && typeof parsed.dnd === "boolean" ? parsed.dnd : null,
+      retentionDays: parsed && parsed.retentionDays !== undefined
+        ? normalizedRetentionDays(parsed.retentionDays, 30) : null,
       legacy: !!(parsed && (parsed.pending || parsed.past || parsed.entries))
     }
   } catch (e) {
-    return { error: true, errorMessage: String(e), dnd: null, legacy: false }
+    return { error: true, errorMessage: String(e), dnd: null, retentionDays: null, legacy: false }
   }
 }
 
@@ -170,7 +182,7 @@ function parseSettings(raw) {
 // (e.g. the restart `omarchy-update` performs). The file exists exactly as
 // long as the popup is on screen: it is written when the toast appears and
 // moved into the history/ subdirectory when the toast expires, is dismissed,
-// or its action is invoked. History is those moved files, newest last-10.
+// or its action is invoked. History is those moved files until age-based cleanup.
 
 function popupEntry(value, normalUrgency) {
   var entry = historyEntry(value, normalUrgency)
@@ -316,7 +328,7 @@ function popupPlacement(barPosition, barClearance, gapsOut) {
 function historyRows(raw, liveRows, normalUrgency, limit) {
   var max = limit === undefined || limit === null ? 10 : Number(limit)
   if (isNaN(max)) max = 10
-  max = Math.max(0, max)
+  if (max >= 0) max = Math.max(0, max)
 
   var out = []
   var seen = {}
@@ -334,7 +346,7 @@ function historyRows(raw, liveRows, normalUrgency, limit) {
   collect(Array.isArray(liveRows) ? liveRows : [])
   collect(parsePopupFiles(raw, normalUrgency))
   out.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0) })
-  return out.slice(0, max)
+  return max < 0 ? out : out.slice(0, max)
 }
 
 if (typeof module !== "undefined") {
@@ -353,6 +365,7 @@ if (typeof module !== "undefined") {
     popupRowChanged: popupRowChanged,
     replacementSnapshot: replacementSnapshot,
     historyEntry: historyEntry,
+    normalizedRetentionDays: normalizedRetentionDays,
     parseSettings: parseSettings,
     historyRows: historyRows,
     popupEntry: popupEntry,

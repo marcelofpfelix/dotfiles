@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# omarchy:summary=Pick a shell plugin to enable or disable
+# omarchy:group=menu
+# omarchy:name=plugin
+# omarchy:args=<enable|disable>
+
+set -euo pipefail
+
+PLUGIN_ICON=$'\U000f0431'
+
+case "${1:-}" in
+  enable) filter='.canEnable and (.enabled | not)' ;;
+  disable) filter='.canDisable and .enabled' ;;
+  *)
+    echo "Usage: omarchy-menu-plugin <enable|disable>" >&2
+    exit 1
+    ;;
+esac
+
+plugins=$(omarchy-plugin-list --json)
+
+# The id rides along as row subtext: it tells same-named plugins apart on
+# screen and comes back with the selection as the key to act on.
+rows=$(jq -r --arg icon "$PLUGIN_ICON" \
+  ". as \$plugins
+   | .[] | select($filter)
+   | \$icon + \"\\t\" + .name + \"\\t\" + .id" <<<"$plugins")
+[[ -n $rows ]] || { notify-send "Plugins" "No plugin to ${1}"; exit 0; }
+
+selection=$(omarchy-menu-select "${1^} plugin" <<<"$rows") || exit 0
+[[ -n $selection ]] || exit 0
+
+id=$(cut -f2 <<<"$selection")
+[[ -n $id ]] || exit 1
+
+"omarchy-plugin-$1" "$id"

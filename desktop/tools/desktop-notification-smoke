@@ -84,6 +84,27 @@ grouped_panel() {
   printf "grouped-panel ok\n"
 }
 
+logic() {
+  local desktop_root logic_file
+  desktop_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+  logic_file="$desktop_root/.config/quickshell/marcelof/plugins/notifications/NotificationLogic.js"
+  node - "$logic_file" <<'JS'
+const logic = require(process.argv[2])
+const assert = require('assert')
+
+assert.strictEqual(logic.snapshotOf({ id: 1 }, 1).read, false)
+assert.strictEqual(logic.historyEntry({ id: 1, read: true }, 1).read, true)
+assert.strictEqual(logic.parseSettings('{"retentionDays":14}').retentionDays, 14)
+assert.strictEqual(logic.normalizedRetentionDays(0, 30), 1)
+assert.strictEqual(logic.normalizedRetentionDays(9999, 30), 3650)
+const rows = ['old', 'new'].map((summary, index) =>
+  logic.serializePopup({ id: index + 1, timestamp: index + 1, summary }, 1)
+).join('\n')
+assert.deepStrictEqual(logic.historyRows(rows, [], 1, -1).map(row => row.summary), ['new', 'old'])
+console.log('notification-logic ok')
+JS
+}
+
 case "${1:-run}" in
   --status|status)
     command -v notify-send >/dev/null 2>&1
@@ -92,7 +113,7 @@ case "${1:-run}" in
     actions_supported
     ;;
   -h|--help)
-    printf "use: desktop-notification-smoke [--status|actions|routing|sticky|count-clear|grouped-panel]\n"
+    printf "use: desktop-notification-smoke [--status|actions|routing|sticky|count-clear|grouped-panel|logic]\n"
     ;;
   run|actions)
     owner
@@ -117,8 +138,11 @@ case "${1:-run}" in
     owner
     grouped_panel
     ;;
+  logic)
+    logic
+    ;;
   *)
-    printf "use: desktop-notification-smoke [--status|actions|routing|sticky|count-clear|grouped-panel]\n" >&2
+    printf "use: desktop-notification-smoke [--status|actions|routing|sticky|count-clear|grouped-panel|logic]\n" >&2
     exit 2
     ;;
 esac
