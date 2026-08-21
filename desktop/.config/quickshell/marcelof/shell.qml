@@ -32,6 +32,10 @@ ShellRoot {
   readonly property var appLibrary: appLibraryService
   readonly property var notificationService: pluginServiceHost.serviceFor("omarchy.notifications")
   readonly property var barConfig: pluginConfig.barConfig
+  function firstPartyServiceFor(id) { return pluginServiceHost.serviceFor(id) }
+  function summon(id, payloadJson) { return root.openShellMenu(id, payloadJson || "{}") }
+  function hide(id) { return root.hideShellMenu(id) }
+  function toggle(id, payloadJson) { return root.toggleShellMenu(id, payloadJson || "{}") }
   readonly property alias bar: dynamicBar
   function menuSize(id) { return shellConfig.menuSize(id, shellSettings.denseUi) }
   function menuWidthFor(id) { return root.menuSize(id).width }
@@ -1118,6 +1122,7 @@ ShellRoot {
           if ("manifest" in item) item.manifest = dynamicPluginEntry.manifest
           if ("pluginRegistry" in item) item.pluginRegistry = pluginRegistry
           if ("barWidgetRegistry" in item) item.barWidgetRegistry = barWidgetRegistry
+          if ("service" in item) item.service = pluginServiceHost.serviceFor(dynamicPluginEntry.pluginId)
           root.registerDynamicPluginLoader(dynamicPluginEntry.pluginId, this)
         }
         onStatusChanged: {

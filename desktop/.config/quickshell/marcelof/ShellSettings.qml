@@ -13,5 +13,5 @@ JsonAdapter {
   property string weatherLocation: "Palmela, Portugal"
   property var favoriteAppIds: []
   property var hiddenAppIds: []
-  property var enabledPluginIds: ["marcelof.board-dashboard", "marcelof.board-status", "marcelof.media-controls", "marcelof.network-tools", "omarchy.audio", "omarchy.bluetooth", "omarchy.network"]
+  property var enabledPluginIds: ["marcelof.board-dashboard", "marcelof.board-status", "marcelof.media-controls", "marcelof.network-tools", "omarchy.audio", "omarchy.bluetooth", "omarchy.media", "omarchy.network"]
 }

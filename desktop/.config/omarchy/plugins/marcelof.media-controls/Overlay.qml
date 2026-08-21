@@ -12,6 +12,7 @@ Item {
   property var targetScreen: null
   property var shell: null
   property var manifest: null
+  property var service: null
   property bool opened: false
   property string audioStatus: ""
   property bool noiseRunning: false
@@ -20,8 +21,9 @@ Item {
   property string savedNoise: "none"
   property string savedMusic: "none"
 
-  readonly property var activePlayer: mediaService.activePlayer
-  readonly property var sourcePlayers: mediaService.sourcePlayers
+  readonly property var mediaService: service
+  readonly property var activePlayer: mediaService ? mediaService.activePlayer : null
+  readonly property var sourcePlayers: mediaService ? mediaService.sourcePlayers : []
   readonly property color background: Color.menu.background
   readonly property color foreground: Color.menu.text
   readonly property color subtle: Color.muted
@@ -72,13 +74,9 @@ Item {
   }
 
   function runPlayerAction(action) {
+    if (!mediaService) return
     mediaService.runAction(action, false,
       activePlayer ? mediaService.playerKey(activePlayer) : "")
-  }
-
-  MediaService {
-    id: mediaService
-    shell: root.shell
   }
 
   Process {

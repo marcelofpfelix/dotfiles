@@ -23,6 +23,7 @@ QtObject {
         right: [
           { id: "marcelof.board-status" },
           { id: "marcelof.status-actions", kind: "privacy" },
+          { id: "omarchy.media" },
           { id: "marcelof.status-actions", kind: "audioctl" },
           { id: "omarchy.tray" },
           { id: "omarchy.bluetooth" },

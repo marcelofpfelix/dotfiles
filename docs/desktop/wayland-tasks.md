@@ -1524,9 +1524,10 @@ and local behavior that must survive replacement.
   - Validation: launch/click/Enter, favorite/hide/unhide, ranking fixture, cold/warm latency, screenshot, and archived old QML.
   - Completed: `qbar launcher` and `Win+D` now open the copied `omarchy.menu` Apps route. `AppLibrary` owns the existing MRU x MFU, favorites, reversible hide, launch, and fuzzy-search behavior; the standalone launcher panel/service and its Hyprland rule are archived. The copied menu suite, QML lint, live IPC state, hidden-app round trip, and launcher screenshot pass.
 
-- [ ] P1: Add Omarchy's media service/bar widget for ordinary MPRIS players while keeping `audioctl` as the separate saved music/noise plugin.
+- [x] P1: Add Omarchy's media service/bar widget for ordinary MPRIS players while keeping `audioctl` as the separate saved music/noise plugin.
   - Boundary: Omarchy media owns browser/player metadata and transport; `audioctl` owns only its launched MPV/noise processes. Neither may pause Meet, calls, or unrelated PipeWire streams.
   - Validation: browser media, MPV, saved noise plus music, Meet safety fixture, restart restore, and no duplicate player controls.
+  - Completed: promoted the exact copied Omarchy media service/model and bar widget into the shared first-party service host, injected that single service into the existing `marcelof.media-controls` overlay, and archived its duplicate embedded service/model. Live IPC sees Brave while `playerctl -l` does not expose either helper-owned MPV/noise process; `audioctl status` retains both saved processes independently. Upstream model tests, QML lint, plugin discovery, service IPC, and both media menu smoke checks pass without issuing a browser/Meet transport command.
 
 - [ ] P1: Replace the root wallpaper renderer with `omarchy.background` while retaining the copied Image Picker and local wallpaper directories.
   - Adapt private Omarchy theme commands to `wallpaper-wayland`; keep one renderer and state file. Do not import theme switching merely for wallpaper rendering.
