@@ -12,8 +12,8 @@ BarWidget {
   readonly property bool dnd: host && host.notificationService ? host.notificationService.doNotDisturb : false
   readonly property string label: {
     if (!host) return ""
-    if (kind === "clock") return "� " + host.lisbonClockText
-    if (kind === "notifications") return dnd ? "ۀܛ" : (notificationCount > 0 ? "ۀܚ " + notificationCount : "ۀܜ")
+    if (kind === "clock") return String.fromCodePoint(0xF0954) + " " + host.lisbonClockText
+    if (kind === "notifications") return dnd ? String.fromCodePoint(0xF009B) : (notificationCount > 0 ? String.fromCodePoint(0xF009A) + " " + notificationCount : String.fromCodePoint(0xF009C))
     if (kind === "privacy") return host.privacyBarText()
     if (kind === "audioctl") return host.audioIconText
     return ""
