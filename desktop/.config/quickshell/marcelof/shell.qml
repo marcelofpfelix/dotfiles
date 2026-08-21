@@ -545,7 +545,10 @@ ShellRoot {
   }
 
   function closeTransientPanels() {
-    if (root.notificationService) root.notificationService.clearPopups()
+    if (root.notificationService) {
+      root.notificationService.clearPopups()
+      root.notificationService.closeHistoryPanel()
+    }
     root.hideLauncher()
     wifiQrOverlay.close()
     imagePicker.close()
@@ -842,7 +845,7 @@ ShellRoot {
   }
 
   function toggleNotifications() {
-    if (root.notificationService) root.notificationService.showRecentHistory()
+    if (root.notificationService) root.notificationService.toggleHistoryPanel()
   }
 
   function updateAudioStatus(output) {

@@ -97,7 +97,7 @@ Bar interactions:
 - Brightness text: left/right-click opens Controls; scroll changes brightness.
 - Network text: left-click opens Network; right-click opens `nmtui`.
 - Clock: left-click opens Calendar.
-- Notifications: the badge counts real visible/replayed notifications and ignores the empty-history placeholder; left-click opens history, right-click clears visible and stored notifications. `qbar notifications-clear` exposes the same action.
+- Notifications: the badge counts real visible notifications; left-click opens the plugin-owned history menu grouped by application with per-app icons/counts and per-app/all clearing; right-click clears visible and stored notifications. `qbar notifications-clear` exposes the same clear-all action.
 
 ### Codex image workaround
 

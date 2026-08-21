@@ -100,6 +100,20 @@ Item {
     return count
   }
 
+  property bool historyPanelOpen: false
+  property bool historyPanelLoading: false
+  property bool historyPanelRefreshPending: false
+  property int historyEntryCount: 0
+  property alias historyPanelModel: historyPanelModel
+  ListModel { id: historyPanelModel }
+
+  Connections {
+    target: popupModel
+    function onCountChanged() {
+      if (service.historyPanelOpen) service.refreshHistoryPanel()
+    }
+  }
+
   // How many notifications the history directory keeps, and therefore how
   // many `showHistory` can replay.
   readonly property int historyLimit: 50
@@ -364,6 +378,8 @@ Item {
   function clearAll() {
     clearPopups()
     clearHistory()
+    historyPanelModel.clear()
+    historyEntryCount = 0
   }
 
   // Run the popup's click action, then dismiss. Omarchy's own toasts carry the
@@ -494,6 +510,8 @@ Item {
         }
       }
       service.runNextPopupFileJob()
+      if (service.popupFileQueue.length === 0 && !readHistoryProc.running && service.historyPanelOpen)
+        service.refreshHistoryPanel()
     }
   }
 
@@ -687,6 +705,152 @@ Item {
     return rows
   }
 
+  function panelRow(entry) {
+    return {
+      kind: "notification",
+      app: String(entry.app || "Notification"),
+      appIcon: String(entry.appIcon || ""),
+      count: 0,
+      originalId: Number(entry.originalId || entry.id || -1),
+      timestamp: Number(entry.timestamp || 0),
+      summary: String(entry.summary || ""),
+      body: String(entry.body || ""),
+      image: String(entry.image || ""),
+      glyph: String(entry.glyph || ""),
+      urgency: Number(entry.urgency || NotificationUrgency.Normal)
+    }
+  }
+
+  function populateHistoryPanel(rows) {
+    historyPanelModel.clear()
+    historyEntryCount = rows.length
+
+    var groups = ({})
+    var order = []
+    for (var i = 0; i < rows.length; i++) {
+      var row = panelRow(rows[i])
+      var key = "$" + row.app
+      if (!groups[key]) {
+        groups[key] = { icon: row.appIcon, rows: [] }
+        order.push(row.app)
+      } else if (!groups[key].icon && row.appIcon) {
+        groups[key].icon = row.appIcon
+      }
+      groups[key].rows.push(row)
+    }
+
+    for (var g = 0; g < order.length; g++) {
+      var app = order[g]
+      var group = groups["$" + app]
+      historyPanelModel.append({
+        kind: "group",
+        app: app,
+        appIcon: group.icon,
+        count: group.rows.length,
+        originalId: -1,
+        timestamp: 0,
+        summary: "",
+        body: "",
+        image: "",
+        glyph: "",
+        urgency: NotificationUrgency.Normal
+      })
+      for (var r = 0; r < group.rows.length; r++)
+        historyPanelModel.append(group.rows[r])
+    }
+
+    historyPanelLoading = false
+  }
+
+  function loadHistoryPanel(raw) {
+    if (!historyPanelOpen) return
+    var rows = NotificationLogic.historyRows(
+      raw, liveRowsForReplay(), NotificationUrgency.Normal, historyLimit)
+    populateHistoryPanel(rows)
+  }
+
+  function refreshHistoryPanel() {
+    if (!historyPanelOpen) return
+    if (panelHistoryProc.running) {
+      historyPanelRefreshPending = true
+      return
+    }
+    historyPanelRefreshPending = false
+    historyPanelLoading = historyPanelModel.count === 0
+    panelHistoryProc.command = ["bash", "-c",
+      "awk 1 \"$1\"/*.json 2>/dev/null || true", "--", historyDir]
+    panelHistoryProc.running = true
+  }
+
+  function openHistoryPanel() {
+    historyPanelOpen = true
+    refreshHistoryPanel()
+  }
+
+  function closeHistoryPanel() {
+    historyPanelOpen = false
+    historyPanelModel.clear()
+    historyEntryCount = 0
+  }
+
+  function toggleHistoryPanel() {
+    if (historyPanelOpen) closeHistoryPanel()
+    else openHistoryPanel()
+  }
+
+  function visiblePanelRows(excludedApp, excludedId, excludedTimestamp) {
+    var rows = []
+    for (var i = 0; i < historyPanelModel.count; i++) {
+      var row = historyPanelModel.get(i)
+      if (!row || row.kind !== "notification") continue
+      if (excludedApp && row.app === excludedApp) continue
+      if (excludedId >= 0 && row.originalId === excludedId && row.timestamp === excludedTimestamp) continue
+      rows.push(panelRow(row))
+    }
+    return rows
+  }
+
+  function deleteHistoryEntryFile(originalId, timestamp) {
+    var row = { originalId: originalId, timestamp: timestamp }
+    enqueuePopupFileJob(["bash", "-c",
+      "rm -f \"$1/$2.json\" \"$3/$2\"-*", "--",
+      historyDir, NotificationLogic.imageStem(row), imagesDir])
+  }
+
+  function clearHistoryApp(app) {
+    var target = String(app || "")
+    if (!target) return
+    for (var i = popupModel.count - 1; i >= 0; i--) {
+      var popup = popupModel.get(i)
+      if (popup && String(popup.app || "Notification") === target)
+        dismissPopup(i)
+    }
+    for (var j = 0; j < historyPanelModel.count; j++) {
+      var row = historyPanelModel.get(j)
+      if (row && row.kind === "notification" && row.app === target)
+        deleteHistoryEntryFile(row.originalId, row.timestamp)
+    }
+    populateHistoryPanel(visiblePanelRows(target, -1, 0))
+  }
+
+  function removeHistoryEntry(originalId, timestamp, app) {
+    for (var i = popupModel.count - 1; i >= 0; i--) {
+      var popup = popupModel.get(i)
+      if (popup && popup.originalId === originalId && popup.timestamp === timestamp)
+        dismissPopup(i)
+    }
+    deleteHistoryEntryFile(originalId, timestamp)
+    populateHistoryPanel(visiblePanelRows("", originalId, timestamp))
+  }
+
+  function focusHistoryEntry(originalId, timestamp, app) {
+    focusApp({ app: app })
+  }
+
+  function clearHistoryPanel() {
+    clearAll()
+  }
+
   function replayHistory(raw) {
     var rows = NotificationLogic.historyRows(
       raw, service.replayCarryOver, NotificationUrgency.Normal, service.historyLimit)
@@ -719,6 +883,19 @@ Item {
       // that has since been handed their old id.
       service.restoredPopups[NotificationLogic.popupFileName(rows[i])] = true
       popupModel.append(rows[i])
+    }
+  }
+
+  Process {
+    id: panelHistoryProc
+    running: false
+    onExited: {
+      if (service.historyPanelRefreshPending)
+        service.refreshHistoryPanel()
+    }
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: service.loadHistoryPanel(text)
     }
   }
 
@@ -895,6 +1072,34 @@ Item {
       return service.showRecentHistory()
     }
 
+    function toggleHistory(): string {
+      service.toggleHistoryPanel()
+      return service.historyPanelOpen ? "open" : "closed"
+    }
+
+    function openHistory(): string {
+      service.openHistoryPanel()
+      return "open"
+    }
+
+    function closeHistory(): string {
+      service.closeHistoryPanel()
+      return "closed"
+    }
+
+    function historyState(): string {
+      return service.historyPanelOpen ? "open" : "closed"
+    }
+
+    function panelCount(): string {
+      return String(service.historyEntryCount)
+    }
+
+    function clearApp(app: string): string {
+      service.clearHistoryApp(app)
+      return "ok"
+    }
+
     // `clear` forgets the recorded history; the toasts on screen stay put.
     function clear(): string {
       service.clearHistory()
@@ -962,6 +1167,11 @@ Item {
     onNotification: function(notification) {
       service.handleNotification(notification)
     }
+  }
+
+  NotificationCenter {
+    service: service
+    shell: service.shell
   }
 
   // -------------------------------------------------------------- popup UI
