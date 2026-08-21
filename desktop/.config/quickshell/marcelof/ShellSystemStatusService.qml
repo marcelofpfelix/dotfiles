@@ -7,18 +7,7 @@ Item {
   required property var shellRoot
   required property var shellConfig
 
-  property alias privacyHandle: privacyStatusRefresh
-  property alias networkHandle: networkStatusRefresh
 
-  function refreshControls() {
-    refreshBrightness()
-    refreshKbdBrightness()
-    refreshNetwork()
-    refreshPower()
-    refreshFan()
-    refreshInhibit()
-    refreshPrivacy()
-  }
 
   function refreshBrightness() { brightnessRefresh.running = true }
   function refreshKbdBrightness() { kbdBrightnessRefresh.running = true }

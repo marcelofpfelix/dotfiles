@@ -91,6 +91,10 @@ Item {
     root.appsChanged()
   }
 
+  function refreshMru() {
+    if (!mruLoad.running) mruLoad.running = true
+  }
+
   function updateMru(output) {
     var lines = String(output || "").split(/\n+/)
     var seen = ({})
@@ -185,6 +189,13 @@ Item {
     var name = dot > 0 ? file.slice(0, dot) : file
     if (name && root.pendingIconIndex[name] === undefined)
       root.pendingIconIndex[name] = value
+  }
+
+  Process {
+    id: mruLoad
+    command: root.shellConfig.launcherMruLoad()
+    running: true
+    stdout: StdioCollector { onStreamFinished: root.updateMru(this.text) }
   }
 
   Process {

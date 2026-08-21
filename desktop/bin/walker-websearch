@@ -2,6 +2,12 @@
 set -euo pipefail
 
 export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:/nix/var/nix/profiles/default/bin:$PATH"
+choose_site=0
+if [[ ${1:-} == --choose-site ]]; then
+  choose_site=1
+  shift
+fi
+
 . "${HOME}/lib/lib_picker.sh"
 
 site="google"
@@ -20,11 +26,16 @@ fi
 while getopts ":s:h" opt; do
   case "$opt" in
     s) site="$OPTARG" ;;
-    h) printf "usage: %s [-s site] [query]\n" "${0##*/}"; exit 0 ;;
+    h) printf "usage: %s [--choose-site] [-s site] [query]\n" "${0##*/}"; exit 0 ;;
     *) exit 2 ;;
   esac
 done
 shift $((OPTIND - 1))
+
+if (( choose_site )); then
+  selection=$(printf '%s\n' $'󰊭\tGoogle\tgoogle' $'󰗃\tYouTube\tyoutube' $'󰊤\tGitHub\tgithub' $'󰌃\tJira\tjira' $'󰧮\tGuru\tguru' $'󰘂\tCall lookup\tcall' | picker_choose "Search site") || exit 0
+  site=${selection##*$'\t'}
+fi
 
 if [[ $# -gt 0 ]]; then
   exec websearch -s "$site" "$*"

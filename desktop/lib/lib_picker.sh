@@ -4,6 +4,7 @@ picker_choose() {
     local prompt="${1:-Select}"
     local backend="${PICKER_BACKEND:-auto}"
     case "$backend" in
+        quickshell) omarchy-menu-select "$prompt" ;;
         walker) walker --dmenu -p "$prompt" ;;
         terminal|term) gum filter --placeholder "$prompt" ;;
         auto)
@@ -26,6 +27,7 @@ picker_input() {
     local prompt="${1:-Input}"
     local backend="${PICKER_BACKEND:-auto}"
     case "$backend" in
+        quickshell) omarchy-menu-select --input "$prompt" ;;
         walker) printf "" | walker --dmenu -p "$prompt" ;;
         terminal|term) gum input --placeholder "$prompt" ;;
         auto)
@@ -63,7 +65,7 @@ picker_status() {
         printf 'wayland no\n'
     fi
 
-    for cmd in walker gum fzf; do
+    for cmd in omarchy-menu-select walker gum fzf; do
         if command -v "$cmd" >/dev/null 2>&1; then
             printf 'ok   %s\n' "$cmd"
             picker_ok=1

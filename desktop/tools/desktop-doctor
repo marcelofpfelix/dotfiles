@@ -457,6 +457,7 @@ check_shell_layout_contract() {
     case "$menu" in
       root-menu|power-confirm) continue ;;
       launcher) grep -Fq '"provider":"apps"' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
+      controls) grep -Fq '"status":' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
       media-controls) grep -Fq 'qbar shell toggle marcelof.media-controls' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
       network-tools) grep -Fq 'qbar shell toggle marcelof.network-tools' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
       *) grep -Fq "\$HOME/bin/qbar $menu" "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;

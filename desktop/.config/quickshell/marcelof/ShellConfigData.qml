@@ -10,7 +10,6 @@ QtObject {
   readonly property string textSeparator: " / "
   readonly property string boardQuickshellSurface: "quickshell-bar"
   readonly property string defaultWallpaperUrl: fileUrlPrefix + home + "/.local/share/backgrounds/bkg2.png"
-  readonly property string defaultWebSearchSite: "google"
   readonly property string defaultPassUserKey: "username"
   readonly property string statusAction: "status"
   readonly property string hibernateAction: "hibernate"
@@ -75,14 +74,6 @@ QtObject {
     path: "Path"
   })
 
-  readonly property var webSearchSites: [
-    { key: defaultWebSearchSite, label: "Google", url: "https://www.google.com/search?q=" },
-    { key: "youtube", label: "YouTube", url: "https://www.youtube.com/results?search_query=" },
-    { key: "github", label: "GitHub", url: "https://github.com/search?q=org%3Ateam-telnyx+" },
-    { key: "jira", label: "Jira", url: "https://telnyx.atlassian.net/secure/QuickSearch.jspa?searchString=" },
-    { key: "guru", label: "Guru", url: "https://app.getguru.com/search?q=" },
-    { key: "call", label: "Call", url: "http://search-tools.internal.telnyx.com/#!/session-lookup?sip_call_id=" }
-  ]
 
   readonly property var menuIds: ({
     calendar: "calendar",
@@ -136,10 +127,10 @@ QtObject {
 
   readonly property var menuRegistry: ({
     "root-menu": { toggle: "toggleRootMenu", hide: "hideRootMenu" },
-    passmenu: { openProperty: "passMenuOpen", toggle: "togglePassmenu" },
-    websearch: { openProperty: "webSearchOpen", toggle: "toggleDefaultWebSearch" },
+    passmenu: { toggle: "openPassmenuMenu", hide: "hideRootMenu" },
+    websearch: { toggle: "openWebSearchMenu", hide: "hideRootMenu" },
     tray: { openProperty: "trayManageOpen" },
-    controls: { openProperty: "controlPanelOpen", refresh: "refreshControls" },
+    controls: { toggle: "toggleControlPanel", hide: "hideRootMenu" },
     emojis: { toggle: "toggleEmojis", hide: "hideEmojis" },
     screen: { openProperty: "screenPanelOpen", refresh: "refreshScreenState" },
     calendar: { openProperty: "calendarOpen", refresh: "refreshCalendar" },
@@ -147,7 +138,7 @@ QtObject {
     "personal-dashboard": { toggle: "togglePersonalDashboard", hide: "hidePersonalDashboard" },
     settings: { openProperty: "settingsOpen" },
     notifications: { toggle: "toggleNotifications" },
-    power: { openProperty: "powerMenuOpen", refresh: "refreshPower", hide: "hidePowerMenu" }
+    power: { toggle: "togglePowerMenu", hide: "hidePowerSurfaces" }
   })
 
   readonly property var actionRegistry: ({

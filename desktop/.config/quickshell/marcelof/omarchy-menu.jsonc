@@ -20,7 +20,6 @@
   "status.bluetooth": {"icon":"\uDB80\uDCAF","label":"Bluetooth","action":"$HOME/bin/qbar bluetooth"},
   "status.audio": {"icon":"󰕾","label":"Audio mixer","aliases":["volume"],"action":"$HOME/bin/qbar media"},
   "status.battery": {"icon":"󰁹","label":"Battery and power","aliases":["power profile"],"action":"$HOME/bin/qbar battery"},
-  "status.controls": {"icon":"󰒓","label":"Controls","action":"$HOME/bin/qbar controls"},
   "status.display": {"icon":"󰒓","label":"Displays","action":"$HOME/bin/qbar display"},
   "status.network": {"icon":"󰖩","label":"Network","aliases":["wifi"],"action":"$HOME/bin/qbar network"},
   "status.network-tools": {"icon":"󰛳","label":"Network details","aliases":["public ip","reconnect"],"action":"$HOME/bin/qbar shell toggle marcelof.network-tools"},

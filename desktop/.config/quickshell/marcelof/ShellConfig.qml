@@ -8,7 +8,6 @@ QtObject {
   readonly property string boardConfig: configData.boardConfig
   readonly property string stateDir: configData.stateDir
   readonly property string defaultWallpaperUrl: configData.defaultWallpaperUrl
-  readonly property string defaultWebSearchSite: configData.defaultWebSearchSite
   readonly property string defaultPassUserKey: configData.defaultPassUserKey
   readonly property string fileUrlPrefix: configData.fileUrlPrefix
   readonly property string textSeparator: configData.textSeparator
@@ -19,7 +18,6 @@ QtObject {
   readonly property string networkUnavailableText: configData.networkUnavailableText
   readonly property string networkWifiToggleAction: configData.networkWifiToggleAction
   readonly property var networkTrayKeywords: configData.networkTrayKeywords
-  readonly property var webSearchSites: configData.webSearchSites
   readonly property var batteryPolicy: configData.batteryPolicy
   readonly property var notificationToastPolicy: configData.notificationToastPolicy
   readonly property var menuIds: configData.menuIds
@@ -62,8 +60,8 @@ QtObject {
   function portalStatus() { return ["sh", "-c", "printf 'hyprland '; systemctl --user is-active xdg-desktop-portal-hyprland.service 2>/dev/null || printf unavailable; printf ', portal '; systemctl --user is-active xdg-desktop-portal.service 2>/dev/null || printf unavailable"] }
   function launcherMruLoad() { return ["sh", "-c", "cat \"${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof/launcher-mru.txt\" 2>/dev/null || true"] }
   function launcherMruSave(cache) { return ["sh", "-c", "dir=${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof; file=$dir/launcher-mru.txt; tmp=$file.tmp; mkdir -p \"$dir\"; printf %s " + shellQuote(cache) + " > \"$tmp\" && mv \"$tmp\" \"$file\""] }
-  function passList(backend) { return ["sh", "-c", shellQuote(backend) + " ls --flat 2>/dev/null"] }
-  function passAction(mode, userKey, backend, entry) { return ["passmenu-action", mode, userKey, backend, entry] }
+  function passMenu(mode, userKey, backend) { return [bin("passmenu-action"), "menu", mode || "copy", userKey || "username", backend || "gopass"] }
+  function webSearchMenu() { return ["env", "PICKER_BACKEND=quickshell", bin("walker-websearch"), "--choose-site"] }
   function gtkLaunch(id) {
     return ["sh", "-c", "id=" + shellQuote(id) + "; base=${id##*/}; stem=${base%.desktop}; gtk-launch \"$id\" 2>/dev/null || gtk-launch \"${id%.desktop}\" 2>/dev/null || gtk-launch \"$id.desktop\" 2>/dev/null || gtk-launch \"$base\" 2>/dev/null || gtk-launch \"$stem\" 2>/dev/null || gtk-launch \"$stem.desktop\""]
   }

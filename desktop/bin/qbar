@@ -228,7 +228,7 @@ case "${1:-status}" in
   keybindings|keys) keybindings_menu ;;
   clipboard) menu_toggle omarchy.clipboard ;;
   emoji|emojis) menu_toggle emojis ;;
-  passmenu) ipc_target passmenu open copy username gopass ;;
+  passmenu) menu_toggle passmenu ;;
   close-panels) ipc_target shell closePanels ;;
   *) usage; exit 2 ;;
 esac

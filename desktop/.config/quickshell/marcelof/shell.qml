@@ -48,7 +48,7 @@ ShellRoot {
     if (rootMenu.opened && rootMenu.activeMenu === "apps") rootMenu.close()
     else {
       root.closeTransientPanels()
-      menuDataService.refreshLauncherMru()
+      appLibraryService.refreshMru()
       rootMenu.open('{"menu":"apps"}')
     }
   }
@@ -57,29 +57,6 @@ ShellRoot {
     if (rootMenu.opened && rootMenu.activeMenu === "apps") rootMenu.close()
   }
 
-  function shellQuote(value) {
-    return shellConfig.shellQuote(value)
-  }
-
-  function webSearchSiteUrl(site) {
-    for (let i = 0; i < root.webSearchSites.length; i++) {
-      if (root.webSearchSites[i].key === site)
-        return root.webSearchSites[i].url
-    }
-    return root.webSearchSites[0].url
-  }
-
-  function openUrlCommand(url) {
-    return shellConfig.openUrl(url)
-  }
-
-  function openWebSearch(site) {
-    webSearchPanel.openSearch(site)
-  }
-
-  function toggleWebSearch(site) {
-    webSearchPanel.toggleSearch(site)
-  }
 
   function showOsd(icon, message, value, maxValue, progressText, duration) {
     const payload = JSON.stringify({
@@ -134,111 +111,15 @@ ShellRoot {
     else root.showOsd("keyboard", root.kbdBrightnessText || "Keyboard brightness")
   }
 
-  function runWebSearch() {
-    webSearchPanel.runSearch()
-  }
 
   function toggleKeybindings() {
     root.closeTransientPanels()
     Quickshell.execDetached(shellConfig.qs("keybindings"))
   }
 
-  function clipboardScore(entry, query) {
-    const q = query.trim().toLowerCase()
-    const text = String(entry || "").toLowerCase()
-    if (q.length === 0)
-      return 0
-    const terms = q.split(/\s+/)
-    for (let i = 0; i < terms.length; i++) {
-      const term = terms[i]
-      if (term.length > 0 && text.indexOf(term) < 0)
-        return -1
-    }
-    const idx = text.indexOf(q)
-    if (idx === 0) return 10000 - text.length
-    if (idx > 0) return 8000 - idx * 10 - text.length
-    return 5000 - text.length
-  }
-
-  function rebuildPassModel() {
-    const query = passMenuPanel.searchText
-    const rows = []
-    for (let i = 0; i < root.passEntries.length; i++) {
-      const entry = String(root.passEntries[i] || "")
-      if (entry.length === 0)
-        continue
-      const score = root.clipboardScore(entry, query)
-      if (score < 0)
-        continue
-      rows.push({ entry: entry, score: score, key: entry.toLowerCase() })
-    }
-    rows.sort((a, b) => {
-      if (query.trim().length > 0 && a.score !== b.score)
-        return b.score - a.score
-      return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)
-    })
-    passModel.clear()
-    const count = Math.min(rows.length, 250)
-    for (let i = 0; i < count; i++)
-      passModel.append({ path: rows[i].entry })
-    if (passMenuPanel) {
-      passMenuPanel.currentIndex = passModel.count > 0 ? 0 : -1
-      Qt.callLater(() => passMenuPanel.positionCurrent())
-    }
-  }
-
-  function updatePassEntries(output) {
-    const lines = String(output || "").split(/\n+/)
-    const entries = []
-    for (let i = 0; i < lines.length; i++) {
-      const entry = lines[i].trim()
-      if (entry.length > 0)
-        entries.push(entry)
-    }
-    root.passEntries = entries
-    root.rebuildPassModel()
-  }
-
-  function passModeLabel() {
-    if (root.passMode === "type-pass") return "Type password"
-    if (root.passMode === "type-user") return "Type username"
-    if (root.passMode === "type-name") return "Type entry name"
-    return "Copy password"
-  }
-
-  function openPassmenu(mode, userKey, backend) {
-    root.closeTransientPanels()
-    root.passMode = String(mode || shellConfig.actions.copy)
-    root.passUserKey = String(userKey || shellConfig.defaultPassUserKey)
-    root.passBackend = String(backend || "gopass")
-    root.passMenuOpen = true
-    passMenuPanel.searchText = ""
-    root.passEntries = []
-    passModel.clear()
-    menuDataService.refreshPassEntries()
-    passMenuPanel.focusSearch()
-  }
-
-  function runPassEntry() {
-    if (!root.passMenuOpen || passMenuPanel.currentIndex < 0 || passMenuPanel.currentIndex >= passModel.count)
-      return
-    const entry = passModel.get(passMenuPanel.currentIndex).path
-    root.passMenuOpen = false
-    Quickshell.execDetached(shellConfig.passAction(root.passMode, root.passUserKey, root.passBackend, entry))
-  }
-
-  property var passEntries: []
-  property bool passMenuOpen: false
-  property string passMode: shellConfig.actions.copy
-  property string passUserKey: shellConfig.defaultPassUserKey
-  property string passBackend: "gopass"
   readonly property bool rootMenuOpen: rootMenu.opened
   property bool powerMenuOpen: false
-  property bool webSearchOpen: false
-  property string webSearchSite: shellConfig.defaultWebSearchSite
-  readonly property var webSearchSites: shellConfig.webSearchSites
 
-  function updateLauncherMru(output) { appLibraryService.updateMru(output) }
   function rebuildLauncher() { appLibraryService.appsChanged() }
   function toggleLauncherFavoriteById(id) { appLibraryService.toggleFavoriteById(id) }
   function hideLauncherById(id) { appLibraryService.hideById(id) }
@@ -251,7 +132,6 @@ ShellRoot {
   property string sessionConfirmLabel: ""
   property string sessionConfirmIcon: ""
   property var sessionConfirmCommand: []
-  property bool controlPanelOpen: false
   property bool screenPanelOpen: false
   property bool calendarOpen: false
   property bool workInboxOpen: false
@@ -572,6 +452,10 @@ ShellRoot {
     if (menu === "bar") return !root.barHidden
     if (menu === "launcher") return rootMenu.opened && rootMenu.activeMenu === "apps"
     if (menu === shellConfig.menuIds.rootMenu) return rootMenu.opened
+    if (menu === shellConfig.menuIds.controls) return rootMenu.opened && rootMenu.activeMenu === "status"
+    if (menu === shellConfig.menuIds.power) return root.powerMenuOpen || (rootMenu.opened && rootMenu.activeMenu === "system")
+    if (menu === shellConfig.menuIds.passmenu) return rootMenu.opened && rootMenu.dmenuActive && rootMenu.dmenuPrompt === "Passwords"
+    if (menu === shellConfig.menuIds.websearch) return rootMenu.opened && rootMenu.dmenuActive && (rootMenu.dmenuPrompt === "Search site" || rootMenu.dmenuPrompt === "Search")
     if (menu === shellConfig.menuIds.emojis) return emojiOverlay.opened
     if (menu === shellConfig.menuIds.wifiQr) return wifiQrOverlay.opened
     const entry = root.shellMenuEntry(menu)
@@ -661,7 +545,7 @@ ShellRoot {
       root.closeTransientPanels()
       root.toggleLauncher()
       break
-    case "web": root.toggleWebSearch(shellConfig.defaultWebSearchSite); break
+    case "web": root.openWebSearchMenu(); break
     case "keys": root.toggleKeybindings(); break
     case "clipboard": root.toggleShellMenu(shellConfig.pluginIds.clipboard, "{}"); break
     case "wallpaper": root.toggleWallpaperPanel(); break
@@ -700,29 +584,34 @@ ShellRoot {
     rootMenu.open(payloadJson || "{}")
   }
 
-  function togglePassmenu() {
-    if (root.passMenuOpen)
-      root.passMenuOpen = false
-    else
-      root.openPassmenu(shellConfig.actions.copy, shellConfig.defaultPassUserKey, "gopass")
+  function openPassmenuMenu() {
+    if (root.shellMenuOpen(shellConfig.menuIds.passmenu)) { root.hideRootMenu(); return }
+    root.closeTransientPanels()
+    Quickshell.execDetached(shellConfig.passMenu(shellConfig.actions.copy, shellConfig.defaultPassUserKey, "gopass"))
   }
 
-  function toggleDefaultWebSearch() { root.toggleWebSearch(shellConfig.defaultWebSearchSite) }
+  function showWebSearchMenu() {
+    if (root.shellMenuOpen(shellConfig.menuIds.websearch)) return
+    root.closeTransientPanels()
+    Quickshell.execDetached(shellConfig.webSearchMenu())
+  }
 
-  function refreshControls() { systemStatusService.refreshControls() }
+  function openWebSearchMenu() {
+    if (root.shellMenuOpen(shellConfig.menuIds.websearch)) { root.hideRootMenu(); return }
+    root.showWebSearchMenu()
+  }
+
   function refreshNetwork() { systemStatusService.refreshNetwork() }
   function refreshPower() { systemStatusService.refreshPower() }
   function refreshCalendar() { calendarService.refreshAll() }
   function refreshWorkInbox() { dashboardService.refreshWorkInbox() }
   function refreshPersonalDashboard() { dashboardService.refreshPersonalDashboard() }
 
-  function togglePowerMenu() { root.toggleTransientPanel("powerMenuOpen", function() { systemStatusService.refreshPower() }) }
+  function togglePowerMenu() { root.toggleRootMenu("{\"menu\":\"system\"}") }
 
   function toggleTrayManage() { root.toggleTransientPanel("trayManageOpen") }
 
-  function toggleControlPanel() {
-    root.toggleTransientPanel("controlPanelOpen", function() { systemStatusService.refreshControls() })
-  }
+  function toggleControlPanel() { root.toggleRootMenu("{\"menu\":\"status\"}") }
 
   function toggleNetworkPanel() { bar.toggleNetworkPanel() }
 
@@ -1288,6 +1177,11 @@ ShellRoot {
     root.powerMenuOpen = false
   }
 
+  function hidePowerSurfaces() {
+    root.hideRootMenu()
+    root.hidePowerMenu()
+  }
+
   function runSessionConfirm() {
     if (root.sessionConfirmCommand.length === 0)
       return
@@ -1366,7 +1260,7 @@ ShellRoot {
     function hide() { root.barHidden = true }
     function trayManage() { root.toggleTrayManage() }
     function controls() { root.toggleControlPanel() }
-    function controlsVisible(): string { return root.controlPanelOpen ? shellConfig.states.visible : shellConfig.states.hidden }
+    function controlsVisible(): string { return rootMenu.opened && rootMenu.activeMenu === "status" ? shellConfig.states.visible : shellConfig.states.hidden }
     function media() { root.toggleMediaPanel() }
     function screen() { root.toggleScreenPanel() }
     function wallpaper() { root.toggleWallpaperPanel() }
@@ -1389,9 +1283,9 @@ ShellRoot {
   IpcHandler {
     target: "websearch"
 
-    function open() { root.openWebSearch(shellConfig.defaultWebSearchSite) }
-    function toggle() { root.toggleWebSearch(shellConfig.defaultWebSearchSite) }
-    function hide() { root.closeTransientPanels() }
+    function open() { root.showWebSearchMenu() }
+    function toggle() { root.openWebSearchMenu() }
+    function hide() { root.hideRootMenu() }
   }
 
   IpcHandler {
@@ -1421,17 +1315,6 @@ ShellRoot {
     }
 
 
-    ShellControlPanel {
-      anchorWindow: bar.primaryWindow
-      shellRoot: root
-      shellSettings: shellSettings
-      shellConfig: shellConfig
-      privacyRefresh: systemStatusService.privacyHandle
-      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.controls, "{}") : root.hideShellMenu(shellConfig.menuIds.controls)
-      panelOpen: root.controlPanelOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.controls)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.controls)
-    }
 
     OmarchyMenu.Menu {
       id: rootMenu
@@ -1513,13 +1396,7 @@ ShellRoot {
 
 
 
-  ListModel { id: passModel }
 
-  ShellMenuDataService {
-    id: menuDataService
-    shellRoot: root
-    shellConfig: shellConfig
-  }
 
 
   OmarchyServices.AppLibrary {
@@ -1558,27 +1435,8 @@ ShellRoot {
   }
 
 
-  ShellPassMenuPanel {
-    id: passMenuPanel
-    shellRoot: root
-    passModel: passModel
-    closeAction: function() { root.hideShellMenu(shellConfig.menuIds.passmenu) }
-    panelOpen: root.passMenuOpen
-    refreshRunning: menuDataService.passRunning
-    panelWidth: root.menuWidthFor(shellConfig.menuIds.passmenu)
-    panelHeight: root.menuHeightFor(shellConfig.menuIds.passmenu)
-  }
 
 
-    ShellWebSearchPanel {
-      id: webSearchPanel
-      shellRoot: root
-      shellConfig: shellConfig
-      closeAction: function() { root.hideShellMenu(shellConfig.menuIds.websearch) }
-      panelOpen: root.webSearchOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.websearch)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.websearch)
-    }
 
 
     ShellPowerMenu {

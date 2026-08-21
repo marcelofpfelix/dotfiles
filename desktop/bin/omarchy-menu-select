@@ -14,8 +14,14 @@
 
 set -euo pipefail
 
+mode=select
+if [[ ${1:-} == --input ]]; then
+  mode=input
+  shift
+fi
+
 if (( $# < 1 )); then
-  echo "Usage: omarchy-menu-select <prompt> [option...] [-- menu args...]" >&2
+  echo "Usage: omarchy-menu-select [--input] <prompt> [option...] [-- menu args...]" >&2
   exit 1
 fi
 
@@ -58,12 +64,12 @@ while (( $# > 0 )); do
   shift
 done
 
-if (( ${#options[@]} == 0 )) && [[ ! -t 0 ]]; then
+if (( ${#options[@]} == 0 )) && [[ $mode == select && ! -t 0 ]]; then
   mapfile -t options
 fi
 
-if (( ${#options[@]} == 0 )); then
-  echo "Usage: omarchy-menu-select <prompt> [option...] [-- menu args...]" >&2
+if (( ${#options[@]} == 0 )) && [[ $mode == select ]]; then
+  echo "Usage: omarchy-menu-select [--input] <prompt> [option...] [-- menu args...]" >&2
   exit 1
 fi
 
@@ -75,7 +81,7 @@ trap 'rm -f "$selection_file" "$done_file"' EXIT
 options_json=$(perl -MEncode=decode -MJSON::PP=encode_json -e 'print encode_json([map { decode("UTF-8", $_) } @ARGV])' "${options[@]}")
 payload=$(perl -MEncode=decode -MJSON::PP=encode_json,decode_json -e '
   my $payload = {
-    mode => "select",
+    mode => decode("UTF-8", $ARGV[6]),
     prompt => decode("UTF-8", $ARGV[0]),
     options => decode_json($ARGV[1]),
     selectionFile => decode("UTF-8", $ARGV[2]),
@@ -84,7 +90,7 @@ payload=$(perl -MEncode=decode -MJSON::PP=encode_json,decode_json -e '
   $payload->{width} = int($ARGV[4]) if length($ARGV[4] // "");
   $payload->{maxHeight} = int($ARGV[5]) if length($ARGV[5] // "");
   print encode_json($payload)
-' "$prompt" "$options_json" "$selection_file" "$done_file" "$menu_width" "$menu_maxheight")
+' "$prompt" "$options_json" "$selection_file" "$done_file" "$menu_width" "$menu_maxheight" "$mode")
 
 omarchy-shell shell summon omarchy.menu "$payload" >/dev/null
 
