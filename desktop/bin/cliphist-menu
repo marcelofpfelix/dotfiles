@@ -18,8 +18,9 @@ need() {
 }
 
 status() {
-    local missing=0 cmd count
-    for cmd in cliphist wl-copy wl-paste qbar fzf notify-send; do
+    local missing=0 cmd count history
+    history="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/clipboard-history.json"
+    for cmd in jq wl-copy qbar fzf notify-send; do
         if command -v "$cmd" >/dev/null 2>&1; then
             printf 'ok   %s\n' "$cmd"
         else
@@ -27,8 +28,9 @@ status() {
             missing=1
         fi
     done
-    count="$(cliphist list 2>/dev/null | wc -l | tr -d ' ')"
+    count="$(jq 'length' "$history" 2>/dev/null || printf 0)"
     printf 'entries %s\n' "${count:-0}"
+    printf 'owner omarchy.clipboard\n'
     return "$missing"
 }
 
@@ -37,25 +39,19 @@ case "${1:-menu}" in
         status
         ;;
     watch)
-        need wl-paste
-        need cliphist
-        wl-paste --type text --watch sh -c 'cliphist store && qbar clipboard-update >/dev/null 2>&1 || true' &
-        text_pid=$!
-        wl-paste --type image --watch sh -c 'cliphist store && qbar clipboard-update >/dev/null 2>&1 || true' &
-        image_pid=$!
-        wl-paste --type text --watch wl-copy --primary --type text/plain &
-        primary_pid=$!
-        trap 'kill "$text_pid" "$image_pid" "$primary_pid" 2>/dev/null || true' EXIT INT TERM
-        wait
+        notice "Clipboard watchers are owned by omarchy.clipboard."
+        exit 2
         ;;
     menu)
-        need cliphist
+        need jq
         need wl-copy
         if [[ -z "${CLIPHIST_FORCE_TERMINAL:-}" && -n "${WAYLAND_DISPLAY:-}" ]] && command -v qbar >/dev/null 2>&1; then
             exec qbar clipboard
         fi
 
-        entries=$(cliphist list) || exit 1
+        history="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/clipboard-history.json"
+        [[ -r "$history" ]] || entries=""
+        entries="${entries:-$(jq -r 'to_entries[] | "\(.key)\t" + (if .value.type == "image" then "[image] \(.value.path)" else (.value.text | gsub("[\\r\\n\\t]+"; " ") | .[0:200]) end)' "$history" 2>/dev/null)}"
         if [[ -z "$entries" ]]; then
             notice "No clipboard history yet."
             exit 0
@@ -69,7 +65,15 @@ case "${1:-menu}" in
         fi
 
         [[ -n "$selection" ]] || exit 0
-        printf '%s' "$selection" | cliphist decode | wl-copy
+        index=${selection%%$'\t'*}
+        type=$(jq -r --argjson index "$index" '.[$index].type' "$history")
+        if [[ "$type" == image ]]; then
+            mime=$(jq -r --argjson index "$index" '.[$index].mime' "$history")
+            path=$(jq -r --argjson index "$index" '.[$index].path' "$history")
+            omarchy-clipboard-paste-file --copy-only "$mime" "$path"
+        else
+            omarchy-clipboard-paste-text --copy-only --history-index "$index"
+        fi
         ;;
     *)
         printf 'usage: %s [menu|watch|status]\n' "${0##*/}" >&2

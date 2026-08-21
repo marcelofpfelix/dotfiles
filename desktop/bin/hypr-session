@@ -208,9 +208,6 @@ quickshell_ipc_status() {
         "function notifications()"
         "function power()"
         "function keybindings()"
-        "function clipboard()"
-        "function clipboardVisible()"
-        "function clipboardUpdate()"
         "function closePanels()"
         "function settings()"
         "function dnd()"
@@ -253,10 +250,9 @@ quickshell_bar_status() {
         "controls) menu_toggle controls"
         "notifications) menu_toggle notifications"
         "network) ipc_target omarchy.network toggle"
-        "clipboard) menu_toggle clipboard"
+        "clipboard) menu_toggle omarchy.clipboard"
         "close-panels) ipc_target shell closePanels"
         "osd-volume) ipc osdVolume"
-        "clipboard-update) ipc clipboardUpdate"
         "websearch) ipc_target websearch toggle"
     )
 
@@ -296,7 +292,6 @@ status() {
         nmcli
         wl-copy
         wl-paste
-        cliphist
         playerctl
         pavucontrol
         xdg-open

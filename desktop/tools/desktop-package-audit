@@ -29,7 +29,6 @@ required_packages=(
   libinput-tools
   espanso-wayland
   wlrctl
-  cliphist
   playerctl
   pavucontrol
   mpv

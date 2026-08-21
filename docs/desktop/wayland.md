@@ -10,7 +10,7 @@ For the short switch procedure, see
 - `desktop/.config/hypr/init.lua`: Hyprland 0.55+ profile selector.
 - `desktop/.config/hypr/profiles/default.lua`: profile matching the current i3 workflow.
 - `desktop/.config/hypr/profiles/omarchy.lua`: Omarchy-like Wayland profile implemented with generic Wayland tools.
-- `desktop/.config/quickshell/marcelof/shell.qml`: Quickshell wallpaper, bar, tray/status, copied Omarchy menu and Apps provider, password picker, clipboard picker, web-search popup, keybindings popup, screen tools popup, and session menu.
+- `desktop/.config/quickshell/marcelof/shell.qml`: Quickshell wallpaper, bar, tray/status, copied Omarchy menu and Apps provider, password picker, copied Omarchy clipboard overlay, web-search popup, keybindings popup, screen tools popup, and session menu.
 - `desktop/bin/hypr-session`: status, smoke, test, reload, rollback helper.
 - `desktop/tools/desktop-doctor`: read-only desktop health wrapper around smoke, profile, shell, board, picker, audio, recording, and browser wrapper checks.
 - `desktop/tools/desktop-package-audit`: checks the active Wayland package intent against the sibling homelab install list.
@@ -137,7 +137,7 @@ Stale live X11 files removed from `$HOME` during migration are preserved under
 
 ## Package notes
 
-Track package intent in `/home/marcelof/gwt/marcelofpfelix/homelab/main/vars/install/desktop.yml`. The minimum Wayland set is Hyprland, hyprctl, Quickshell, and the backend tools used by the selected profile. Both profiles use the local Marcelof Quickshell shell; the `omarchy` profile changes Hyprland behavior, not the shell runtime. Keep only backend tools here. `board` is tracked as a local CLI/runtime dependency for Quickshell and tmux status rendering. Backend tools include screenshot and recording helpers (`grim`, `slurp`, `swappy`, `imagemagick-6.q16`, `wf-recorder`, `tesseract`), `brightnessctl`, `ddcutil`, `wl-clipboard`, `cliphist`, `playerctl`, `pavucontrol`, `mpv`, `ffmpeg`, `hyprlock`, `swaylock`, `hyprpicker`, `jq`, `libnotify-bin`, `network-manager`, `network-manager-gnome`, `pulseaudio-utils`, `lm-sensors`, `upower`, `power-profiles-daemon`, `bluez`, `wireplumber`, `xdg-utils`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk`, `nixGL` for Nix Hyprland on Ubuntu, and the existing autostart backend (`dex`). `hypr-session status` checks these runtime commands directly, with `hyprpicker` reported as optional and locking accepted through `hyprlock`, `swaylock`, or `loginctl`.
+Track package intent in `/home/marcelof/gwt/marcelofpfelix/homelab/main/vars/install/desktop.yml`. The minimum Wayland set is Hyprland, hyprctl, Quickshell, and the backend tools used by the selected profile. Both profiles use the local Marcelof Quickshell shell; the `omarchy` profile changes Hyprland behavior, not the shell runtime. Keep only backend tools here. `board` is tracked as a local CLI/runtime dependency for Quickshell and tmux status rendering. Backend tools include screenshot and recording helpers (`grim`, `slurp`, `swappy`, `imagemagick-6.q16`, `wf-recorder`, `tesseract`), `brightnessctl`, `ddcutil`, `wl-clipboard`, `playerctl`, `pavucontrol`, `mpv`, `ffmpeg`, `hyprlock`, `swaylock`, `hyprpicker`, `jq`, `libnotify-bin`, `network-manager`, `network-manager-gnome`, `pulseaudio-utils`, `lm-sensors`, `upower`, `power-profiles-daemon`, `bluez`, `wireplumber`, `xdg-utils`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk`, `nixGL` for Nix Hyprland on Ubuntu, and the existing autostart backend (`dex`). `hypr-session status` checks these runtime commands directly, with `hyprpicker` reported as optional and locking accepted through `hyprlock`, `swaylock`, or `loginctl`.
 
 ### Screen sharing portal
 
@@ -171,7 +171,7 @@ Hyprland starts desktop entries through `dex --autostart --environment Hyprland`
 
 The default profile keeps movement, workspaces, launcher, terminal, monitor toggle, media keys, and screenshot bindings close to the X11 i3 config. Hyprland `dwindle` does not provide direct i3 stacking, tabbed containers, or focus-parent behavior, so native groups are the closest match: `Win+G` creates/toggles a group, `Win+Alt+Arrow` moves the focused window into a neighboring group direction, `Win+Alt+Tab` and `Win+Alt+Shift+Tab` switch grouped windows, and `Win+Alt+G` removes the focused window from the group. `Win+W` closes the focused window. `Win+U` toggles a floating Ghostty-backed tmux popup session through `hypr-term popup-tmux`. `Win+S` uses the helper-backed special workspace scratchpad and `Win+Alt+S` moves the active window there. Resize is exposed as `Win+Ctrl+h/j/k/l`.
 
-GTK primary selection paste is enabled in both Hyprland profiles with `gsettings set org.gnome.desktop.interface gtk-enable-primary-paste true`. `cliphist-menu watch` also mirrors normal text clipboard changes into the primary selection so middle-click paste follows explicit clipboard copies.
+GTK primary selection paste is enabled in both Hyprland profiles with `gsettings set org.gnome.desktop.interface gtk-enable-primary-paste true`. The copied `omarchy.clipboard` plugin mirrors normal text clipboard changes into the primary selection so middle-click paste follows explicit clipboard copies.
 
 The local Quickshell shell has replaced the Polybar surface for workspace/status/tray coverage, the main `rofi` app launcher, `passmenu`, calendar, clipboard history, web search, keybinding help, notifications, and the power/session menu. `passmenu` is Quickshell-only in the active Wayland desktop profile. Secure locking is delegated to a real locker through Quickshell IPC, using `hyprlock`, `swaylock`, or `loginctl lock-session` when available. `dunst.service` is masked in the tracked user systemd config so Quickshell can own desktop notifications; `hypr-session smoke` also verifies the active D-Bus notification owner.
 
@@ -181,9 +181,9 @@ Calendar account sync stays outside Quickshell. The shell reads `calendar-agenda
 
 Reuse reference repos for behavior, layout patterns, and small implementation ideas. Upstream runtime command names are acceptable when they make the repo smaller or more compatible, but they must remain behind local entrypoints such as `qbar` and must not force a full shell replacement. Do not import broad framework rewrites, distro update machinery, or assumptions that conflict with the local default i3-compatible profile.
 
-Adapted locally: Omarchy quattro key behavior, Caelestia-style session panel actions and idle inhibitor, end-4-style `Super+/` keybinding discoverability and cliphist watcher updates, Noctalia-style compact popup/control surfaces, and cxOrz-style backend-only cliphist ownership.
+Adapted locally: Omarchy quattro key behavior, Caelestia-style session panel actions and idle inhibitor, end-4-style `Super+/` keybinding discoverability, Noctalia-style compact popup/control surfaces, and copied Omarchy clipboard ownership.
 
-Rejected locally: distro-level refresh/update jobs, full upstream shell replacement, and copied launchers that duplicate a smaller local wrapper.
+Rejected locally: distro-level refresh/update jobs and full upstream shell replacement. Copied components are adopted only when they retire local owners without losing behavior.
 
 ## Switchable launchers
 

@@ -119,57 +119,6 @@ ShellRoot {
     return 5000 - text.length
   }
 
-  function rebuildClipboardModel() {
-    const query = clipboardPanel.searchText
-    const rows = []
-    for (let i = 0; i < root.clipboardEntries.length; i++) {
-      const entry = String(root.clipboardEntries[i] || "")
-      if (entry.length === 0)
-        continue
-      const score = root.clipboardScore(entry, query)
-      if (score < 0)
-        continue
-      rows.push({ entry: entry, score: score, key: entry.toLowerCase() })
-    }
-    rows.sort((a, b) => {
-      if (query.trim().length > 0 && a.score !== b.score)
-        return b.score - a.score
-      return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)
-    })
-    clipboardModel.clear()
-    const count = Math.min(rows.length, 250)
-    for (let i = 0; i < count; i++)
-      clipboardModel.append({ text: rows[i].entry, preview: rows[i].entry.replace(/^\d+\s+/, "") })
-    if (clipboardPanel) {
-      clipboardPanel.currentIndex = clipboardModel.count > 0 ? 0 : -1
-      Qt.callLater(() => clipboardPanel.positionCurrent())
-    }
-  }
-
-  function updateClipboardEntries(output) {
-    const lines = String(output || "").split(/\n+/)
-    const entries = []
-    for (let i = 0; i < lines.length; i++) {
-      const entry = lines[i].trim()
-      if (entry.length > 0 && !root.looksSecretClipboardEntry(entry))
-        entries.push(entry)
-    }
-    root.clipboardEntries = entries
-    root.rebuildClipboardModel()
-  }
-
-  function looksSecretClipboardEntry(entry) {
-    const text = String(entry || "")
-    const body = text.replace(/^\d+\s+/, "")
-    if (/^(password|passwd|secret|token|api[_-]?key|authorization|bearer)[:=]/i.test(body))
-      return true
-    if (/^(otpauth:\/\/|-----BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----)/i.test(body))
-      return true
-    if (/^[A-Za-z0-9+\/=]{32,}$/.test(body) && /[A-Z]/.test(body) && /[a-z]/.test(body) && /[0-9]/.test(body))
-      return true
-    return false
-  }
-
   function rebuildPassModel() {
     const query = passMenuPanel.searchText
     const rows = []
@@ -209,16 +158,6 @@ ShellRoot {
     root.rebuildPassModel()
   }
 
-  function openClipboard() {
-    root.closeTransientPanels()
-    root.clipboardOpen = true
-    clipboardPanel.searchText = ""
-    root.clipboardEntries = []
-    clipboardModel.clear()
-    menuDataService.refreshClipboard()
-    clipboardPanel.focusSearch()
-  }
-
   function passModeLabel() {
     if (root.passMode === "type-pass") return "Type password"
     if (root.passMode === "type-user") return "Type username"
@@ -247,25 +186,7 @@ ShellRoot {
     Quickshell.execDetached(shellConfig.passAction(root.passMode, root.passUserKey, root.passBackend, entry))
   }
 
-  function toggleClipboard() {
-    if (root.clipboardOpen) {
-      root.clipboardOpen = false
-      return
-    }
-    root.openClipboard()
-  }
-
-  function pasteClipboardEntry() {
-    if (!root.clipboardOpen || clipboardPanel.currentIndex < 0 || clipboardPanel.currentIndex >= clipboardModel.count)
-      return
-    const entry = clipboardModel.get(clipboardPanel.currentIndex).text
-    root.clipboardOpen = false
-    Quickshell.execDetached(shellConfig.cliphistDecode(entry))
-  }
-
-  property var clipboardEntries: []
   property var passEntries: []
-  property bool clipboardOpen: false
   property bool passMenuOpen: false
   property string passMode: shellConfig.actions.copy
   property string passUserKey: shellConfig.defaultPassUserKey
@@ -666,7 +587,10 @@ ShellRoot {
   }
 
   function openShellMenu(id, payloadJson) {
-    const menu = root.shellMenuId(id)
+    const raw = String(id || "")
+    if (pluginRegistry.supportsKind(raw, pluginRegistry.overlayKind))
+      return root.dynamicPluginOpen(raw) ? true : root.summonDynamicPlugin(raw, payloadJson)
+    const menu = root.shellMenuId(raw)
     if (menu === "bar") {
       root.barHidden = false
       return true
@@ -683,7 +607,7 @@ ShellRoot {
       break
     case "web": root.toggleWebSearch(shellConfig.defaultWebSearchSite); break
     case "keys": root.toggleKeybindings(); break
-    case "clipboard": root.toggleClipboard(); break
+    case "clipboard": root.toggleShellMenu(shellConfig.pluginIds.clipboard, "{}"); break
     case "wallpaper": root.toggleWallpaperPanel(); break
     case "screen": root.toggleScreenPanel(); break
     case "media": root.toggleMediaPanel(); break
@@ -1406,9 +1330,6 @@ ShellRoot {
     function osdKbd() { root.showKbdOsd() }
     function osdMic() { root.showMicOsd() }
     function keybindings() { root.toggleKeybindings() }
-    function clipboard() { root.toggleClipboard() }
-    function clipboardVisible(): string { return root.clipboardOpen ? shellConfig.states.visible : shellConfig.states.hidden }
-    function clipboardUpdate() { menuDataService.refreshClipboard() }
     function closePanels() { root.closeTransientPanels() }
   }
 
@@ -1574,7 +1495,6 @@ ShellRoot {
 
 
 
-  ListModel { id: clipboardModel }
   ListModel { id: passModel }
 
   ShellMenuDataService {
@@ -1619,16 +1539,6 @@ ShellRoot {
     }
   }
 
-  ShellClipboardPanel {
-    id: clipboardPanel
-    shellRoot: root
-    clipboardModel: clipboardModel
-    closeAction: function() { root.hideShellMenu(shellConfig.menuIds.clipboard) }
-    panelOpen: root.clipboardOpen
-    refreshRunning: menuDataService.clipboardRunning
-    panelWidth: root.menuWidthFor(shellConfig.menuIds.clipboard)
-    panelHeight: root.menuHeightFor(shellConfig.menuIds.clipboard)
-  }
 
   ShellPassMenuPanel {
     id: passMenuPanel

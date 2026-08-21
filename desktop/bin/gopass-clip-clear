@@ -2,13 +2,14 @@
 
 # Gopass clipboard clear helper.
 # Receives the entry name as $1 and the checksum on stdin.
-# Secret cleanup is intentionally disabled while debugging Wayland paste.
+# Clipboard clearing stays disabled; only remove the history-suppression marker.
 
 BACKEND="${CLIP_BACKEND:-wl}"
 [ "$BACKEND" = gpaste ] && BACKEND=wl
 
 case "$BACKEND" in
     wl)
+        rm -f "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gopass-clipboard-sensitive"
         exit 0
         ;;
     gpaste)

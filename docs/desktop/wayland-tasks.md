@@ -42,7 +42,7 @@
 - [x] Avoid upstream runtime binaries; implement similar behavior with generic tools and local Quickshell IPC.
 - [x] Use local Quickshell IPC and common Wayland apps/CLIs for launcher, network, lock, screenshot, audio, and related actions.
 - [x] Media playback keys use generic `playerctl`; volume and brightness use `pactl` and `brightnessctl`.
-- [x] Clipboard history is available from the Quickshell controls menu backed by `cliphist decode | wl-copy`; `cliphist`, `wl-copy`, and `wl-paste` are tracked.
+- [x] Clipboard history is available from the Quickshell controls menu through copied `omarchy.clipboard`; `wl-copy`, `wl-paste`, and `jq` provide its backend.
 
 ## Quickshell replacements
 
@@ -58,7 +58,7 @@
 - [x] Add a native Quickshell calendar popup with month navigation, today highlighting, Lisbon time context, and todo detail area.
 - [x] Add a Quickshell password picker popup for `passmenu` parity: fuzzy entry filtering, copy password, type password, type username, and type entry name.
 - [x] Replace X11 monitor toggling with a Hyprland-aware `monitor` path.
-- [x] Add optional `cliphist-menu watch` startup guarded by `command -v cliphist`.
+- [x] Retire the former optional `cliphist-menu watch` startup after `omarchy.clipboard` becomes the single history owner.
 - [x] `gocode` and `gowork` are Hyprland-only under this desktop profile.
 
 ## Validation
@@ -270,8 +270,7 @@ Review snapshot: 2026-07-28. Sources were local clones under `/tmp/wayland-ui-re
   - Keep `rcal` opening the native Quickshell calendar under Wayland and plain `cal -3` outside a graphical session.
   - Validate that Hyprland startup, Quickshell actions, and Wayland helpers do not hard-call rofi, dmenu, or zenity.
 - [x] Add a Quickshell clipboard history picker.
-  - Replace `cliphist-menu` Wayland zenity/fzf selection with a Quickshell fuzzy popup.
-  - Keep `cliphist decode | wl-copy` as the backend action after selection.
+  - Superseded: copied `omarchy.clipboard` now provides the Quickshell fuzzy overlay and JSON history; `cliphist-menu` remains only a terminal client of that same store.
   - Keep clipboard selection Quickshell-owned for the active Wayland desktop profile.
 - [x] Replace the old `Win+,` rofi websearch path with direct Quickshell web-search IPC; keep `websearch` only as a CLI helper.
 - [x] Expand the Quickshell control center.
@@ -353,12 +352,12 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
 
 - [x] Make the Quickshell clipboard picker a true popup.
   - Sources: current Quickshell clipboard picker, launcher popup behavior, user report that clipboard should be popup-like instead of a normal window.
-  - Current behavior: `qbar clipboard` toggles a centered 720x500 floating Quickshell picker, uses the same Hyprland float/center rule shape as launcher/web search, takes focus immediately, and closes through Escape, focus-grab clear, or repeated toggle.
+  - Current behavior: superseded by the copied `omarchy.clipboard` overlay, which uses a centered card with scrim, exclusive keyboard focus, Escape/outside-click/repeated-toggle close, text and image previews, and no Hyprland window rule.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `luac -p desktop/.config/hypr/init.lua desktop/.config/hypr/profiles/default.lua desktop/.config/hypr/profiles/omarchy.lua`, `bash -n desktop/tools/qs-menu-smoke desktop/bin/hypr-session desktop/bin/qbar`, `desktop/tools/qs-menu-smoke clipboard-toggle clipboard`, and `desktop/tools/desktop-doctor`.
 - [x] Integrate secret-aware clipboard handling with gopass/Wayland.
   - Sources: local `gopass-clip-copy`, `gopass-clip-clear`, `history-secrets`, `passmenu`, local gopass/Wayland clipboard command surface, and the current Quickshell clipboard picker.
   - Constraint: keep decrypted values out of argv, logs, QML state, and normal clipboard history by default.
-  - Current behavior: `passmenu` opens a Quickshell password picker again; QML stores only entry names, and selection delegates copy/type work to `passmenu-action`. Copy mode uses `gopass show -c` with tracked `GOPASS_CLIPBOARD_COPY_CMD`/`GOPASS_CLIPBOARD_CLEAR_CMD` defaults. `gopass-clip-copy` is stdin-only and leaves `cliphist` running; `gopass-clip-clear` is temporarily a no-op while debugging Wayland paste regressions. `cliphist-menu watch` mirrors normal text clipboard changes into the primary selection for middle-click paste. GPaste remains disabled because its daemon can take stale Wayland clipboard ownership. Password copies may enter normal clipboard history until secret cleanup is re-enabled.
+  - Current behavior: `passmenu` keeps only entry names in QML and delegates copy/type work to `passmenu-action`. Copy mode remains stdin-only; `gopass-clip-copy` sets a runtime marker consumed by the Omarchy capture script so password values are not persisted, while `gopass-clip-clear` removes only that marker and still does not clear the clipboard. The plugin owns text/image history plus normal-to-primary sync; GPaste remains disabled.
   - Validation: `passmenu-action --self-test`, fake-backend `passmenu --name`, fake-backend `passmenu --user`, `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `bash -n desktop/bin/passmenu desktop/bin/passmenu-action desktop/bin/gopass-clip-copy desktop/bin/gopass-clip-clear desktop/tools/desktop-doctor desktop/tools/desktop-accept desktop/bin/hypr-session`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
 - [x] Add a redacted work inbox status helper.
   - Sources: Slack Conversations API, GitHub search through `gh api`, Linear notifications GraphQL, and existing cache patterns.
@@ -402,14 +401,14 @@ Do these in this order; each task should leave one small validation command behi
    - Result: generic matching now normalizes reverse-DNS desktop IDs; no unsupported app-specific behavior found in the local test fixture.
 3. Clipboard popup parity. Done.
    - Task: make `qbar clipboard` use the same popup/focus-grab behavior as the launcher instead of presenting as a normal side/tiled window.
-   - Depends on: current Quickshell clipboard picker and `cliphist-menu` data path.
+   - Depends on: the active Quickshell clipboard owner and its persisted history path.
    - Validation: `desktop/tools/qs-menu-smoke clipboard-toggle clipboard` and `desktop/tools/desktop-doctor`.
-   - Result: clipboard now toggles through Quickshell IPC, is centered/floating by Hyprland title rule, and exposes a smoke-test visible state.
+   - Result: superseded by the copied overlay, which toggles through generic plugin IPC, centers its own card without a Hyprland rule, and exposes canonical open/closed state to smoke tests.
 4. Secret-safe clipboard and gopass integration. Done.
-   - Task: audit active password copy paths, keep decrypted values out of QML, and make Quickshell clipboard hide likely secret rows from normal `cliphist`.
+   - Task: audit active password copy paths, keep decrypted values out of QML, argv, logs, and persistent clipboard history.
    - Depends on: `passmenu`, `passmenu-action`, `gopass-clip-copy`, `gopass-clip-clear`, and the local GPaste/gopass command surface.
    - Validation: `passmenu-action --self-test`, fake-backend `passmenu --name`, fake-backend `passmenu --user`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
-   - Result: `passmenu` has a Quickshell popup target again; copy/type actions run in a helper, not QML; gopass copy uses repo-managed clipboard hook defaults; local GPaste password-entry mode and copyq secret copy are intentionally not used because they require password argv.
+   - Result: `passmenu` copy/type actions run in helpers, not QML; gopass copy uses repo-managed hooks and a runtime capture-suppression marker; GPaste and copyq remain disabled. Secret-history cleanup remains intentionally manual.
 5. Work inbox helper first, dashboard second. Helper done.
    - Task: `work-inbox-status` returns redacted cached JSON counts for Slack unread, GitHub PR review requests, and Linear notifications.
    - Sources: Slack Conversations API, GitHub search through `gh api`, Linear notifications GraphQL, and local cache patterns.
@@ -450,8 +449,8 @@ Do these in this order; each task should leave one small validation command behi
 
 - `default` is the i3-compatible profile. There is intentionally no separate `i3` profile.
 - Quickshell owns bar, launcher, tray, wallpaper, controls, calendar, notification history, network panel, lock IPC, and exit confirmation; controls also acts as the all-menus hub. `board` is the tracked local status renderer for Quickshell and tmux surfaces.
-- Both profiles use the local lightweight Quickshell shell. The `omarchy` profile does not install or call upstream runtime binaries.
-- Adapted reference patterns already landed locally: Caelestia-like session actions behind local commands, end-4-like `Super+/` keybinding help and cliphist watcher refresh, Noctalia-like compact popup/control surfaces, and cxOrz-like cliphist as backend plumbing.
+- Both profiles use the local Quickshell shell with selected copied Omarchy components; the `omarchy` profile changes Hyprland behavior and does not install the full Omarchy runtime.
+- Adapted reference patterns already landed locally: Caelestia-like session actions behind local commands, end-4-like `Super+/` keybinding help, Noctalia-like compact popup/control surfaces, and copied Omarchy clipboard ownership.
 - Rust system-metrics helper is intentionally not active work. The future note lives in `wiki/main/resources/dev/desktop.md`; build it only if measured Quickshell status polling cost becomes a real problem.
 
 ## Open polish and simplification tasks
@@ -1510,9 +1509,10 @@ and local behavior that must survive replacement.
   - Completed: upstream now owns the only `NotificationServer`, DND, actions, app focus, crash restoration, per-app icons, age-based disk history, persisted read state, and per-app grouping. The old notification center/cards were archived.
   - Local adapters: Ubuntu focus-helper path, Qt 6.6 reserved-word rename, and laptop-screen-only toast surfaces.
   - Validation: one-server audit, IPC/DND/action smoke, Slack app-icon screenshot, restart persistence, one-output visual confirmation, and live popup/history screenshots without overlap.
-- [ ] P1: Replace `ShellClipboardPanel`, its eager model, and `cliphist-menu watch` with `omarchy.clipboard`.
+- [x] P1: Replace `ShellClipboardPanel`, its eager model, and `cliphist-menu watch` with `omarchy.clipboard`.
   - Preserve: text and image history, normal and primary clipboard behavior, middle-click semantics, Ghostty/Herdr/OSC52, gopass safety, and explicit copy-only mode. Disable one watcher before enabling the other.
   - Validation: local/remote copy, primary paste, image copy, history restart, secret fixture without printing values, one watcher, and screenshot/input tests.
+  - Completed: copied `omarchy.clipboard` owns the overlay, text/image capture, JSON history, fuzzy search, preview, delete, and copy-only helpers. One shell owner runs two history watchers plus the preserved normal-to-primary sync watcher; the old `cliphist` startup owner is stopped and removed. The standalone panel is archived, `cliphist-menu` is a terminal client of the same JSON history, and gopass uses a runtime marker so copied secrets are skipped without clearing the clipboard. Upstream tests, local sensitive-copy fixture, QML/shell/Lua checks, live toggle/render smoke, watcher audit, reload persistence, and `hypr-session smoke` pass.
 
 - [ ] P1: Replace `ShellOverlays` with the copied `omarchy.osd` panel.
   - Preserve: volume, mic mute, display brightness, keyboard brightness, existing media-key bindings, and no extra polling. Keep `desktop-osd` only as a thin IPC/action boundary if Hyprland bindings still need it.

@@ -18,6 +18,7 @@ This shell stays small by keeping ownership boring and visible.
   engine owns hierarchy, search, aliases, guards, providers, and navigation.
 - `services/AppSearch.js` and `services/AppLibrary.qml` own the shared desktop
   application catalog, filtering, icon lookup, launch path, MRU/MFU ranking, favorites, and reversible hide behavior used by the copied root menu and `Win+D`. The retired standalone launcher panel and service are archived.
+- `plugins/clipboard/` is copied Omarchy code and owns clipboard capture, persisted text/image history, search, preview, deletion, and the overlay. Its third watcher preserves the local normal-to-primary selection behavior; `cliphist-menu` is only a terminal client of the same JSON history.
 - Copied `Ui/TextField.qml` owns search-input styling for launcher, clipboard,
   passmenu, web search, and keybindings. Panels add only local palette/font
   values and behavior-specific native Qt key handlers.

@@ -288,7 +288,7 @@ smoke_launcher_hidden() {
 }
 
 clipboard_visible() {
-  "$qs_bin" ipc --path "$config_path" --any-display call bar clipboardVisible 2>/dev/null | tail -n 1 | tr -d '\r'
+  "$qs_bin" ipc --path "$config_path" --any-display call shell state omarchy.clipboard 2>/dev/null | tail -n 1 | tr -d '\r'
 }
 
 smoke_osd() {
@@ -347,7 +347,7 @@ smoke_clipboard_toggle() {
   sleep "$sleep_time"
   after_close=$(clipboard_visible || true)
 
-  if [ "$before" != "hidden" ] || [ "$after_open" != "visible" ] || [ "$after_close" != "hidden" ]; then
+  if [ "$before" != "closed" ] || [ "$after_open" != "open" ] || [ "$after_close" != "closed" ]; then
     printf 'fail clipboard-toggle before=%s open=%s close=%s\n' "$before" "$after_open" "$after_close" >&2
     record_result clipboard-toggle fail "before:$before open:$after_open close:$after_close" - -
     status=1

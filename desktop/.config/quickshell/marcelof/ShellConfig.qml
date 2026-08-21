@@ -62,8 +62,6 @@ QtObject {
   function portalStatus() { return ["sh", "-c", "printf 'hyprland '; systemctl --user is-active xdg-desktop-portal-hyprland.service 2>/dev/null || printf unavailable; printf ', portal '; systemctl --user is-active xdg-desktop-portal.service 2>/dev/null || printf unavailable"] }
   function launcherMruLoad() { return ["sh", "-c", "cat \"${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof/launcher-mru.txt\" 2>/dev/null || true"] }
   function launcherMruSave(cache) { return ["sh", "-c", "dir=${XDG_CACHE_HOME:-$HOME/.cache}/quickshell/marcelof; file=$dir/launcher-mru.txt; tmp=$file.tmp; mkdir -p \"$dir\"; printf %s " + shellQuote(cache) + " > \"$tmp\" && mv \"$tmp\" \"$file\""] }
-  function cliphistList() { return ["sh", "-c", "cliphist list 2>/dev/null"] }
-  function cliphistDecode(entry) { return ["sh", "-c", "printf %s " + shellQuote(entry) + " | cliphist decode | wl-copy"] }
   function passList(backend) { return ["sh", "-c", shellQuote(backend) + " ls --flat 2>/dev/null"] }
   function passAction(mode, userKey, backend, entry) { return ["passmenu-action", mode, userKey, backend, entry] }
   function gtkLaunch(id) {

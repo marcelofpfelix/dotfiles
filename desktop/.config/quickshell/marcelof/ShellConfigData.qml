@@ -108,6 +108,7 @@ QtObject {
 
   readonly property var pluginIds: ({
     boardDashboard: "marcelof.board-dashboard",
+    clipboard: "omarchy.clipboard",
     wifiQr: "omarchy.wifiqr"
   })
 
@@ -135,7 +136,6 @@ QtObject {
 
   readonly property var menuRegistry: ({
     "root-menu": { toggle: "toggleRootMenu", hide: "hideRootMenu" },
-    clipboard: { openProperty: "clipboardOpen", toggle: "toggleClipboard" },
     passmenu: { openProperty: "passMenuOpen", toggle: "togglePassmenu" },
     websearch: { openProperty: "webSearchOpen", toggle: "toggleDefaultWebSearch" },
     tray: { openProperty: "trayManageOpen" },
@@ -162,7 +162,6 @@ QtObject {
     work: { width: 640, height: 420 },
     dashboard: { width: 640, height: 460 },
     launcher: { width: 720, height: 726, denseHeight: 672 },
-    clipboard: { width: 640, height: 500, denseHeight: 480 },
     passmenu: { width: 640, height: 544, denseHeight: 500 },
     websearch: { width: 640, height: 112 },
     wallpaper: { width: 640, height: 560, compactHeight: 360 },

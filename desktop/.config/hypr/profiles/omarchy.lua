@@ -123,7 +123,6 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("dex --autostart --environment Hyprland")
   hl.exec_cmd("gnome-keyring-daemon --start --components=secrets")
   hl.exec_cmd("command -v chrome-wayland-fix-apps >/dev/null 2>&1 && chrome-wayland-fix-apps")
-  hl.exec_cmd("command -v cliphist >/dev/null 2>&1 && command -v wl-paste >/dev/null 2>&1 && cliphist-menu watch")
 end)
 
 -- open terminal
