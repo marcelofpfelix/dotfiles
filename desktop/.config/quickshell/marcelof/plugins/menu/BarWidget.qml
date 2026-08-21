@@ -12,7 +12,7 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: ""
+    text: String.fromCodePoint(0xE779)
     fontFamily: root.bar ? root.bar.fontFamily : "FiraCode Nerd Font"
     horizontalMargin: 7.5
     onPressed: function(button) {
