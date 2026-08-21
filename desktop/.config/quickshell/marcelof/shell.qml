@@ -40,17 +40,16 @@ ShellRoot {
 
 
   function toggleLauncher() {
-    launcher.panelOpen = !launcher.panelOpen
-    if (launcher.panelOpen) {
-      launcher.searchText = ""
+    if (rootMenu.opened && rootMenu.activeMenu === "apps") rootMenu.close()
+    else {
+      root.closeTransientPanels()
       menuDataService.refreshLauncherMru()
-      root.rebuildLauncher()
-      launcher.focusSearch()
+      rootMenu.open('{"menu":"apps"}')
     }
   }
 
   function hideLauncher() {
-    launcher.panelOpen = false
+    if (rootMenu.opened && rootMenu.activeMenu === "apps") rootMenu.close()
   }
 
   function shellQuote(value) {
@@ -277,12 +276,10 @@ ShellRoot {
   property string webSearchSite: shellConfig.defaultWebSearchSite
   readonly property var webSearchSites: shellConfig.webSearchSites
 
-  function updateLauncherMru(output) { launcherService.updateMru(output) }
-  function rebuildLauncher() { launcherService.rebuild() }
-  function launchCurrentApp() { launcherService.launchCurrent() }
-  function launchAppAtIndex(index) { launcherService.launchAtIndex(index) }
-  function toggleLauncherFavoriteById(id) { launcherService.toggleFavoriteById(id) }
-  function hideLauncherById(id) { launcherService.hideById(id) }
+  function updateLauncherMru(output) { appLibraryService.updateMru(output) }
+  function rebuildLauncher() { appLibraryService.appsChanged() }
+  function toggleLauncherFavoriteById(id) { appLibraryService.toggleFavoriteById(id) }
+  function hideLauncherById(id) { appLibraryService.hideById(id) }
 
   readonly property var laptopScreen: Quickshell.screens.find(screen => screen.name === "eDP-1") || Quickshell.screens[0]
 
@@ -596,7 +593,7 @@ ShellRoot {
     if (pluginRegistry.supportsKind(raw, pluginRegistry.overlayKind)) return root.dynamicPluginOpen(raw)
     const menu = root.shellMenuId(raw)
     if (menu === "bar") return !root.barHidden
-    if (menu === "launcher") return launcher.panelOpen
+    if (menu === "launcher") return rootMenu.opened && rootMenu.activeMenu === "apps"
     if (menu === shellConfig.menuIds.rootMenu) return rootMenu.opened
     if (menu === shellConfig.menuIds.emojis) return emojiOverlay.opened
     if (menu === shellConfig.menuIds.wifiQr) return wifiQrOverlay.opened
@@ -674,11 +671,7 @@ ShellRoot {
       root.barHidden = false
       return true
     }
-    if (root.shellMenuOpen(menu)) {
-      if (menu === "launcher")
-        launcher.focusSearch()
-      return true
-    }
+    if (root.shellMenuOpen(menu)) return true
     return root.toggleShellMenu(menu, payloadJson)
   }
 
@@ -1337,7 +1330,7 @@ ShellRoot {
     function ping(): string { return "ok" }
     function listMenus(): string { return JSON.stringify(shellConfig.menuIds) }
     function listPlugins(): string {
-      const plugins = [{ id: "launcher", name: "launcher", kinds: ["menu"], enabled: true, active: true, canDisable: false, canEnable: false, firstParty: true, clonedFrom: "" }]
+      const plugins = []
       for (let id in shellConfig.menuRegistry)
         plugins.push({ id: id, name: id, kinds: ["menu"], enabled: true, active: true, canDisable: false, canEnable: false, firstParty: true, clonedFrom: "" })
       for (let pluginId in pluginRegistry.installedPlugins) {
@@ -1581,7 +1574,6 @@ ShellRoot {
 
 
 
-  ListModel { id: launcherModel }
   ListModel { id: clipboardModel }
   ListModel { id: passModel }
 
@@ -1592,28 +1584,39 @@ ShellRoot {
   }
 
 
-  ShellLauncherPanel {
-    id: launcher
-    shellRoot: root
-    launcherModel: launcherModel
-    closeAction: function() { root.hideShellMenu(shellConfig.menuIds.launcher) }
-    panelHeight: root.menuHeightFor(shellConfig.menuIds.launcher)
-  }
-
   OmarchyServices.AppLibrary {
     id: appLibraryService
     shellRoot: root
     shellSettings: shellSettings
+    shellConfig: shellConfig
   }
 
-  ShellLauncherService {
-    id: launcherService
-    shellRoot: root
-    shellConfig: shellConfig
-    shellSettings: shellSettings
-    launcherPanel: launcher
-    launcherModel: launcherModel
-    appLibrary: appLibraryService
+  IpcHandler {
+    target: "launcher"
+
+    function toggle() { root.toggleLauncher() }
+    function open() { if (!root.shellMenuOpen("launcher")) root.toggleLauncher() }
+    function show() { open() }
+    function hide() { root.hideLauncher() }
+    function state(): string { return root.shellMenuOpen("launcher") ? "open" : "closed" }
+    function visibleById(entryId: string): string {
+      var entry = appLibraryService.entryById(entryId)
+      return entry && !appLibraryService.isHiddenEntry(entry) ? "visible" : "hidden"
+    }
+    function launchableById(entryId: string): string {
+      var entry = appLibraryService.entryById(entryId)
+      if (!entry) return "missing"
+      return (entry.command && entry.command.length > 0) || typeof entry.execute === "function"
+        ? "launchable" : "not-launchable"
+    }
+    function hiddenRoundTrip(entryId: string): string {
+      var previous = root.launcherSmokeHiddenId
+      var before = visibleById(entryId)
+      root.launcherSmokeHiddenId = entryId
+      var hidden = visibleById(entryId)
+      root.launcherSmokeHiddenId = previous
+      return before + "|" + hidden + "|" + visibleById(entryId)
+    }
   }
 
   ShellClipboardPanel {

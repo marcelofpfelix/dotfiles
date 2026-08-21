@@ -17,9 +17,7 @@ This shell stays small by keeping ownership boring and visible.
 - `omarchy-menu.jsonc` owns the Ubuntu-safe root-menu catalog. The copied menu
   engine owns hierarchy, search, aliases, guards, providers, and navigation.
 - `services/AppSearch.js` and `services/AppLibrary.qml` own the shared desktop
-  application catalog, filtering, icon lookup, and launch path used by both the
-  copied root menu and `Win+D`. Launcher MRU/MFU, favorites, and command mode
-  remain in `ShellLauncherService.qml` because Omarchy does not provide them.
+  application catalog, filtering, icon lookup, launch path, MRU/MFU ranking, favorites, and reversible hide behavior used by the copied root menu and `Win+D`. The retired standalone launcher panel and service are archived.
 - Copied `Ui/TextField.qml` owns search-input styling for launcher, clipboard,
   passmenu, web search, and keybindings. Panels add only local palette/font
   values and behavior-specific native Qt key handlers.

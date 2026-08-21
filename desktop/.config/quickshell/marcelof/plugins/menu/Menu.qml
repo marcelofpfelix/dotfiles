@@ -78,7 +78,7 @@ Item {
   property int providerRevision: 0
 
   // Shared application engine (entries, hidden filters, icons, launch,
-  // removal), owned by the shell and also used by the standalone launcher.
+  // reversible hiding), owned by the shell and used by the Apps provider.
   readonly property var appLibrary: root.shell ? root.shell.appLibrary : null
   property bool deleteConfirmOpen: false
   property var deleteTarget: null
@@ -620,7 +620,14 @@ Item {
     var query = root.filterText.trim()
     root.searchDivider = false
 
-    if (query) {
+    if (active === "apps" && root.appLibrary) {
+      var appMatches = root.appLibrary.sortedEntries(query)
+      for (var a = 0; a < appMatches.length; a++) {
+        var appEntry = appMatches[a].entry
+        var appItem = root.item("apps." + String(appEntry.id || ""))
+        if (appItem) rows.push(root.displayRow(appItem, root.appLibrary.entrySubtext(appEntry), appMatches[a].score))
+      }
+    } else if (query) {
       var currentRows = []
       var drilldownRows = []
 
@@ -656,21 +663,6 @@ Item {
         rows.push(root.displayRow(child, child.description, child.order))
       }
 
-      // DesktopEntries can reorder its values when an application starts.
-      // Keep the Apps menu alphabetical independently of provider refreshes.
-      if (active === "apps") {
-        rows.sort(function(a, b) {
-          var aLabel = String(a.label || "").toLowerCase()
-          var bLabel = String(b.label || "").toLowerCase()
-          if (aLabel < bLabel) return -1
-          if (aLabel > bLabel) return 1
-          var aId = String(a.itemId || "")
-          var bId = String(b.itemId || "")
-          if (aId < bId) return -1
-          if (aId > bId) return 1
-          return 0
-        })
-      }
     }
 
     for (var k = 0; k < rows.length; k++) displayModel.append(rows[k])
@@ -1172,8 +1164,8 @@ Item {
           anchors.fill: parent
           opened: root.deleteConfirmOpen
           z: 10
-          message: "Do you want to uninstall " + ((root.deleteTarget && root.deleteTarget.label) || "") + "?"
-          confirmText: "Uninstall"
+          message: "Hide " + ((root.deleteTarget && root.deleteTarget.label) || "") + " from the launcher?"
+          confirmText: "Hide"
           background: root.background
           foreground: root.foreground
           scrim: root.scrim
@@ -1353,17 +1345,17 @@ Item {
 
               Row {
                 id: trail
-                width: Style.space(14)
+                width: row.isApp ? Style.space(20) : Style.space(14)
                 anchors.right: parent.right
                 anchors.rightMargin: root.rowReservedBorderRight + Style.space(8)
                 y: contentColumn.y + labelText.y + (labelText.height - height) / 2
                 spacing: 0
 
                 Text {
-                  visible: false
-                  text: row.childCount
+                  visible: row.isApp
+                  text: root.appLibrary && root.appLibrary.isFavorite(row.appId) ? "" : ""
                   color: root.foreground
-                  opacity: 0.45
+                  opacity: root.appLibrary && root.appLibrary.isFavorite(row.appId) ? 0.9 : 0.45
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.body
                   anchors.verticalCenter: parent.verticalCenter
@@ -1383,6 +1375,7 @@ Item {
               MouseArea {
                 id: mouseArea
                 anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                 hoverEnabled: true
                 cursorShape: row.disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
                 onEntered: root.selectFromPointer(row.index, row, {
@@ -1392,11 +1385,16 @@ Item {
                 onPositionChanged: function(mouse) {
                   root.selectFromPointer(row.index, row, mouse)
                 }
-                onClicked: {
+                onClicked: function(mouse) {
                   if (row.disabled) return
                   root.cursorActive = true
                   root.selectedIndex = row.index
-                  root.activateIndex(row.index, true)
+                  if (row.isApp && mouse.button === Qt.RightButton && root.appLibrary)
+                    root.appLibrary.toggleFavoriteById(row.appId)
+                  else if (row.isApp && mouse.button === Qt.MiddleButton && root.appLibrary)
+                    root.appLibrary.hideById(row.appId)
+                  else
+                    root.activateIndex(row.index, true)
                 }
               }
             }

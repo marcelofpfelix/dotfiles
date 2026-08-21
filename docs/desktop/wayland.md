@@ -10,7 +10,7 @@ For the short switch procedure, see
 - `desktop/.config/hypr/init.lua`: Hyprland 0.55+ profile selector.
 - `desktop/.config/hypr/profiles/default.lua`: profile matching the current i3 workflow.
 - `desktop/.config/hypr/profiles/omarchy.lua`: Omarchy-like Wayland profile implemented with generic Wayland tools.
-- `desktop/.config/quickshell/marcelof/shell.qml`: Quickshell wallpaper, bar, tray/status, launcher, password picker, clipboard picker, web-search popup, keybindings popup, screen tools popup, and session menu.
+- `desktop/.config/quickshell/marcelof/shell.qml`: Quickshell wallpaper, bar, tray/status, copied Omarchy menu and Apps provider, password picker, clipboard picker, web-search popup, keybindings popup, screen tools popup, and session menu.
 - `desktop/bin/hypr-session`: status, smoke, test, reload, rollback helper.
 - `desktop/tools/desktop-doctor`: read-only desktop health wrapper around smoke, profile, shell, board, picker, audio, recording, and browser wrapper checks.
 - `desktop/tools/desktop-package-audit`: checks the active Wayland package intent against the sibling homelab install list.
@@ -189,7 +189,7 @@ Rejected locally: distro-level refresh/update jobs, full upstream shell replacem
 
 Quickshell remains the default shell UI:
 
-- `archive/obsolete/desktop/bin/qs-launcher` is the retired launcher wrapper; active bindings use `qbar launcher`.
+- `archive/obsolete/desktop/bin/qs-launcher` and the archived standalone launcher QML are retired; active bindings use `qbar launcher`, which opens the copied `omarchy.menu` Apps provider backed by the shared `AppLibrary` index.
 - `websearch` with no arguments opens the Quickshell web search panel when Wayland/Quickshell are available.
 
 Script-friendly Walker/terminal alternatives are available in parallel:

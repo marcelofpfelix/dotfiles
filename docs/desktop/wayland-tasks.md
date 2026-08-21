@@ -584,7 +584,7 @@ Review snapshot: 2026-08-03. Sources: local reference clones for Caelestia, end-
   - Sources: Caelestia launcher modes, Omarchy app menu behavior, AGS launcher close/selection behavior.
   - Acceptance: launcher keeps MRU/MFU/favorite behavior, has a clean empty state, stable keyboard focus, and consistent row actions for favorite/hide/open.
   - Validation: `desktop/tools/qs-menu-smoke launcher settings`, `qs ipc ... call launcher state` after `qbar launcher`, manual `Win+D`, type query, click or Enter launch, hide app, favorite app, clear hidden apps, reload.
-  - Current behavior: `ShellLauncherService.qml` owns MRU/MFU scoring, favorites, hidden apps, command rows, and app activation. Launcher IPC opens with `panelOpen`, so click and Enter pass the same state guard as keyboard toggles. Click and Enter launch the visible `DesktopEntries` object through Quickshell native `execute()` first, with command/`gtk-launch` fallback; custom command rows keep direct command execution. The launcher shows a shared empty state, and Settings exposes `Clear Hidden Apps` so hidden entries are recoverable.
+  - Current behavior: the copied `omarchy.menu` Apps route uses shared `AppLibrary` discovery, MRU/MFU scoring, favorites, reversible hidden apps, fuzzy search, and native desktop-entry activation. Launcher IPC opens that route, and Settings retains `Clear Hidden Apps` for recovery.
 
 - [x] P1: Improve notification center grouping and details.
   - Sources: Noctalia notification center, end-4 notification surfaces, Omarchy notification service/card split.
@@ -697,7 +697,7 @@ Task source: latest local review request. Priority is code repetition and simple
   - Sources: live launcher IPC smoke, current Quickshell `DesktopEntries` API, redundant `qs-launcher` wrapper.
   - Acceptance: `Win+D`/`Win+Space` open the launcher through `qbar launcher`; selecting an app launches the Quickshell desktop-entry object with command/`gtk-launch` fallback; the old wrapper is archived, not deleted.
   - Validation: `desktop/tools/qs-menu-smoke launcher`, `luac -p desktop/.config/hypr/init.lua desktop/.config/hypr/profiles/common.lua desktop/.config/hypr/profiles/default.lua desktop/.config/hypr/profiles/omarchy.lua`, manual `Win+D` open/type/Enter.
-  - Current behavior: both active Hyprland profiles bind launcher keys to `qbar launcher`; `archive/obsolete/desktop/bin/qs-launcher` keeps the retired wrapper for history. Launcher IPC sets `panelOpen`, so click and Enter route through the visible `DesktopEntries` object in `ShellLauncherService.qml`; Settings exposes `Clear Hidden Apps` for hidden-entry recovery.
+  - Current behavior: both active Hyprland profiles bind launcher keys to `qbar launcher`; that IPC route opens the copied `omarchy.menu` Apps provider backed by `AppLibrary`. The retired wrapper, panel, and service remain under `archive/obsolete`; Settings exposes `Clear Hidden Apps` for recovery.
 
 - [x] P1: Continue reducing Quickshell/Hyprland runtime script count by call-site audit only.
   - Sources: user request to reduce script count, current runtime helpers, Ponytail/YAGNI rule.
@@ -721,7 +721,7 @@ Task source: latest local review request. Priority is code repetition and simple
   - Sources: Caelestia services/components, Noctalia modules, end-4 widgets.
   - Acceptance: `shell.qml` owns windows, IPC, and top-level state only; any repeated visual block, service process, or menu body lives in a focused `Shell*.qml` component.
   - Validation: `wc -l desktop/.config/quickshell/marcelof/shell.qml`, `qmllint desktop/.config/quickshell/marcelof/shell.qml desktop/.config/quickshell/marcelof/Shell*.qml desktop/.config/quickshell/marcelof/StatusText.qml`.
-  - Current behavior: OSD state/display/timers and notification toast timing moved into `ShellOverlays.qml`; calendar grid helpers moved into `ShellCalendarPanel.qml`; launcher ranking/activation moved into `ShellLauncherService.qml`; polling/process blocks live in focused service components, and `shell.qml` has no direct `Process` blocks left. `shell.qml` is 1465 lines and focused QML lint passed. Remaining root-owned code is top-level state, IPC, and glue that crosses panels.
+  - Current behavior: OSD state/display/timers and notification toast timing moved into `ShellOverlays.qml`; calendar grid helpers moved into `ShellCalendarPanel.qml`; launcher ranking/activation now lives in shared `AppLibrary.qml` after the standalone service was archived; polling/process blocks live in focused service components, and `shell.qml` has no direct `Process` blocks left. `shell.qml` is 1465 lines and focused QML lint passed. Remaining root-owned code is top-level state, IPC, and glue that crosses panels.
 
 - [x] P0: Move board check metadata out of Rust.
   - Sources: current board config, user request to keep config in one place and code generic.
@@ -1487,7 +1487,7 @@ Findings:
 - [x] P2: Audit tray ownership extraction.
   - Result: keep the current root functions shared by `ShellBar` and `ShellTrayButton`; there is no duplicate backend or poller, and a service would only replace direct calls with pass-through calls.
 - [x] P2: Audit launcher ownership extraction.
-  - Result: no change. `AppLibrary.qml` owns discovery/search and `ShellLauncherService.qml` owns MRU/MFU, favorites, hidden apps, and launching; root functions are narrow UI delegates.
+  - Result: superseded by the Apps-provider migration. `AppLibrary.qml` now owns discovery, search, MRU/MFU, favorites, hidden apps, and launching; the standalone service is archived and root functions remain narrow IPC delegates.
 ## 2026-08-19 Omarchy Foundation Replacement Review
 
 Refreshed source: local `omarchy-quattro` clone at `9455496`. The review compared
@@ -1518,9 +1518,10 @@ and local behavior that must survive replacement.
   - Preserve: volume, mic mute, display brightness, keyboard brightness, existing media-key bindings, and no extra polling. Keep `desktop-osd` only as a thin IPC/action boundary if Hyprland bindings still need it.
   - Validation: upstream OSD model test, every hardware key, repeated-key coalescing, screenshots, and one loaded panel.
 
-- [ ] P1: Route Win+D through the Omarchy menu Apps provider and retire the standalone launcher panel/service only after parity.
+- [x] P1: Route Win+D through the Omarchy menu Apps provider and retire the standalone launcher panel/service only after parity.
   - Preserve: MRU x MFU ranking, favorites, hide/unhide, desktop-entry launch correctness, icons, right-click actions, and fast keyboard focus. Reuse the already shared `AppLibrary`; do not run two app indexes.
   - Validation: launch/click/Enter, favorite/hide/unhide, ranking fixture, cold/warm latency, screenshot, and archived old QML.
+  - Completed: `qbar launcher` and `Win+D` now open the copied `omarchy.menu` Apps route. `AppLibrary` owns the existing MRU x MFU, favorites, reversible hide, launch, and fuzzy-search behavior; the standalone launcher panel/service and its Hyprland rule are archived. The copied menu suite, QML lint, live IPC state, hidden-app round trip, and launcher screenshot pass.
 
 - [ ] P1: Add Omarchy's media service/bar widget for ordinary MPRIS players while keeping `audioctl` as the separate saved music/noise plugin.
   - Boundary: Omarchy media owns browser/player metadata and transport; `audioctl` owns only its launched MPV/noise processes. Neither may pause Meet, calls, or unrelated PipeWire streams.

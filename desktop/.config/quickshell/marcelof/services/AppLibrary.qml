@@ -11,9 +11,12 @@ Item {
 
   required property var shellRoot
   required property var shellSettings
+  required property var shellConfig
 
   property var iconIndex: ({})
   property var pendingIconIndex: ({})
+  property var launcherMru: []
+  property var launcherCounts: ({})
 
   signal appsChanged()
 
@@ -35,9 +38,91 @@ Item {
 
   function sortedEntries(query) {
     var values = DesktopEntries.applications.values || []
-    return AppSearch.sortedEntries(values, query, function(entry) {
+    var rows = AppSearch.sortedEntries(values, query, function(entry) {
       return root.isHiddenEntry(entry)
     })
+    for (var i = 0; i < rows.length; i++) {
+      var entry = rows[i].entry
+      var id = String(entry && entry.id || "")
+      var mru = root.launcherMru.indexOf(id)
+      var favorite = root.isFavorite(id)
+      rows[i].favorite = favorite
+      rows[i].mru = mru
+      rows[i].boost = (favorite ? 20000 : 0)
+        + (mru < 0 ? 0 : 300 - Math.min(mru, 49) * 5)
+        + Math.min(Number(root.launcherCounts[id] || 0), 20) * 10
+      rows[i].score += rows[i].boost
+    }
+    rows.sort(function(a, b) {
+      if (String(query || "").trim() && a.score !== b.score) return b.score - a.score
+      if (!String(query || "").trim() && a.boost !== b.boost) return b.boost - a.boost
+      if (!String(query || "").trim() && a.mru !== b.mru)
+        return a.mru < 0 ? 1 : (b.mru < 0 ? -1 : a.mru - b.mru)
+      return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)
+    })
+    return rows
+  }
+
+  function isFavorite(id) {
+    var favorites = Array.isArray(root.shellSettings.favoriteAppIds)
+      ? root.shellSettings.favoriteAppIds : []
+    return favorites.indexOf(String(id || "")) !== -1
+  }
+
+  function toggleListValue(list, value) {
+    var next = Array.isArray(list) ? list.slice() : []
+    var index = next.indexOf(value)
+    if (index < 0) next.push(value)
+    else next.splice(index, 1)
+    return next
+  }
+
+  function toggleFavoriteById(id) {
+    var value = String(id || "")
+    if (!value) return
+    root.shellSettings.favoriteAppIds = root.toggleListValue(root.shellSettings.favoriteAppIds, value)
+    root.appsChanged()
+  }
+
+  function hideById(id) {
+    var value = String(id || "")
+    if (!value) return
+    root.shellSettings.hiddenAppIds = root.toggleListValue(root.shellSettings.hiddenAppIds, value)
+    root.appsChanged()
+  }
+
+  function updateMru(output) {
+    var lines = String(output || "").split(/\n+/)
+    var seen = ({})
+    var entries = []
+    var counts = ({})
+    for (var i = 0; i < lines.length && entries.length < 50; i++) {
+      var fields = lines[i].trim().split(/\t+/)
+      var id = fields[0]
+      if (!id || seen[id]) continue
+      seen[id] = true
+      entries.push(id)
+      counts[id] = Math.max(1, Number(fields[1] || 1))
+    }
+    root.launcherMru = entries
+    root.launcherCounts = counts
+    root.appsChanged()
+  }
+
+  function recordUse(id) {
+    var value = String(id || "")
+    if (!value) return
+    var next = [value]
+    for (var i = 0; i < root.launcherMru.length && next.length < 50; i++)
+      if (root.launcherMru[i] !== value) next.push(root.launcherMru[i])
+    var counts = Object.assign({}, root.launcherCounts)
+    counts[value] = Number(counts[value] || 0) + 1
+    root.launcherMru = next
+    root.launcherCounts = counts
+    var cache = ""
+    for (var j = 0; j < next.length; j++)
+      cache += next[j] + "\t" + Number(counts[next[j]] || 1) + "\n"
+    Quickshell.execDetached(root.shellConfig.launcherMruSave(cache))
   }
 
   function entryById(desktopId) {
@@ -66,16 +151,17 @@ Item {
   function launch(desktopId, name) {
     var id = String(desktopId || "")
     if (!id) return
+    root.recordUse(id)
     var entry = root.entryById(id)
     if (entry && typeof entry.execute === "function") entry.execute()
     else Util.execDetached("gtk-launch " + Util.shellQuote(id + ".desktop"))
+    root.appsChanged()
   }
 
   // Omarchy removes packages here. Local launcher removal is deliberately the
   // existing reversible hide action.
   function remove(desktopId, name) {
-    root.shellRoot.hideLauncherById(String(desktopId || ""))
-    root.appsChanged()
+    root.hideById(String(desktopId || ""))
   }
 
   function iconIndexScanCommand() {
