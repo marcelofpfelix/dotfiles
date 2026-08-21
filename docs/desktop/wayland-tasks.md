@@ -1514,9 +1514,10 @@ and local behavior that must survive replacement.
   - Validation: local/remote copy, primary paste, image copy, history restart, secret fixture without printing values, one watcher, and screenshot/input tests.
   - Completed: copied `omarchy.clipboard` owns the overlay, text/image capture, JSON history, fuzzy search, preview, delete, and copy-only helpers. One shell owner runs two history watchers plus the preserved normal-to-primary sync watcher; the old `cliphist` startup owner is stopped and removed. The standalone panel is archived, `cliphist-menu` is a terminal client of the same JSON history, and gopass uses a runtime marker so copied secrets are skipped without clearing the clipboard. Upstream tests, local sensitive-copy fixture, QML/shell/Lua checks, live toggle/render smoke, watcher audit, reload persistence, and `hypr-session smoke` pass.
 
-- [ ] P1: Replace `ShellOverlays` with the copied `omarchy.osd` panel.
-  - Preserve: volume, mic mute, display brightness, keyboard brightness, existing media-key bindings, and no extra polling. Keep `desktop-osd` only as a thin IPC/action boundary if Hyprland bindings still need it.
-  - Validation: upstream OSD model test, every hardware key, repeated-key coalescing, screenshots, and one loaded panel.
+- [x] P1: Replace `ShellOverlays` with the copied `omarchy.osd` panel.
+  - Completed: copied Omarchy's OSD panel/model and archived the old renderer. Volume, mic mute, display brightness, and keyboard brightness retain their existing Hyprland bindings through the thin `desktop-osd` action boundary; the shell reuses current PipeWire state and existing brightness refresh callbacks without another poller.
+  - Host fix: the shared plugin loader now accepts upstream `panel` as well as `overlay` entry points, uses the discovered source URL, and exposes Omarchy's generic loaded-plugin call IPC.
+  - Validation: copied model assertions, QML/shell lint, all four live display routes, repeated open/close lifecycle, one `omarchy-osd` layer on `eDP-1`, and screenshot smoke at `20260821-191524`. The bottom OSD crop was visually inspected with no clipping, alignment, spacing, or contrast defects.
 
 - [x] P1: Route Win+D through the Omarchy menu Apps provider and retire the standalone launcher panel/service only after parity.
   - Preserve: MRU x MFU ranking, favorites, hide/unhide, desktop-entry launch correctness, icons, right-click actions, and fast keyboard focus. Reuse the already shared `AppLibrary`; do not run two app indexes.

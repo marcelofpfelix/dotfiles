@@ -64,7 +64,7 @@ qs_menu_crop_geometry() {
     emojis|wallpaper) width=$max_w; height=$max_h; x=0; y=0 ;;
     media-controls|network-tools|wifi-qr) width=900; height=800; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     battery) width=720; height=700; x=0; y=0 ;;
-    osd) width=360; height=140; x=$(((max_w - width) / 2)); y=0 ;;
+    osd) width=360; height=140; x=$(((max_w - width) / 2)); y=$((max_h - height)) ;;
     notifications) width=720; height=620; x=$(((max_w - width) / 2)); y=21 ;;
     controls) width=840; height=1020; x=$((max_w - width)); y=0 ;;
     calendar) width=780; height=840; x=$((max_w - width)); y=0 ;;

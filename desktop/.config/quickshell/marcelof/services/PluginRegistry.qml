@@ -28,6 +28,7 @@ QtObject {
 
   // Compatibility with the current host while shell.json becomes canonical.
   property var enabledPluginIds: []
+  readonly property string panelKind: "panel"
   readonly property string overlayKind: "overlay"
   readonly property string barWidgetKind: "bar-widget"
 
@@ -153,8 +154,18 @@ QtObject {
     return entryPointUrl(manifest, entryKind) !== ""
   }
 
+  function panelEntryKind(id) {
+    if (supportsKind(id, panelKind)) return panelKind
+    if (supportsKind(id, overlayKind)) return overlayKind
+    return ""
+  }
+
+  function supportsPanel(id) {
+    return panelEntryKind(id) !== ""
+  }
+
   function supports(id) {
-    return supportsKind(id, overlayKind) || supportsKind(id, barWidgetKind) || supportsKind(id, "service")
+    return supportsPanel(id) || supportsKind(id, barWidgetKind) || supportsKind(id, "service")
   }
 
   function isDisabled(config, id) {

@@ -76,21 +76,57 @@ ShellRoot {
     webSearchPanel.toggleSearch(site)
   }
 
-  function showVolumeOsd() { overlays.showVolume(root.defaultSinkAudio()) }
+  function showOsd(icon, message, value, maxValue, progressText, duration) {
+    const payload = JSON.stringify({
+      icon: icon || "",
+      message: message || "",
+      value: value === undefined ? "" : value,
+      max: maxValue === undefined ? 100 : maxValue,
+      progressText: progressText || "",
+      duration: duration === undefined ? 1200 : duration
+    })
+    const loader = root.dynamicPluginLoaders["omarchy.osd"]
+    if (loader && loader.item) {
+      loader.item.open(payload)
+      return true
+    }
+    return root.summonDynamicPlugin("omarchy.osd", payload)
+  }
+
+  function showVolumeOsd() {
+    const audio = root.defaultSinkAudio()
+    if (!audio) return root.showOsd("volume-muted", "Audio unavailable")
+    return root.showOsd(audio.muted ? "volume-muted" : "volume", "", Math.round(audio.volume * 100))
+  }
 
   function showBrightnessOsd() {
+    root.brightnessOsdPending = true
     systemStatusService.refreshBrightness()
-    overlays.showBrightnessSoon()
   }
 
   function showKbdOsd() {
+    root.kbdOsdPending = true
     systemStatusService.refreshKbdBrightness()
-    overlays.showKbdSoon()
   }
 
   function showMicOsd() {
-    systemStatusService.refreshPrivacy()
-    overlays.show("󰍬", "Microphone toggled")
+    const source = Pipewire.defaultAudioSource
+    const audio = source && source.audio ? source.audio : null
+    return root.showOsd(audio && audio.muted ? "microphone-muted" : "microphone", audio && audio.muted ? "Microphone muted" : "Microphone live")
+  }
+
+  function finishBrightnessOsd() {
+    if (!root.brightnessOsdPending) return
+    root.brightnessOsdPending = false
+    root.showOsd("brightness", "", root.brightnessValue)
+  }
+
+  function finishKbdOsd() {
+    if (!root.kbdOsdPending) return
+    root.kbdOsdPending = false
+    const value = Number(root.kbdBrightnessText.replace("%", ""))
+    if (isFinite(value)) root.showOsd("keyboard", "", value)
+    else root.showOsd("keyboard", root.kbdBrightnessText || "Keyboard brightness")
   }
 
   function runWebSearch() {
@@ -218,7 +254,9 @@ ShellRoot {
   property bool settingsOpen: false
   property string brightnessText: "--"
   property real brightnessValue: 0
+  property bool brightnessOsdPending: false
   property string kbdBrightnessText: ""
+  property bool kbdOsdPending: false
   property string networkStatusText: ""
   property string powerStatusText: ""
   property string fanStatusText: "Fan --"
@@ -393,8 +431,9 @@ ShellRoot {
     for (var id in pluginRegistry.installedPlugins) {
       var manifest = pluginRegistry.installedPlugins[id]
       if (!pluginRegistry.isEnabled(id)) continue
-      if (pluginRegistry.supportsKind(id, pluginRegistry.overlayKind))
-        overlays.push({ id: id, manifest: manifest, sourceUrl: pluginRegistry.entryPointUrl(manifest, pluginRegistry.overlayKind), keepLoaded: manifest.keepLoaded === true })
+      const panelKind = pluginRegistry.panelEntryKind(id)
+      if (panelKind !== "")
+        overlays.push({ id: id, manifest: manifest, sourceUrl: pluginRegistry.entryPointUrl(manifest, panelKind), keepLoaded: manifest.keepLoaded === true })
       if (pluginRegistry.supportsKind(id, pluginRegistry.barWidgetKind))
         widgets.push({ id: id, manifest: manifest, sourceUrl: pluginRegistry.entryPointUrl(manifest, "barWidget") })
     }
@@ -416,6 +455,19 @@ ShellRoot {
     var next = ({})
     for (var key in dynamicPluginLoaders) if (key !== id) next[key] = dynamicPluginLoaders[key]
     dynamicPluginLoaders = next
+  }
+
+  function callDynamicPlugin(id, method, arg) {
+    const resolved = pluginRegistry.resolveEnabledId(id)
+    const loader = dynamicPluginLoaders[resolved]
+    if (!loader || !loader.item || typeof loader.item[method] !== "function") return "unknown"
+    try {
+      const result = loader.item[method](arg)
+      return result === undefined || result === null ? "ok" : String(result)
+    } catch (error) {
+      console.warn("plugin " + resolved + " " + method + "() threw:", error)
+      return "error"
+    }
   }
 
   function deliverDynamicPluginPayloads(id) {
@@ -511,7 +563,7 @@ ShellRoot {
 
   function shellMenuOpen(id) {
     const raw = String(id || "")
-    if (pluginRegistry.supportsKind(raw, pluginRegistry.overlayKind)) return root.dynamicPluginOpen(raw)
+    if (pluginRegistry.supportsPanel(raw)) return root.dynamicPluginOpen(raw)
     const menu = root.shellMenuId(raw)
     if (menu === "bar") return !root.barHidden
     if (menu === "launcher") return rootMenu.opened && rootMenu.activeMenu === "apps"
@@ -524,7 +576,7 @@ ShellRoot {
 
   function hideShellMenu(id) {
     const raw = String(id || "")
-    if (pluginRegistry.supportsKind(raw, pluginRegistry.overlayKind)) return root.hideDynamicPlugin(raw)
+    if (pluginRegistry.supportsPanel(raw)) return root.hideDynamicPlugin(raw)
     const menu = root.shellMenuId(raw)
     if (menu === "all" || menu === "panels") {
       root.closeTransientPanels()
@@ -553,7 +605,7 @@ ShellRoot {
 
   function toggleShellMenu(id, payloadJson) {
     const raw = String(id || "")
-    if (pluginRegistry.supportsKind(raw, pluginRegistry.overlayKind))
+    if (pluginRegistry.supportsPanel(raw))
       return root.dynamicPluginOpen(raw) ? root.hideDynamicPlugin(raw) : root.summonDynamicPlugin(raw, payloadJson)
     const menu = root.shellMenuId(raw)
     if (menu === "bar") {
@@ -588,7 +640,7 @@ ShellRoot {
 
   function openShellMenu(id, payloadJson) {
     const raw = String(id || "")
-    if (pluginRegistry.supportsKind(raw, pluginRegistry.overlayKind))
+    if (pluginRegistry.supportsPanel(raw))
       return root.dynamicPluginOpen(raw) ? true : root.summonDynamicPlugin(raw, payloadJson)
     const menu = root.shellMenuId(raw)
     if (menu === "bar") {
@@ -1051,7 +1103,7 @@ ShellRoot {
       required property var modelData
       readonly property string pluginId: modelData.id
       readonly property var manifest: modelData.manifest
-      readonly property string sourceUrl: pluginRegistry.entryPointUrl(manifest, pluginRegistry.overlayKind)
+      readonly property string sourceUrl: modelData.sourceUrl
 
       property Loader pluginLoader: Loader {
         source: dynamicPluginEntry.sourceUrl
@@ -1186,7 +1238,7 @@ ShellRoot {
     root.brightnessValue = Math.max(0, Math.min(100, Math.round(value)))
     root.brightnessText = root.brightnessValue + "%"
     root.runBrightness(String(root.brightnessValue))
-    overlays.show("󰃠", "Brightness " + root.brightnessText)
+    root.showOsd("brightness", "", root.brightnessValue)
   }
 
   function runKbdBrightness(action) {
@@ -1300,6 +1352,7 @@ ShellRoot {
     function toggle(id: string, payloadJson: string): string { return root.toggleShellMenu(id, payloadJson) ? "ok" : "unknown" }
     function hide(id: string): string { return root.hideShellMenu(id) ? "ok" : "unknown" }
     function summon(id: string, payloadJson: string): string { return root.openShellMenu(id, payloadJson) ? "ok" : "unknown" }
+    function call(id: string, method: string, arg: string): string { return root.callDynamicPlugin(id, method, arg) }
     function state(id: string): string { return root.shellMenuOpen(id) ? "open" : "closed" }
     function closePanels() { root.closeTransientPanels() }
   }
@@ -1467,13 +1520,6 @@ ShellRoot {
       panelWidth: root.menuWidthFor(shellConfig.menuIds.tray)
       panelHeight: Math.min(root.menuHeightFor(shellConfig.menuIds.tray), 84 + Math.max(1, root.allTrayItems.length) * (shellTheme.launcherRowHeight + shellTheme.spacingMd))
     }
-
-    ShellOverlays {
-      id: overlays
-      anchorWindow: bar.primaryWindow
-      shellRoot: root
-    }
-
 
   ShellWallpaperService {
     id: wallpaperService

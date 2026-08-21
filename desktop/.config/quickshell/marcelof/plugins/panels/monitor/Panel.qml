@@ -230,7 +230,7 @@ Panel {
   }
 
   function showBrightnessOsd(percent) {
-    Quickshell.execDetached(["qbar", "osd-brightness"])
+    if (bar && bar.barRoot) bar.barRoot.showOsd("brightness", "", Model.clampBrightness(percent))
   }
 
   function normalizeScale(scale) {

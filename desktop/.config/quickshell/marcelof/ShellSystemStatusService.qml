@@ -41,6 +41,7 @@ Item {
       onStreamFinished: {
         systemStatusService.shellRoot.brightnessText = this.text.trim()
         systemStatusService.shellRoot.brightnessValue = Number(systemStatusService.shellRoot.brightnessText.replace("%", "")) || 0
+        systemStatusService.shellRoot.finishBrightnessOsd()
       }
     }
   }
@@ -56,7 +57,12 @@ Item {
     id: kbdBrightnessRefresh
     command: systemStatusService.shellConfig.keyboardBrightnessStatus()
     running: true
-    stdout: StdioCollector { onStreamFinished: systemStatusService.shellRoot.kbdBrightnessText = this.text.trim() }
+    stdout: StdioCollector {
+      onStreamFinished: {
+        systemStatusService.shellRoot.kbdBrightnessText = this.text.trim()
+        systemStatusService.shellRoot.finishKbdOsd()
+      }
+    }
   }
 
   Timer {
