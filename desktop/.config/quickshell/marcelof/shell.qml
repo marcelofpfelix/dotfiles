@@ -3,7 +3,6 @@ import Quickshell.Hyprland
 import Quickshell.Bluetooth
 import Quickshell.Io
 import Quickshell.Services.Pipewire
-import Quickshell.Services.Notifications
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
 import Quickshell.Wayland
@@ -13,6 +12,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import qs.Commons
 import "plugins/menu" as OmarchyMenu
+import "plugins/bar" as OmarchyBar
 import "plugins/emojis" as EmojiPlugin
 import "plugins/image-picker" as ImagePickerPlugin
 import "plugins/panels/wifiqr" as WifiQrPlugin
@@ -30,6 +30,9 @@ ShellRoot {
   property var dynamicPluginLoaders: ({})
   property string launcherSmokeHiddenId: ""
   readonly property var appLibrary: appLibraryService
+  readonly property var notificationService: pluginServiceHost.serviceFor("omarchy.notifications")
+  readonly property var barConfig: pluginConfig.barConfig
+  readonly property alias bar: dynamicBar
   function menuSize(id) { return shellConfig.menuSize(id, shellSettings.denseUi) }
   function menuWidthFor(id) { return root.menuSize(id).width }
   function menuHeightFor(id) { return root.menuSize(id).height }
@@ -283,7 +286,7 @@ ShellRoot {
 
   readonly property var laptopScreen: Quickshell.screens.find(screen => screen.name === "eDP-1") || Quickshell.screens[0]
 
-  property bool barHidden: false
+  property alias barHidden: dynamicBar.barHidden
   property bool trayExpanded: false
   property bool trayManageOpen: false
   property string sessionConfirmLabel: ""
@@ -295,17 +298,6 @@ ShellRoot {
   property bool workInboxOpen: false
   property bool personalDashboardOpen: false
   property bool settingsOpen: false
-  property bool notificationCenterOpen: false
-  property bool notificationToastOpen: false
-  property int selectedNotificationIndex: -1
-  property var notificationObjects: []
-  property bool notificationHistoryLoaded: false
-  property string notificationToastApp: ""
-  property string notificationToastAppIcon: ""
-  property string notificationToastImage: ""
-  property string notificationToastSummary: ""
-  property string notificationToastBody: ""
-  property int notificationToastSerial: 0
   property string brightnessText: "--"
   property real brightnessValue: 0
   property string kbdBrightnessText: ""
@@ -547,18 +539,13 @@ ShellRoot {
   function setDynamicPluginEnabled(id, enabled) {
     if (!root.dynamicPluginKnown(id)) return "unknown"
     if (!pluginRegistry.supports(id)) return "unsupported"
-    var ids = shellSettings.enabledPluginIds.slice()
-    var index = ids.indexOf(id)
-    if (enabled && index === -1) ids.push(id)
-    if (!enabled && index !== -1) {
-      root.hideDynamicPlugin(id)
-      ids.splice(index, 1)
-    }
-    shellSettings.enabledPluginIds = ids
+    if (!pluginRegistry.setEnabled(id, enabled, {}))
+      return pluginRegistry.lastEnableError || "failed"
     return "ok"
   }
 
   function closeTransientPanels() {
+    if (root.notificationService) root.notificationService.clearPopups()
     root.hideLauncher()
     wifiQrOverlay.close()
     imagePicker.close()
@@ -843,322 +830,21 @@ ShellRoot {
 
   function toggleSettings() { root.toggleTransientPanel("settingsOpen") }
 
+  function mutateShellConfig(mutator) { pluginConfig.mutate(mutator) }
+  function updateEntryInline(moduleName, settings) {
+    return pluginConfig.updateEntryInline(moduleName, settings)
+  }
+
+
   function toggleDnd() {
-    shellSettings.doNotDisturb = !shellSettings.doNotDisturb
-    if (shellSettings.doNotDisturb)
-      root.notificationToastOpen = false
+    if (!root.notificationService) return
+    root.notificationService.setDoNotDisturb(!root.notificationService.doNotDisturb)
   }
 
-  function toggleNotifications() { root.toggleTransientPanel("notificationCenterOpen") }
-
-  function clearNotifications() {
-    for (let i = 0; i < root.notificationObjects.length; i++) {
-      const notification = root.notificationObjects[i]
-      if (notification && notification.dismiss)
-        notification.dismiss()
-    }
-    root.notificationObjects = []
-    notificationHistory.clear()
-    notificationInboxModel.clear()
-    root.selectedNotificationIndex = -1
-    root.scheduleNotificationHistorySave()
+  function toggleNotifications() {
+    if (root.notificationService) root.notificationService.showRecentHistory()
   }
 
-  function notificationAppAt(index) {
-    if (index < 0 || index >= notificationHistory.count)
-      return ""
-    return String(notificationHistory.get(index).app || "")
-  }
-
-  function clearNotificationsForApp(app) {
-    const target = String(app || "")
-    if (target.length === 0)
-      return
-    for (let i = notificationHistory.count - 1; i >= 0; i--) {
-      if (String(notificationHistory.get(i).app || "") === target)
-        root.dismissNotification(i)
-    }
-  }
-
-  function rebuildNotificationInbox() {
-    const apps = []
-    const counts = ({})
-    const appIcons = ({})
-    for (let i = 0; i < notificationHistory.count; i++) {
-      const row = notificationHistory.get(i)
-      const app = String(row.app || "Notification")
-      if (!counts[app]) {
-        counts[app] = 0
-        apps.push(app)
-      }
-      counts[app] += 1
-      if (!appIcons[app])
-        appIcons[app] = String(row.appIcon || "")
-    }
-
-    notificationInboxModel.clear()
-    // ponytail: O(apps * notifications), capped at 50; index by app only if history grows.
-    for (let appIndex = 0; appIndex < apps.length; appIndex++) {
-      const app = apps[appIndex]
-      notificationInboxModel.append({ kind: "group", app: app, appIcon: appIcons[app] || "", image: "", count: counts[app], sourceIndex: -1, summary: "", body: "", text: "", actionsText: "", desktopEntry: "", time: "", sticky: false, liveActions: false, urgency: 1, timestamp: 0 })
-      for (let i = 0; i < notificationHistory.count; i++) {
-        const row = notificationHistory.get(i)
-        if (String(row.app || "Notification") !== app)
-          continue
-        notificationInboxModel.append({ kind: "notification", app: row.app, appIcon: row.appIcon || "", image: row.image || "", count: counts[app], sourceIndex: i, summary: row.summary, body: row.body, text: row.text, actionsText: row.actionsText, desktopEntry: row.desktopEntry || "", time: row.time, sticky: !!row.sticky, liveActions: !!row.liveActions, urgency: Number(row.urgency || 1), timestamp: Number(row.timestamp || 0) })
-      }
-    }
-  }
-
-  function cleanNotificationText(value) {
-    return String(value || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim()
-  }
-
-  function notificationActionsFrom(notification) {
-    if (!notification || !notification.actions)
-      return []
-    if (notification.actions.map)
-      return notification.actions.map(action => action)
-
-    const actions = []
-    for (let i = 0; i < notification.actions.length; i++)
-      actions.push(notification.actions[i])
-    return actions
-  }
-
-  function notificationActionLabelsFrom(notification) {
-    const actions = root.notificationActionsFrom(notification)
-    const labels = []
-    for (let i = 0; i < actions.length; i++) {
-      const text = root.cleanNotificationText(actions[i].text || actions[i].identifier)
-      if (text.length > 0)
-        labels.push(text)
-    }
-    return labels
-  }
-
-  function notificationPreview(summary, body, app) {
-    if (summary.length > 0 && body.length > 0)
-      return summary + " - " + body
-    return summary.length > 0 ? summary : (body.length > 0 ? body : app)
-  }
-
-  function notificationImageSource(value) {
-    const source = String(value || "")
-    if (source.length === 0)
-      return ""
-    if (source.indexOf("file://") === 0 || source.indexOf("image://") === 0)
-      return source
-    if (source.charAt(0) === "/")
-      return "file://" + source
-    return Quickshell.iconPath(source, true)
-  }
-
-  function notificationMatchesAny(text, values) {
-    const haystack = String(text || "").toLowerCase()
-    for (let i = 0; i < values.length; i++) {
-      const needle = String(values[i] || "").toLowerCase()
-      if (needle.length > 0 && haystack.indexOf(needle) !== -1)
-        return true
-    }
-    return false
-  }
-
-  function shouldToastNotification(notification, app, summary, body, actionLabels) {
-    const policy = shellConfig.notificationToastPolicy
-    const urgency = Number(notification && notification.urgency || 0)
-    if (urgency >= Number(policy.criticalUrgency || 2))
-      return true
-    if (root.notificationMatchesAny(app + "\n" + String(notification.desktopEntry || "") + "\n" + String(notification.appIcon || ""), policy.importantApps || []))
-      return true
-    if (root.notificationMatchesAny(actionLabels.join("\n"), policy.importantActions || []))
-      return true
-    return root.notificationMatchesAny(summary + "\n" + body, policy.importantPatterns || [])
-  }
-
-  function isNotificationSticky(notification, app, summary, body, actionLabels) {
-    if (!notification)
-      return false
-
-    const expireTimeout = Number(notification.expireTimeout)
-    if (notification.resident || (!isNaN(expireTimeout) && expireTimeout === 0))
-      return true
-
-    return root.shouldToastNotification(notification, app, summary, body, actionLabels)
-  }
-
-  function notificationActionCompletes(label) {
-    return root.notificationMatchesAny(label, shellConfig.notificationToastPolicy.completeActions || [])
-  }
-
-  function notificationPersistable(row) {
-    const text = String((row && row.app) || "") + "\n" + String((row && row.desktopEntry) || "")
-    return !root.notificationMatchesAny(text, ["gopass", "passmenu", "password", "secret", "1password"])
-  }
-
-  function safeNotificationReference(value) {
-    const ref = root.cleanNotificationText(value)
-    if (ref.indexOf("data:") === 0 || ref.indexOf("http://") === 0 || ref.indexOf("https://") === 0)
-      return ""
-    return ref
-  }
-
-  function persistedNotificationRow(row) {
-    const app = root.cleanNotificationText(row && row.app || "Notification")
-    const summary = root.cleanNotificationText(row && row.summary || "")
-    const body = root.cleanNotificationText(row && row.body || "")
-    return {
-      app: app,
-      appIcon: root.safeNotificationReference(row && row.appIcon || ""),
-      image: root.safeNotificationReference(row && row.image || ""),
-      summary: summary,
-      body: body,
-      text: root.notificationPreview(summary, body, app),
-      actionsText: root.cleanNotificationText(row && row.actionsText || ""),
-      sticky: !!(row && row.sticky),
-      liveActions: false,
-      urgency: Number(row && row.urgency || 1),
-      desktopEntry: root.cleanNotificationText(row && row.desktopEntry || ""),
-      time: root.cleanNotificationText(row && row.time || ""),
-      timestamp: Number(row && row.timestamp || Date.now())
-    }
-  }
-
-  function loadNotificationHistory(raw) {
-    if (root.notificationHistoryLoaded)
-      return
-
-    const lines = String(raw || "").trim().split(/\n+/)
-    const rows = []
-    for (let i = 0; i < lines.length; i++) {
-      try {
-        const row = root.persistedNotificationRow(JSON.parse(lines[i]))
-        if (root.notificationPersistable(row))
-          rows.push(row)
-      } catch (e) {
-      }
-    }
-    rows.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0))
-    for (let j = 0; j < Math.min(50, rows.length); j++) {
-      notificationHistory.append(rows[j])
-      root.notificationObjects.push(null)
-    }
-    if (notificationHistory.count > 0)
-      root.selectedNotificationIndex = 0
-    root.notificationHistoryLoaded = true
-    root.rebuildNotificationInbox()
-  }
-
-  function scheduleNotificationHistorySave() {
-    if (root.notificationHistoryLoaded)
-      notificationHistorySaveTimer.restart()
-  }
-
-  function saveNotificationHistory() {
-    const lines = []
-    for (let i = 0; i < Math.min(50, notificationHistory.count); i++) {
-      const row = root.persistedNotificationRow(notificationHistory.get(i))
-      if (root.notificationPersistable(row))
-        lines.push(JSON.stringify(row))
-    }
-    notificationHistoryFile.setText(lines.join("\n") + (lines.length > 0 ? "\n" : ""))
-  }
-
-  function rememberNotification(notification) {
-    if (!notification)
-      return
-
-    const app = root.cleanNotificationText(notification.appName || "Notification")
-    const summary = root.cleanNotificationText(notification.summary)
-    const body = root.cleanNotificationText(notification.body)
-    const actionLabels = root.notificationActionLabelsFrom(notification)
-    const sticky = root.isNotificationSticky(notification, app, summary, body, actionLabels)
-    const now = new Date()
-
-    notificationHistory.insert(0, {
-      app: app,
-      appIcon: root.cleanNotificationText(notification.appIcon),
-      image: root.cleanNotificationText(notification.image),
-      summary: summary,
-      body: body,
-      text: root.notificationPreview(summary, body, app),
-      actionsText: actionLabels.join(" | "),
-      sticky: sticky,
-      liveActions: actionLabels.length > 0,
-      urgency: Number(notification.urgency || 1),
-      desktopEntry: root.cleanNotificationText(notification.desktopEntry),
-      time: Qt.formatDateTime(now, "HH:mm"),
-      timestamp: now.getTime()
-    })
-    root.notificationObjects = [notification].concat(root.notificationObjects)
-    root.selectedNotificationIndex = 0
-    root.notificationToastApp = app
-    root.notificationToastAppIcon = root.cleanNotificationText(notification.appIcon)
-    root.notificationToastImage = root.cleanNotificationText(notification.image)
-    root.notificationToastSummary = summary.length > 0 ? summary : app
-    root.notificationToastBody = body
-    root.notificationToastSerial += 1
-    if (!shellSettings.doNotDisturb && root.shouldToastNotification(notification, app, summary, body, actionLabels)) {
-      root.notificationToastOpen = false
-      Qt.callLater(() => {
-        root.notificationToastOpen = true
-        overlays.restartToastTimer()
-      })
-    }
-    while (notificationHistory.count > 50) {
-      notificationHistory.remove(notificationHistory.count - 1)
-      root.notificationObjects.pop()
-    }
-    root.rebuildNotificationInbox()
-    root.scheduleNotificationHistorySave()
-  }
-
-  function dismissNotification(index) {
-    if (index < 0 || index >= notificationHistory.count)
-      return
-    const notification = root.notificationObjects[index]
-    if (notification && notification.dismiss)
-      notification.dismiss()
-    const next = root.notificationObjects.slice()
-    next.splice(index, 1)
-    root.notificationObjects = next
-    notificationHistory.remove(index)
-    root.rebuildNotificationInbox()
-    if (notificationHistory.count === 0)
-      root.selectedNotificationIndex = -1
-    else if (root.selectedNotificationIndex === index)
-      root.selectedNotificationIndex = -1
-    else if (root.selectedNotificationIndex > index)
-      root.selectedNotificationIndex -= 1
-    else if (root.selectedNotificationIndex >= notificationHistory.count)
-      root.selectedNotificationIndex = notificationHistory.count - 1
-    root.scheduleNotificationHistorySave()
-  }
-
-
-  function notificationActionLabels(index) {
-    return root.notificationActionLabelsFrom(root.notificationObjects[index])
-  }
-
-  function focusNotificationApp(index) {
-    if (index < 0 || index >= notificationHistory.count)
-      return
-    const row = notificationHistory.get(index)
-    Quickshell.execDetached(shellConfig.notificationFocus(row.desktopEntry, row.app))
-  }
-
-  function invokeNotificationAction(index, actionIndex) {
-    const notification = root.notificationObjects[index]
-    const actions = root.notificationActionsFrom(notification)
-    if (actionIndex < 0 || actionIndex >= actions.length)
-      return
-
-    const row = index >= 0 && index < notificationHistory.count ? notificationHistory.get(index) : null
-    const actionLabel = String(actions[actionIndex].text || actions[actionIndex].identifier || "")
-    actions[actionIndex].invoke()
-    if (!row || !row.sticky || root.notificationActionCompletes(actionLabel))
-      root.dismissNotification(index)
-  }
   function updateAudioStatus(output) {
     const text = String(output || "").trim()
     root.audioStatusText = text
@@ -1376,11 +1062,43 @@ ShellRoot {
 
   OmarchyServices.PluginRegistry {
     id: pluginRegistry
-    firstPartyDir: shellConfig.home + "/.config/quickshell/marcelof/plugins/panels"
-    enabledPluginIds: shellSettings.enabledPluginIds
+    firstPartyDir: shellConfig.home + "/.config/quickshell/marcelof/plugins"
+    shellConfigProvider: function() { return pluginConfig.config }
+    shellConfigMutator: function(mutate) { pluginConfig.mutate(mutate) }
   }
 
   OmarchyServices.BarWidgetRegistry { id: barWidgetRegistry }
+
+  OmarchyServices.ShellPluginConfig {
+    id: pluginConfig
+    path: shellConfig.home + "/.config/omarchy/shell.json"
+  }
+
+  OmarchyServices.PluginBarWidgetHost {
+    pluginRegistry: pluginRegistry
+    barWidgetRegistry: barWidgetRegistry
+  }
+
+
+  OmarchyServices.PluginServiceHost {
+    id: pluginServiceHost
+    pluginRegistry: pluginRegistry
+    barWidgetRegistry: barWidgetRegistry
+    shell: root
+  }
+
+  Connections {
+    target: root.notificationService
+    ignoreUnknownSignals: true
+    function onDoNotDisturbChanged() {
+      shellSettings.doNotDisturb = root.notificationService.doNotDisturb
+    }
+  }
+
+  onNotificationServiceChanged: {
+    if (root.notificationService)
+      shellSettings.doNotDisturb = root.notificationService.doNotDisturb
+  }
 
   Connections {
     target: pluginRegistry
@@ -1488,32 +1206,6 @@ ShellRoot {
   }
 
 
-  FileView {
-    id: notificationHistoryFile
-    path: root.stateDir + "/notifications.jsonl"
-    watchChanges: false
-    atomicWrites: true
-    printErrors: false
-    onLoaded: root.loadNotificationHistory(text())
-    onLoadFailed: root.loadNotificationHistory("")
-  }
-
-  Timer {
-    id: notificationHistorySaveTimer
-    interval: 200
-    repeat: false
-    onTriggered: root.saveNotificationHistory()
-  }
-  ListModel { id: notificationHistory }
-  ListModel { id: notificationInboxModel }
-
-
-  NotificationServer {
-    id: notifications
-    keepOnReload: false
-    actionsSupported: true
-    onNotification: function(notification) { root.rememberNotification(notification) }
-  }
 
   PwObjectTracker {
     objects: Pipewire.defaultAudioSink ? [Pipewire.defaultAudioSink] : []
@@ -1674,14 +1366,15 @@ ShellRoot {
     function listShellConfig(): string {
       return JSON.stringify({ menus: shellConfig.menuIds, aliases: shellConfig.menuAliases })
     }
-    function dndState(): string { return shellSettings.doNotDisturb ? "on" : "off" }
+    function dndState(): string {
+      return root.notificationService && root.notificationService.doNotDisturb ? "on" : "off"
+    }
     function isDnd(): string { return dndState() }
     function toggleDnd(): string { root.toggleDnd(); return dndState() }
     function setDnd(value: string): string {
+      if (!root.notificationService) return "unavailable"
       const v = String(value || "").toLowerCase()
-      shellSettings.doNotDisturb = v === "true" || v === "1" || v === "on" || v === "yes"
-      if (shellSettings.doNotDisturb)
-        root.notificationToastOpen = false
+      root.notificationService.setDoNotDisturb(v === "true" || v === "1" || v === "on" || v === "yes")
       return dndState()
     }
     function toggle(id: string, payloadJson: string): string { return root.toggleShellMenu(id, payloadJson) ? "ok" : "unknown" }
@@ -1759,19 +1452,18 @@ ShellRoot {
     }
   }
 
-  ShellBar {
-    id: bar
-    barRoot: root
-    barTheme: shellTheme
-    barSettings: shellSettings
-    barConfig: shellConfig
-    barPluginEntries: root.dynamicBarWidgetEntries
-    notificationHistoryModel: notificationHistory
+  OmarchyBar.Bar {
+    id: dynamicBar
+    omarchyPath: shellConfig.home + "/.config/quickshell/marcelof"
+    barWidgetRegistry: barWidgetRegistry
+    barConfig: root.barConfig
+    shell: root
+    manifest: pluginRegistry.installedPlugins["omarchy.bar"] || ({ id: "omarchy.bar" })
   }
 
 
     ShellScreenPanel {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellConfig: shellConfig
       visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.screen, "{}") : root.hideShellMenu(shellConfig.menuIds.screen)
@@ -1782,7 +1474,7 @@ ShellRoot {
 
 
     ShellControlPanel {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellSettings: shellSettings
       shellConfig: shellConfig
@@ -1810,7 +1502,7 @@ ShellRoot {
     }
 
     ShellSettingsPanel {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellSettings: shellSettings
       shellConfig: shellConfig
@@ -1823,7 +1515,7 @@ ShellRoot {
 
 
     ShellCalendarPanel {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellSettings: shellSettings
       shellConfig: shellConfig
@@ -1838,7 +1530,7 @@ ShellRoot {
 
 
     ShellWorkInboxPanel {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellSettings: shellSettings
       shellConfig: shellConfig
@@ -1849,23 +1541,20 @@ ShellRoot {
       panelHeight: root.menuHeightFor(shellConfig.menuIds.workInbox)
     }
 
-    ShellNotificationCenter {
-      anchorWindow: bar
+
+    ShellTrayManagePanel {
+      anchorWindow: bar.primaryWindow
       shellRoot: root
-      shellSettings: shellSettings
-      historyModel: notificationHistory
-      inboxModel: notificationInboxModel
-      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.notifications, "{}") : root.hideShellMenu(shellConfig.menuIds.notifications)
-      panelOpen: root.notificationCenterOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.notifications)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.notifications)
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.tray, "{}") : root.hideShellMenu(shellConfig.menuIds.tray)
+      panelOpen: root.trayManageOpen
+      panelWidth: root.menuWidthFor(shellConfig.menuIds.tray)
+      panelHeight: Math.min(root.menuHeightFor(shellConfig.menuIds.tray), 84 + Math.max(1, root.allTrayItems.length) * (shellTheme.launcherRowHeight + shellTheme.spacingMd))
     }
 
     ShellOverlays {
       id: overlays
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
-      shellSettings: shellSettings
     }
 
 
@@ -1959,7 +1648,7 @@ ShellRoot {
 
 
     ShellPowerMenu {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellConfig: shellConfig
       visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.power, "{}") : root.hideShellMenu(shellConfig.menuIds.power)

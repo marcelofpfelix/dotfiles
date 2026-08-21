@@ -254,4 +254,5 @@ hl.bind("ALT + XF86MonBrightnessDown", osd("brightness-fine-down"), { locked = t
 hl.bind("SHIFT + XF86MonBrightnessUp", osd("brightness-max"), { locked = true, repeating = true })
 hl.bind("SHIFT + XF86MonBrightnessDown", osd("brightness-min"), { locked = true, repeating = true })
 hl.bind("PRINT", screenshot("edit"))
+hl.bind(mod .. " + CTRL + PRINT", screenshot("ocr"))
 hl.bind(mod .. " + PRINT", sh("command -v hyprpicker >/dev/null 2>&1 && hyprpicker -a || notify-send 'Hyprland omarchy profile' 'hyprpicker is not installed'"))

@@ -1501,17 +1501,14 @@ and local behavior that must survive replacement.
   - Completed: Learn and its duplicate/manual rows were removed. Status now exposes Audio mixer, Battery and power, Bluetooth, Controls, Displays, Network, Network details, Share Wi-Fi, Time and calendar, Work inbox, Dashboard, Notifications, Tray, and Session menu. Trigger retains launcher-adjacent actions; Setup retains shell settings and keybindings; System retains session actions.
   - Validation: parsed JSONC catalog assertions and live root/Status screenshots found all 14 Status rows readable.
 
-- [ ] P0: Replace the reduced plugin host and static `ShellBar` with Omarchy's full `PluginRegistry`, `BarWidgetRegistry`, and dynamic `omarchy.bar` contract.
-  - Progress: the full upstream `PluginRegistry` and shared `BarWidgetRegistry` are live. A narrow compatibility adapter keeps the current enabled-plugin state until `shell.json` becomes canonical; recursive discovery and third-party hot reload now use upstream code.
-  - Remaining: copy the dynamic `omarchy.bar`, package the retained local status/center segments, switch discovery to the complete first-party tree, migrate ordering/settings into `shell.json`, and archive `ShellBar` only after live geometry and restart checks.
-  - Why: upstream owns invisible-slot removal, widget ordering, bar placement, settings schemas, service/panel kinds, hot reload, clone routing, and one `shell.json`. Local code currently reimplements only overlays and bar widgets, which caused the spacing regression.
-  - Preserve: penguin menu icon, center clock/notifications placement, Board status widget, laptop-screen default, primary color, and reviewed custom `marcelof.*` plugins.
-  - Validation: upstream registry/bar tests, migrated `shell.json`, one/two-monitor screenshots, hidden-widget geometry, enable/disable/move/restart persistence, one-process and idle CPU/RSS checks.
-
-- [ ] P0: Replace root-owned notifications with the copied `omarchy.notifications` service and components.
-  - Preserve: source-app focus, browser actions, DND integration, critical/sticky behavior, redaction, per-app icons, and permanent history. Adapt Omarchy's focus helper and state paths rather than running a second server.
-  - Validation: upstream notification suite, migration fixture for existing history, browser/Slack smoke, DND, action click, restart persistence, one notification owner, and screenshots.
-
+- [x] P0: Replace the reduced plugin host and static `ShellBar` with Omarchy's full `PluginRegistry`, `BarWidgetRegistry`, and dynamic `omarchy.bar` contract.
+  - Completed: copied upstream `omarchy.bar` at `ed7bae4`, made `~/.config/omarchy/shell.json` canonical, added generic service/bar-widget hosts, and archived `ShellBar.qml`.
+  - Preserved: penguin menu, workspaces, center Lisbon clock/notifications, Board status, privacy, audioctl, tray, Bluetooth, network, audio, display, power, primary color, and laptop-screen-only ownership through one `marcelof.status-actions` plugin.
+  - Validation: QML/JSON checks, live overlay and bar-widget enable/disable persistence, one Quickshell process, and screenshots confirmed one bar, correct menu anchoring, no clipping, and no missing widgets. Ubuntu uses the installed `FiraCode Nerd Font` directly and the menu keeps the requested Linux/penguin glyph instead of depending on Omarchy private logo font.
+- [x] P0: Replace root-owned notifications with the copied `omarchy.notifications` service and components.
+  - Completed: upstream now owns the only `NotificationServer`, DND, actions, app focus, crash restoration, per-app icons, and 50-entry disk history. The old notification center/cards were archived.
+  - Local adapters: Ubuntu focus-helper path, Qt 6.6 reserved-word rename, and laptop-screen-only toast surfaces.
+  - Validation: one-server audit, IPC/DND/action smoke, Slack app-icon screenshot, restart persistence, one-output visual confirmation, and live popup/history screenshots without overlap.
 - [ ] P1: Replace `ShellClipboardPanel`, its eager model, and `cliphist-menu watch` with `omarchy.clipboard`.
   - Preserve: text and image history, normal and primary clipboard behavior, middle-click semantics, Ghostty/Herdr/OSC52, gopass safety, and explicit copy-only mode. Disable one watcher before enabling the other.
   - Validation: local/remote copy, primary paste, image copy, history restart, secret fixture without printing values, one watcher, and screenshot/input tests.
@@ -1547,3 +1544,49 @@ and local behavior that must survive replacement.
 Rejected for now: agents, Tailscale, weather bar, theme switching, and the full Omarchy
 runtime. They do not replace current ownership or are not requested; copying them would add
 code and background work without removing anything.
+
+
+## 2026-08-21 Omarchy Compatibility Follow-Up
+
+Source: refreshed `/tmp/omarchy-quattro` branch `quattro` at `ed7bae4`. Compatibility and first-party plugin loading take priority over local reinvention. Copy current upstream plugin/service code where its runtime dependencies can be satisfied on Ubuntu; keep local adapters narrow and archive replaced owners only after parity validation.
+
+- [x] P1: Adopt Omarchy Text Extraction behavior.
+  - Current state: `grim`, `slurp`, `tesseract-ocr`, and `wl-clipboard` are already installed and tracked; `screenshot-wayland ocr` already performs region OCR without another helper.
+  - Completed: `Super+Ctrl+Print` calls the existing `screenshot-wayland ocr` action in both profiles and Super+Space > Trigger exposes Text extraction; no second OCR helper was added.
+  - Validation: Hyprland reload and both generated profile binds pass, the existing OCR helper passes shell syntax, Tesseract is installed/tracked, and the copied root menu loads the action.
+
+- [x] P1: Install and track Cliamp, dua, and Omawrite.
+  - Completed: Cliamp 1.57.1 and dua 2.42.1 are installed through Homebrew; Omawrite is built from unchanged upstream `8f98892` with Nix Qt 6.6, installed in `~/bin`, and has a tracked desktop entry/icon. Homelab records all three install channels.
+  - Validation: all commands resolve, Cliamp/dua versions pass, Omawrite links without missing libraries and appears in the launcher, homelab lint passes, and the desktop package audit covers all three.
+
+- [ ] P2: Tighten oversized Passwords and Bookmarks popup geometry.
+  - Evidence: full visual smoke at `20260821-113623` shows Passwords wasting roughly half its width and Bookmarks reserving a large empty body.
+  - Acceptance: size both from useful content with stable responsive limits; preserve keyboard input, results, and floating behavior.
+
+- [ ] P2: Make Network Details and Clipboard useful in visual smoke.
+  - Evidence: Network Details remained on a large loading placeholder during capture; long Clipboard command/URL rows hard-clip without wrap or ellipsis.
+  - Acceptance: render cached network data immediately while refreshing, and give clipboard rows deterministic elision plus a full-text detail path.
+
+- [ ] P2: Normalize Session action geometry.
+  - Evidence: the current three-, two-, and one-button rows use visibly unrelated widths.
+  - Acceptance: use one grid contract across rows while keeping destructive confirmation and current commands.
+
+- [ ] P1: Adopt Omarchy hardware authentication setup as gated Ubuntu tasks.
+  - Acceptance: fingerprint and FIDO2 setup/remove flows are separate, package/PAM changes live in homelab rather than the home role, and lock-screen fingerprint support is enabled only after enrollment and recovery validation.
+  - Validation: hardware detection, package and PAM check mode, enrollment/removal dry run, password fallback, TTY recovery, sudo/polkit verification, and no lockout.
+  - Stop: no automatic PAM edits, enrollment, or privileged mutation without explicit approval.
+
+- [ ] P1: Adopt the Omarchy Quickshell lock service.
+  - Dependencies: Ubuntu PAM adapter, one validated authentication backend, and current `omarchy.lock` plugin contract.
+  - Acceptance: `Super+Ctrl+L`, menu Lock, idle lock, suspend lock, password fallback, optional fingerprint, keyboard-layout reset, and multi-monitor coverage use one lock owner; archive `hyprlock`/`swaylock` runtime ownership only after recovery testing.
+  - Validation: upstream lock tests, wrong/correct password, fingerprint fallback, monitor attach/detach, suspend/resume, TTY recovery, and one lock process.
+
+- [ ] P1: Adopt Omarchy idle service and screensaver.
+  - Dependencies: lock service and dynamic `shell.json` ownership.
+  - Acceptance: copied `omarchy.idle` owns screensaver and lock timing, stay-awake state, manual screensaver launch, per-monitor dismissal, and live config reload; local terminal branding may replace the Omarchy logo without forking idle logic.
+  - Validation: upstream idle tests, short-timeout fixture, dismiss-before-lock, stay-awake, manual screensaver, multi-monitor behavior, suspend/resume, and no duplicate idle daemon.
+
+- [ ] P1: Adopt Omarchy indicators, DND, and night light.
+  - Dependencies: dynamic bar and `omarchy.notifications`; install/track `hyprsunset` before enabling night light.
+  - Acceptance: copy `omarchy.indicators`, `Dnd`, `NightLight`, `StayAwake`, `ScreenRecording`, and `Reminder`; DND writes silenced notifications to history; night light toggles 4000K/6500K through one service; inactive indicators remain compact and become discoverable on hover.
+  - Validation: upstream indicator/night-light tests, DND history, toggle/menu/hotkey parity, one `hyprsunset`, bar screenshots, restart persistence, and idle CPU/RSS comparison.

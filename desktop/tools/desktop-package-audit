@@ -18,6 +18,9 @@ required_packages=(
   swappy
   imagemagick-6.q16
   tesseract-ocr
+  cliamp
+  dua-cli
+  omawrite
   wf-recorder
   brightnessctl
   ddcutil
@@ -25,6 +28,7 @@ required_packages=(
   wev
   libinput-tools
   espanso-wayland
+  wlrctl
   cliphist
   playerctl
   pavucontrol

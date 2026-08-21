@@ -146,7 +146,7 @@ QtObject {
     "work-inbox": { openProperty: "workInboxOpen", refresh: "refreshWorkInbox" },
     "personal-dashboard": { toggle: "togglePersonalDashboard", hide: "hidePersonalDashboard" },
     settings: { openProperty: "settingsOpen" },
-    notifications: { openProperty: "notificationCenterOpen" },
+    notifications: { toggle: "toggleNotifications" },
     power: { openProperty: "powerMenuOpen", refresh: "refreshPower", hide: "hidePowerMenu" }
   })
 

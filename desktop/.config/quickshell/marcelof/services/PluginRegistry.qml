@@ -154,7 +154,7 @@ QtObject {
   }
 
   function supports(id) {
-    return supportsKind(id, overlayKind) || supportsKind(id, barWidgetKind)
+    return supportsKind(id, overlayKind) || supportsKind(id, barWidgetKind) || supportsKind(id, "service")
   }
 
   function isDisabled(config, id) {

@@ -12,8 +12,8 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: "\ue900"
-    fontFamily: "omarchy"
+    text: ""
+    fontFamily: root.bar ? root.bar.fontFamily : "FiraCode Nerd Font"
     horizontalMargin: 7.5
     onPressed: function(button) {
       if (!root.bar) return

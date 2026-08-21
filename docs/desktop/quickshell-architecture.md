@@ -5,7 +5,7 @@ This shell stays small by keeping ownership boring and visible.
 ## Ownership
 
 - `shell.qml` owns top-level windows, IPC endpoints, live service instances, and cross-panel state.
-- `ShellBar.qml` owns only the bar layout.
+- `plugins/bar/Bar.qml` is copied Omarchy code and renders the canonical layout from `~/.config/omarchy/shell.json`; retained local actions live in one `marcelof.status-actions` bar-widget plugin.
 - `Shell*Panel.qml` files own menu bodies.
 - `Shell*Service.qml` files own filtering, ranking, parsing, and backend-specific state.
 - `ShellConfigData.qml` owns static ids, aliases, built-in menu/action routing, menu sizes, menu rows, labels, and command data.
@@ -46,13 +46,7 @@ The root menu is the copied `plugins/menu/Menu.qml`, not a parallel local menu.
 Its engine and model remain upstream code while `shell.qml` injects the local
 theme and routes lifecycle through the existing `shell` IPC registry.
 `listPlugins` and `listShellConfig` expose Omarchy-compatible inspection of
-built-ins. `services/PluginRegistry.qml` also discovers reviewed schema-1
-plugins under `~/.config/omarchy/plugins`; the generic loader deliberately
-supports `overlay` entry points only. Enable state persists in the existing
-shell settings file, and `rescanPlugins`, `enablePlugin`, and `disablePlugin`
-are available through the `shell` IPC target. Unsupported kinds are listed but
-cannot be enabled. Keep older `bar` and panel-specific IPC calls only where
-they are already stable compatibility shims.
+built-ins. `services/PluginRegistry.qml` discovers first-party and reviewed schema-1 user plugins. `PluginServiceHost.qml` and `PluginBarWidgetHost.qml` use the upstream entry-point contract, and `ShellPluginConfig.qml` owns canonical `shell.json` mutation. Overlay, service, and bar-widget enablement therefore survives restart through one config; unsupported generic panel/menu/bar hosts fail clearly.
 
 ## Boundaries
 
@@ -64,7 +58,7 @@ Board owns health/status collection and text rendering for reusable surfaces. Qu
 
 ## Archive Rule
 
-X11-era files stay under `archive/x11/desktop/` or `archive/obsolete/desktop/` when retired. They are history, not an active fallback, and `home -y` should not deploy them.
+Retired X11 files stay under `archive/x11/desktop/`; replaced Wayland shell files stay under `archive/wayland/`; obsolete shared files stay under `archive/obsolete/desktop/`. They are history, not an active fallback, and `home -y` should not deploy them.
 
 ## Reference Rule
 

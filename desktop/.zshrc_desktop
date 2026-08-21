@@ -136,7 +136,7 @@ fi
 
 # Omarchy-compatible experiment directories.
 if command -v try >/dev/null 2>&1; then
-    eval "$(try init "$HOME/Work/tries")"
+    eval "$(try init ~/src/tries)"
 fi
 
 # starship

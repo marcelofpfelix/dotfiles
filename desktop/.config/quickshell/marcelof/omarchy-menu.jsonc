@@ -13,6 +13,7 @@
   "trigger.emojis": {"icon":"󰞅","label":"Emojis","aliases":["emoji"],"action":"$HOME/bin/qbar emojis"},
   "trigger.passwords": {"icon":"󰌾","label":"Passwords","aliases":["pass"],"action":"$HOME/bin/qbar passmenu"},
   "trigger.capture": {"icon":"󰍹","label":"Capture","aliases":["screenshot","record"],"action":"$HOME/bin/qbar screen"},
+  "trigger.text-extraction": {"icon":"󰥬","label":"Text extraction","aliases":["ocr","copy text"],"action":"$HOME/bin/screenshot-wayland ocr"},
   "trigger.wallpaper": {"icon":"󰸉","label":"Wallpaper","aliases":["background"],"action":"$HOME/bin/qbar wallpaper"},
   "trigger.media": {"icon":"󰕾","label":"Media","aliases":["audio","music"],"action":"$HOME/bin/qbar shell toggle marcelof.media-controls"},
 

@@ -262,17 +262,12 @@ QtObject {
 
   // ---------------------------------------------------------- typography
   //
-  // `fontFamily` defaults to "monospace" so the bar and every qs.Ui
-  // component follows the fontconfig alias `omarchy-font-set` writes.
-  // Themes can override per-token via [font] in shell.toml, but the
-  // family stays system-wide.
-  property string fontFamily: "monospace"
+  // Ubuntu does not map the monospace alias to a Nerd Font. Use the tracked
+  // FiraCode Nerd Font so copied Omarchy PUA icons render consistently.
+  property string fontFamily: "FiraCode Nerd Font"
 
-  // The concrete family `monospace` resolves to right now, e.g.
-  // "JetBrainsMono Nerd Font". Bind `font.family` to `fontFamily` (so the
-  // alias path keeps working when the user runs `omarchy font set`), but
-  // read `resolvedFontFamily` when you want to *display* what's drawing.
-  property string resolvedFontFamily: "monospace"
+  // Keep the displayed family tied to the font actually used for rendering.
+  property string resolvedFontFamily: fontFamily
 
   // The only sanity floor is 1px. Themes and users can make this as large
   // as they like; if the shell gets ridiculous, that's their call.

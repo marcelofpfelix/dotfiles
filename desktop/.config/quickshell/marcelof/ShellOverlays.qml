@@ -9,7 +9,6 @@ Item {
 
   required property var anchorWindow
   required property var shellRoot
-  required property var shellSettings
 
   property bool osdOpen: false
   property string osdIconText: ""
@@ -93,42 +92,4 @@ Item {
     }
   }
 
-  function restartToastTimer() {
-    notificationToastTimer.restart()
-  }
-
-  Timer {
-    id: notificationToastTimer
-    interval: 5000
-    repeat: false
-    onTriggered: overlays.shellRoot.notificationToastOpen = false
-  }
-
-
-  PopupWindow {
-    visible: overlays.shellRoot.notificationToastOpen && !overlays.shellRoot.notificationCenterOpen && !overlays.shellSettings.doNotDisturb
-    color: theme.transparent
-    implicitWidth: 380
-    implicitHeight: toastCard.implicitHeight
-    anchor.window: overlays.anchorWindow
-    anchor.rect.x: Math.max(8, overlays.anchorWindow.width - implicitWidth - 10)
-    anchor.rect.y: overlays.anchorWindow.height + 6
-
-    ShellNotificationCard {
-      id: toastCard
-      width: parent.width
-      app: overlays.shellRoot.notificationToastApp
-      appIcon: overlays.shellRoot.notificationToastAppIcon
-      image: overlays.shellRoot.notificationToastImage
-      summary: overlays.shellRoot.notificationToastSummary
-      body: overlays.shellRoot.notificationToastBody
-      time: "now"
-      selected: true
-      onCloseRequested: overlays.shellRoot.notificationToastOpen = false
-      onOpenRequested: {
-        overlays.shellRoot.notificationToastOpen = false
-        overlays.shellRoot.notificationCenterOpen = true
-      }
-    }
-  }
 }

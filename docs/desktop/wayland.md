@@ -64,29 +64,21 @@ Editable today: primary color, density, weather location, DND, tray behavior, hi
 
 Built-in menus share one declarative registry in `ShellConfigData.qml`. Omarchy-compatible clients can inspect them with `omarchy-shell shell listPlugins` and `omarchy-shell shell listShellConfig`; these first-party menu surfaces remain read-only. The same plugin list includes reviewed schema-1 plugins discovered under `~/.config/omarchy/plugins`.
 
-Dynamic compatibility is intentionally limited to `overlay` entry points. Their enable state persists in `~/.local/state/quickshell/marcelof/settings.json`, and the shell exposes `rescanPlugins`, `enablePlugin`, and `disablePlugin`. Other plugin kinds are discoverable but cannot be enabled because this shell does not provide Omarchy's bar, service, or panel registries. Third-party QML is unsandboxed and disabled by default.
+Dynamic compatibility now uses Omarchy's manifest contract for `overlay`, `service`, and `bar-widget` plugins. `~/.config/omarchy/shell.json` is canonical for enablement, bar placement, ordering, and inline widget settings; reviewed third-party plugins remain under `~/.config/omarchy/plugins`. The copied service and bar-widget hosts load those kinds without a second shell process. Generic `panel`, `menu`, and alternate `bar` entry points remain unsupported until their upstream hosts replace local ownership. Third-party QML is unsandboxed and disabled by default.
 
 Use `omarchy-plugin-review <plugin-dir>` before enabling any third-party plugin. It validates the manifest, rejects symlinks and unsafe entry points, and reminds that plugin QML is unsandboxed.
 
-Use `omarchy-plugin-add --yes <plugin-dir-or-git-url>` to stage a reviewed plugin under `~/.config/omarchy/plugins/<id>`. Add `--enable` only for a reviewed `overlay` plugin; the command rescans, waits for discovery, and enables it through the live shell.
+Use `omarchy-plugin-add --yes <plugin-dir-or-git-url>` to stage a reviewed plugin under `~/.config/omarchy/plugins/<id>`. Add `--enable` only for a reviewed `overlay`, `service`, or `bar-widget` plugin; the command rescans, waits for discovery, and enables it through the live shell.
 
 ### Omarchy replacement audit
 
-Snapshot: `/tmp/omarchy-quattro` on branch `quattro`, refreshed with `git pull --ff-only` on 2026-08-18, commit `f32ebbd`.
+Snapshot: `/tmp/omarchy-quattro` on branch `quattro`, refreshed with `git pull --ff-only` on 2026-08-21, commit `ed7bae4`.
 
-The useful Omarchy pattern is organization, not a full shell copy. Omarchy keeps a long-running Quickshell root with a `shell` IPC target, manifest-backed plugins, a small shared `Ui/Panel.qml` lifecycle wrapper, and shared bar/panel button primitives. The local shell already has matching behavior through `qbar shell ...`, `ShellFloatingPopup.qml`, `ShellPopup.qml`, `ShellPanel.qml`, and existing menu components. Built-in routing now lives in `ShellConfigData.qml`; `shell.qml` retains the live panel state.
-
-Good replacement candidates:
-
-- Keep built-in menu ids, aliases, lifecycle callbacks, actions, and sizes in `ShellConfigData.qml`; `shell.qml` only executes that registry.
-- Keep the small Bash menu registry for shell completion, smoke crops, and labels. Do not generate Bash from QML unless drift becomes a repeated bug.
-- Adapt Omarchy-style `Ui/Panel.qml` lifecycle semantics into the existing `ShellPopup.qml` and `ShellFloatingPopup.qml` instead of copying every panel.
-- Borrow Omarchy bar widget registry ideas only after local menu routing is simpler. `ShellBar.qml` is smaller than Omarchy's bar and already delegates status rendering to `board`.
-- Keep local notification and media behavior. Omarchy has useful card/service structure, but local notifications already persist history and local media intentionally avoids pausing Google Meet/browser audio.
+The shell now copies Omarchy's shared Commons/Ui foundation, plugin registry, dynamic bar, notification service, and menu engine while retaining local panels as manifest-backed plugins or narrow root surfaces. Local adaptations are limited to Ubuntu command paths, the installed Qt version, laptop-screen-only rendering, and preserved behavior that upstream does not provide. Replaced QML stays under `archive/wayland/quickshell/`.
 
 Not replacement candidates:
 
-- Do not replace secure lock, idle, or polkit with copied QML in this repo. Quickshell may own visible buttons and IPC, but privileged behavior stays delegated to real system services.
+- Adopt lock, idle, and polkit only through their recorded Ubuntu gates: explicit PAM/package prerequisites, password/TTY recovery, suspend/resume testing, and one owner per service.
 - Do not import Omarchy installer, update, Arch package, snapshot, or distro policy flows.
 - Do not enable staged third-party Omarchy plugins until a reviewed plugin justifies supporting its concrete Omarchy UI and service dependencies.
 

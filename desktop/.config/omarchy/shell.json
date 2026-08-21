@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "bar": {
+    "position": "top",
+    "transparent": false,
+    "centerAnchor": "marcelof.status-actions",
+    "layout": {
+      "left": [
+        { "id": "omarchy.menu" },
+        { "id": "omarchy.workspaces" }
+      ],
+      "center": [
+        { "id": "marcelof.status-actions", "kind": "clock" },
+        { "id": "marcelof.status-actions", "kind": "notifications" }
+      ],
+      "right": [
+        { "id": "marcelof.board-status" },
+        { "id": "marcelof.status-actions", "kind": "privacy" },
+        { "id": "marcelof.status-actions", "kind": "audioctl" },
+        { "id": "omarchy.tray" },
+        { "id": "omarchy.bluetooth" },
+        { "id": "omarchy.network" },
+        { "id": "omarchy.audio" },
+        { "id": "omarchy.monitor" },
+        { "id": "omarchy.power" }
+      ]
+    }
+  },
+  "plugins": [
+    { "id": "marcelof.board-dashboard" },
+    { "id": "marcelof.media-controls" },
+    { "id": "marcelof.network-tools" }
+  ]
+}
