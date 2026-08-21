@@ -31,7 +31,7 @@ list_instances() {
 }
 
 usage() {
-  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|display|battery|bluetooth|wifi-qr|power|session-action|inhibit|keybindings|clipboard|emoji|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
+  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|notifications-clear|display|battery|bluetooth|wifi-qr|power|session-action|inhibit|keybindings|clipboard|emoji|clipboard-update|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
 }
 
 kill_all() {
@@ -210,6 +210,7 @@ case "${1:-status}" in
   osd-kbd) ipc osdKbd ;;
   osd-mic) ipc osdMic ;;
   notifications) menu_toggle notifications ;;
+  notifications-clear) ipc_target notifications clearAll ;;
   display|monitor) ipc_target omarchy.monitor toggle ;;
   battery) ipc_target omarchy.power toggle ;;
   bluetooth) ipc_target omarchy.bluetooth toggle ;;

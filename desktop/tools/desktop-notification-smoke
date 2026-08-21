@@ -40,6 +40,28 @@ send_sticky_notification() {
   printf "sticky-log %s\n" "$log"
 }
 
+notification_count() {
+  qs -p "$HOME/.config/quickshell/marcelof/shell.qml" ipc call notifications count
+}
+
+count_clear() {
+  qbar notifications-clear >/dev/null
+  qbar notifications >/dev/null
+  sleep 0.5
+  [[ $(notification_count) == 0 ]]
+
+  qbar notifications-clear >/dev/null
+  notify-send -a desktop-notification-count-smoke -t 30000 "Count smoke one" "first fixture"
+  notify-send -a desktop-notification-count-smoke -t 30000 "Count smoke two" "second fixture"
+  sleep 0.5
+  [[ $(notification_count) == 2 ]]
+
+  qbar notifications-clear >/dev/null
+  sleep 0.5
+  [[ $(notification_count) == 0 ]]
+  printf "count-clear ok\n"
+}
+
 case "${1:-run}" in
   --status|status)
     command -v notify-send >/dev/null 2>&1
@@ -48,7 +70,7 @@ case "${1:-run}" in
     actions_supported
     ;;
   -h|--help)
-    printf "use: desktop-notification-smoke [--status|actions|routing|sticky]\n"
+    printf "use: desktop-notification-smoke [--status|actions|routing|sticky|count-clear]\n"
     ;;
   run|actions)
     owner
@@ -65,8 +87,12 @@ case "${1:-run}" in
     actions_supported
     send_sticky_notification
     ;;
+  count-clear)
+    owner
+    count_clear
+    ;;
   *)
-    printf "use: desktop-notification-smoke [--status|actions|routing|sticky]\n" >&2
+    printf "use: desktop-notification-smoke [--status|actions|routing|sticky|count-clear]\n" >&2
     exit 2
     ;;
 esac

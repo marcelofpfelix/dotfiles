@@ -91,6 +91,15 @@ Item {
   property alias popupModel: popupModel
   ListModel { id: popupModel }
 
+  readonly property int notificationCount: {
+    var count = 0
+    for (var i = 0; i < popupModel.count; i++) {
+      var row = popupModel.get(i)
+      if (row && row.originalId >= 0) count++
+    }
+    return count
+  }
+
   // How many notifications the history directory keeps, and therefore how
   // many `showHistory` can replay.
   readonly property int historyLimit: 50
@@ -350,6 +359,11 @@ Item {
 
   function clearPopups() {
     while (popupModel.count > 0) dismissPopup(0)
+  }
+
+  function clearAll() {
+    clearPopups()
+    clearHistory()
   }
 
   // Run the popup's click action, then dismiss. Omarchy's own toasts carry the
@@ -890,6 +904,15 @@ Item {
     function dismissAll(): string {
       service.clearPopups()
       return "ok"
+    }
+
+    function clearAll(): string {
+      service.clearAll()
+      return "ok"
+    }
+
+    function count(): string {
+      return String(service.notificationCount)
     }
 
     // Dismiss the most recent popup.

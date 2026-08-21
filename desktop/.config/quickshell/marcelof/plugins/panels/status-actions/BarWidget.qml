@@ -8,7 +8,7 @@ BarWidget {
 
   readonly property string kind: String(setting("kind", "clock"))
   readonly property var host: bar && bar.shell ? bar.shell : null
-  readonly property int notificationCount: host && host.notificationService ? host.notificationService.popupModel.count : 0
+  readonly property int notificationCount: host && host.notificationService ? host.notificationService.notificationCount : 0
   readonly property bool dnd: host && host.notificationService ? host.notificationService.doNotDisturb : false
   readonly property string label: {
     if (!host) return ""
@@ -33,7 +33,10 @@ BarWidget {
     onPressed: function(mouseButton) {
       if (!root.host) return
       if (root.kind === "clock") root.host.toggleCalendar()
-      else if (root.kind === "notifications") root.host.toggleNotifications()
+      else if (root.kind === "notifications") {
+        if (mouseButton === Qt.RightButton) root.host.notificationService.clearAll()
+        else root.host.toggleNotifications()
+      }
       else if (root.kind === "privacy") {
         if (mouseButton === Qt.RightButton) root.host.toggleDnd()
         else root.host.toggleScreenPanel()
