@@ -18,6 +18,8 @@ PopupWindow {
   implicitWidth: 700
   implicitHeight: 600
 
+  onVisibleChanged: if (visible) Qt.callLater(function() { searchField.forceActiveFocus() })
+
   anchor.window: anchorWindow
   anchor.rect.x: anchorWindow ? Math.max(Style.gapsOut, Math.round((anchorWindow.width - implicitWidth) / 2)) : 0
   anchor.rect.y: anchorWindow ? anchorWindow.height + Style.gapsOut : 0
@@ -121,6 +123,30 @@ PopupWindow {
         }
       }
 
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: Style.spacing.md
+
+        TextField {
+          id: searchField
+          Layout.fillWidth: true
+          placeholderText: "Search notifications"
+          text: root.service.historySearchText
+          onTextChanged: if (text !== root.service.historySearchText) root.service.setHistorySearchText(text)
+          onAccepted: root.service.focusFirstHistoryEntry()
+        }
+
+        Button {
+          visible: root.service.historyAppFilter.length > 0
+          text: root.service.historyAppFilter
+          iconText: String.fromCodePoint(0xF0156)
+          tooltipText: "Show all applications"
+          fontFamily: root.fontFamily
+          bordered: true
+          onClicked: root.service.setHistoryAppFilter("")
+        }
+      }
+
       Rectangle {
         Layout.fillWidth: true
         implicitHeight: 1
@@ -143,7 +169,7 @@ PopupWindow {
         Text {
           anchors.centerIn: parent
           visible: !root.service.historyPanelLoading && root.service.historyEntryCount === 0
-          text: "No notifications"
+          text: root.service.historySearchText.length > 0 || root.service.historyAppFilter.length > 0 ? "No matching notifications" : "No notifications"
           color: Color.muted
           font.family: root.fontFamily
           font.pixelSize: Style.font.body
@@ -163,6 +189,7 @@ PopupWindow {
             required property string kind
             required property string app
             required property string appIcon
+            required property string desktopEntry
             required property int count
             required property int originalId
             required property double timestamp
@@ -210,13 +237,22 @@ PopupWindow {
               }
 
               Text {
+                id: groupName
                 Layout.fillWidth: true
                 text: row.app
-                color: Color.accent
+                color: groupScopeArea.containsMouse ? Color.foreground : Color.accent
                 elide: Text.ElideRight
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.body
                 font.bold: true
+
+                MouseArea {
+                  id: groupScopeArea
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: root.service.setHistoryAppFilter(row.app)
+                }
               }
 
               Text {
@@ -239,6 +275,7 @@ PopupWindow {
               width: parent.width
               app: row.app
               appIcon: row.appIcon
+              desktopEntry: row.desktopEntry
               summary: row.summary
               body: row.body
               image: row.image
@@ -251,7 +288,7 @@ PopupWindow {
               read: row.read
               onMarkReadRequested: root.service.markHistoryEntryRead(row.originalId, row.timestamp)
               onCloseRequested: root.service.removeHistoryEntry(row.originalId, row.timestamp, row.app)
-              onCardClicked: root.service.focusHistoryEntry(row.originalId, row.timestamp, row.app, row.appIcon, row.exec)
+              onCardClicked: root.service.focusHistoryEntry(row.originalId, row.timestamp, row.app, row.appIcon, row.desktopEntry, row.exec)
             }
           }
         }

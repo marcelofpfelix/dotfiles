@@ -93,6 +93,24 @@ const logic = require(process.argv[2])
 const assert = require('assert')
 
 assert.strictEqual(logic.snapshotOf({ id: 1 }, 1).read, false)
+assert.strictEqual(logic.snapshotOf({ id: 2, hints: { "desktop-entry": "com.slack.Slack" } }, 1).desktopEntry, "com.slack.Slack")
+assert.strictEqual(logic.resolvedAppIcon("slack-icon", "com.slack.Slack", "Slack"), "slack-icon")
+assert.strictEqual(logic.resolvedAppIcon("", "com.slack.Slack", "Slack"), "com.slack.Slack")
+assert.strictEqual(logic.resolvedAppIcon("", "", "Slack"), "Slack")
+const history = [
+  { app: "Slack", summary: "Incident review", body: "Production alert" },
+  { app: "Chrome", summary: "Build complete", body: "Ready" }
+]
+assert.deepStrictEqual(logic.filterHistoryRows(history, "icrv", "").map(row => row.app), ["Slack"])
+assert.deepStrictEqual(logic.filterHistoryRows(history, "", "Chrome").map(row => row.app), ["Chrome"])
+assert.deepStrictEqual(logic.filterHistoryRows(history, "alert", "Chrome"), [])
+assert.deepStrictEqual(logic.unreadApps([
+  { app: "Slack", appIcon: "", desktopEntry: "com.slack.Slack", read: false },
+  { app: "Slack", appIcon: "slack-new", read: false },
+  { app: "Chrome", read: true },
+  { app: "notify-send", read: false },
+  { app: "Notification", read: false }
+]), [{ app: "Slack", appIcon: "slack-new", desktopEntry: "com.slack.Slack", count: 2 }])
 assert.strictEqual(logic.historyEntry({ id: 1, read: true }, 1).read, true)
 assert.strictEqual(logic.parseSettings('{"retentionDays":14}').retentionDays, 14)
 assert.strictEqual(logic.normalizedRetentionDays(0, 30), 1)

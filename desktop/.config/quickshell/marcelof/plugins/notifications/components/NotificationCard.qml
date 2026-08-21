@@ -14,6 +14,7 @@ BorderSurface {
 
   property string app: ""
   property string appIcon: ""
+  property string desktopEntry: ""
   property string summary: ""
   property string body: ""
   property string image: ""
@@ -39,7 +40,7 @@ BorderSurface {
   signal markReadRequested()
   // Prefer per-notification media/avatar data, then fall back to the app icon.
   // The `check` flag avoids Qt's missing-texture placeholder for unknown names.
-  readonly property string smallIconSource: image.length > 0 ? image : iconSource(appIcon)
+  readonly property string smallIconSource: image.length > 0 ? image : iconSource(NotificationLogic.resolvedAppIcon(appIcon, desktopEntry, app))
   readonly property bool hasGlyph: glyph.length > 0
   readonly property bool compactGlyph: NotificationLogic.shouldRenderCompactGlyph(glyph, smallIconSource, singleLineToast)
   readonly property bool hasSmallIcon: smallIconSource.length > 0

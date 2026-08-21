@@ -1464,10 +1464,11 @@ Findings:
   - Board remains the only collector, scheduler, cache, renderer, and action owner. The embedded Board watcher was removed and `ShellPersonalDashboardPanel.qml` moved to `archive/obsolete` after live visual validation.
   - Validation: both manifests pass `omarchy-plugin-validate` and `qmllint`; both persist enabled across restart; process inspection and `desktop-doctor` require one watch stream; the dashboard route and screenshot passed without clipping or monitor spill.
 
-- [ ] P0: Preserve per-application notification identity in `omarchy.notifications`.
+- [x] P0: Preserve per-application notification identity in `omarchy.notifications`.
   - Use one notification plugin, not one plugin per application. Every toast, history row, and app group must resolve `appIcon`, then `desktopEntry`/theme icon, then the existing app fallback.
-  - Preserve neutral-history-only routing, important/critical toasts, sticky completion behavior, app focus/open actions, DND, redaction, and bounded persistent history.
+  - Preserve neutral-history-only routing, important/critical toasts, sticky completion behavior, app focus/open actions, DND, redaction, and age-retained persistent history.
   - Validation: distinct Slack, Chrome, terminal, and generic notification fixtures; icon and fallback screenshots; browser action; DND/routing; restart persistence; exactly one notification owner.
+  - Completed 2026-08-21: standard `desktop-entry` identity now survives popup/history persistence, icon resolution consistently prefers app icon, desktop entry, then app name, and restored clicks use the existing focus-or-launch helper. Generic `notify-send`/unnamed rows remain under the neutral bell.
 
 - [ ] P1: Apply the same preserve-before-archive gate to pending replacements.
   - Clipboard moves to `omarchy.clipboard`; OSD moves to `omarchy.osd`; Launcher moves to the Apps provider; ordinary MPRIS moves to Omarchy media while `audioctl` remains separate; wallpaper rendering moves to `omarchy.background`; Controls/Session/passmenu/web search move only after copied menu/input providers preserve their behavior; Calendar moves only if copied clock/reminders preserve every local extension.
@@ -1606,6 +1607,18 @@ notification center.
 - [x] P0: Replace count-based notification deletion with age-based retention and read state.
   - Completed: history defaults to 30 days, accepts a custom 1-3650 day value in the notification center, prunes JSON and image pairs by timestamp, persists unread/read state, marks a row read without deleting it, deletes individual or per-app history explicitly, and opens/focuses the source app when a card is clicked.
   - Validation: focused Node regression, inherited Omarchy notification suite, QML lint, live archive/read/delete persistence, corrected notification screenshot crop, and visual inspection.
+
+- [x] P1: Fuzzy-find retained notifications, optionally scoped by application.
+  - Acceptance: the notification center has one keyboard-focused search field that fuzzy-matches app, summary, and body; selecting an app group scopes results to that app; clearing the scope restores all retained notifications; Enter opens/focuses the selected notification without deleting it.
+  - Dependencies: reuse the existing age-retained history model and app grouping; do not add another index, daemon, or history store.
+  - Validation: focused matching tests for all-app and app-scoped searches, keyboard navigation/activation, empty state, retained read state, and notification-center screenshot review.
+  - Completed 2026-08-21: the existing retained-row model now supports subsequence search across app, summary, and body, clickable app scoping, clear scope, first-result activation, and scriptable search/scope IPC without another index or process.
+
+- [x] P1: Show unread notification icons per application in the bar.
+  - Acceptance: each application with unread retained notifications contributes one app icon with an unread count; clicking it opens the notification center scoped to that app; read/deleted notifications update or remove the icon immediately; apps without unread notifications consume no bar space.
+  - Dependencies: derive icons and counts from the existing notification service and reuse the notification plugin bar host; do not poll disk or create one process per app.
+  - Validation: two-app unread/read/delete flow, restart persistence, missing-icon fallback, bar overflow behavior, idle CPU/RSS comparison, and desktop screenshot review.
+  - Completed 2026-08-21: one event-driven unread-app model feeds compact icon-plus-count buttons before the neutral bell; clicking opens scoped history, read/delete updates flow through the existing file queue, and generic notifications reserve no app slot. Live Slack/Espanso/Chrome visual review passed without overlap.
 
 - [ ] P1: Convert remaining synthetic local menus into real manifests.
   - Scope: `calendar`, `clipboard`, `controls`, `launcher`, `passmenu`, `personal-dashboard`, `power`, `screen`, `settings`, `tray`, `websearch`, and `work-inbox` currently appear in registry output as fixed compatibility menus and cannot be independently disabled.

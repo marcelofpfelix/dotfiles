@@ -74,7 +74,7 @@ Item {
       if (service._hydrating) return
       service.scheduleSettingsSave()
       service.pruneHistory(function() {
-        if (service.historyPanelOpen) service.refreshHistoryPanel()
+        service.refreshHistoryPanel()
       })
     }
   }
@@ -115,13 +115,18 @@ Item {
   property bool historyPanelLoading: false
   property bool historyPanelRefreshPending: false
   property int historyEntryCount: 0
+  property var historyRowsCache: []
+  property string historySearchText: ""
+  property string historyAppFilter: ""
   property alias historyPanelModel: historyPanelModel
   ListModel { id: historyPanelModel }
+  property alias unreadAppsModel: unreadAppsModel
+  ListModel { id: unreadAppsModel }
 
   Connections {
     target: popupModel
     function onCountChanged() {
-      if (service.historyPanelOpen) service.refreshHistoryPanel()
+      service.refreshHistoryPanel()
     }
   }
 
@@ -388,7 +393,10 @@ Item {
   function clearAll() {
     clearPopups()
     clearHistory()
+    setHistoryRows([])
     historyPanelModel.clear()
+    historySearchText = ""
+    historyAppFilter = ""
     historyEntryCount = 0
   }
 
@@ -450,7 +458,7 @@ Item {
     if (!entry || !entry.app) return
     focusAppProc.command = [
       service.home + "/bin/notification-focus-app",
-      String(entry.appIcon || ""),
+      String(entry.desktopEntry || entry.appIcon || ""),
       String(entry.app)
     ]
     focusAppProc.running = true
@@ -530,7 +538,7 @@ Item {
         }
       }
       service.runNextPopupFileJob()
-      if (service.popupFileQueue.length === 0 && !readHistoryProc.running && service.historyPanelOpen)
+      if (service.popupFileQueue.length === 0 && !readHistoryProc.running)
         service.refreshHistoryPanel()
     }
   }
@@ -723,6 +731,7 @@ Item {
         originalId: row.originalId,
         app: row.app,
         appIcon: row.appIcon,
+        desktopEntry: row.desktopEntry || "",
         summary: row.summary,
         body: row.body,
         image: row.image,
@@ -739,7 +748,8 @@ Item {
     return {
       kind: "notification",
       app: String(entry.app || "Notification"),
-      appIcon: String(entry.appIcon || ""),
+      appIcon: NotificationLogic.resolvedAppIcon(entry.appIcon, entry.desktopEntry, entry.app),
+      desktopEntry: String(entry.desktopEntry || ""),
       count: 0,
       originalId: Number(entry.originalId || entry.id || -1),
       timestamp: Number(entry.timestamp || 0),
@@ -752,6 +762,28 @@ Item {
       unread: 0,
       urgency: Number(entry.urgency || NotificationUrgency.Normal)
     }
+  }
+
+  function applyHistoryFilter() {
+    populateHistoryPanel(NotificationLogic.filterHistoryRows(historyRowsCache, historySearchText, historyAppFilter))
+  }
+
+  function setHistoryRows(rows) {
+    historyRowsCache = rows || []
+    unreadAppsModel.clear()
+    var apps = NotificationLogic.unreadApps(historyRowsCache)
+    for (var i = 0; i < apps.length; i++) unreadAppsModel.append(apps[i])
+    if (historyPanelOpen) applyHistoryFilter()
+  }
+
+  function setHistorySearchText(value) {
+    historySearchText = String(value || "")
+    applyHistoryFilter()
+  }
+
+  function setHistoryAppFilter(value) {
+    historyAppFilter = String(value || "")
+    applyHistoryFilter()
   }
 
   function populateHistoryPanel(rows) {
@@ -780,6 +812,7 @@ Item {
         kind: "group",
         app: app,
         appIcon: group.icon,
+        desktopEntry: "",
         count: group.rows.length,
         originalId: -1,
         timestamp: 0,
@@ -800,14 +833,12 @@ Item {
   }
 
   function loadHistoryPanel(raw) {
-    if (!historyPanelOpen) return
     var rows = NotificationLogic.historyRows(
       raw, liveRowsForReplay(), NotificationUrgency.Normal, -1)
-    populateHistoryPanel(rows)
+    setHistoryRows(rows)
   }
 
   function refreshHistoryPanel() {
-    if (!historyPanelOpen) return
     if (panelHistoryProc.running) {
       historyPanelRefreshPending = true
       return
@@ -819,7 +850,9 @@ Item {
     panelHistoryProc.running = true
   }
 
-  function openHistoryPanel() {
+  function openHistoryPanel(app) {
+    historySearchText = ""
+    historyAppFilter = String(app || "")
     historyPanelOpen = true
     refreshHistoryPanel()
   }
@@ -827,6 +860,8 @@ Item {
   function closeHistoryPanel() {
     historyPanelOpen = false
     historyPanelModel.clear()
+    historySearchText = ""
+    historyAppFilter = ""
     historyEntryCount = 0
   }
 
@@ -837,12 +872,11 @@ Item {
 
   function visiblePanelRows(excludedApp, excludedId, excludedTimestamp) {
     var rows = []
-    for (var i = 0; i < historyPanelModel.count; i++) {
-      var row = historyPanelModel.get(i)
-      if (!row || row.kind !== "notification") continue
+    for (var i = 0; i < historyRowsCache.length; i++) {
+      var row = panelRow(historyRowsCache[i])
       if (excludedApp && row.app === excludedApp) continue
       if (excludedId >= 0 && row.originalId === excludedId && row.timestamp === excludedTimestamp) continue
-      rows.push(panelRow(row))
+      rows.push(row)
     }
     return rows
   }
@@ -866,7 +900,7 @@ Item {
     }
     if (!changed) return
     updateHistoryEntryFile(originalId, timestamp, true)
-    populateHistoryPanel(rows)
+    setHistoryRows(rows)
   }
 
   function deleteHistoryEntryFile(originalId, timestamp) {
@@ -895,7 +929,7 @@ Item {
         dismissPopup(i)
     }
     deleteHistoryAppFiles(target)
-    populateHistoryPanel(visiblePanelRows(target, -1, 0))
+    setHistoryRows(visiblePanelRows(target, -1, 0))
   }
 
   function removeHistoryEntry(originalId, timestamp, app) {
@@ -905,14 +939,23 @@ Item {
         dismissPopup(i)
     }
     deleteHistoryEntryFile(originalId, timestamp)
-    populateHistoryPanel(visiblePanelRows("", originalId, timestamp))
+    setHistoryRows(visiblePanelRows("", originalId, timestamp))
   }
 
-  function focusHistoryEntry(originalId, timestamp, app, appIcon, exec) {
+  function focusFirstHistoryEntry() {
+    for (var i = 0; i < historyPanelModel.count; i++) {
+      var row = historyPanelModel.get(i)
+      if (!row || row.kind !== "notification") continue
+      focusHistoryEntry(row.originalId, row.timestamp, row.app, row.appIcon, row.desktopEntry, row.exec)
+      return
+    }
+  }
+
+  function focusHistoryEntry(originalId, timestamp, app, appIcon, desktopEntry, exec) {
     markHistoryEntryRead(originalId, timestamp)
     var command = String(exec || "")
     if (command) Util.execDetached(command)
-    else focusApp({ app: app, appIcon: appIcon })
+    else focusApp({ app: app, appIcon: appIcon, desktopEntry: desktopEntry })
     closeHistoryPanel()
   }
 
@@ -932,6 +975,7 @@ Item {
         originalId: -1,
         app: "omarchy-action",
         appIcon: "",
+        desktopEntry: "",
         summary: "No recent notifications",
         body: "",
         image: "",
@@ -1080,9 +1124,7 @@ Item {
     service._hydrating = false
 
     service.settingsLoaded = true
-    service.pruneHistory(function() {
-      if (service.historyPanelOpen) service.refreshHistoryPanel()
-    })
+    service.pruneHistory(function() { service.refreshHistoryPanel() })
     // Versions before the history moved into its own directory kept every
     // notification in here. Rewrite once so that dead payload doesn't sit in
     // the file until the next DND toggle happens to clear it.
@@ -1170,6 +1212,21 @@ Item {
       return String(service.historyEntryCount)
     }
 
+    function search(query: string): string {
+      service.setHistorySearchText(query)
+      return String(service.historyEntryCount)
+    }
+
+    function scope(app: string): string {
+      service.setHistoryAppFilter(app)
+      return String(service.historyEntryCount)
+    }
+
+    function openApp(app: string): string {
+      service.openHistoryPanel(app)
+      return "open"
+    }
+
     function retention(): string {
       return String(service.retentionDays)
     }
@@ -1209,6 +1266,12 @@ Item {
 
     function count(): string {
       return String(service.notificationCount)
+    }
+
+    function unreadApps(): string {
+      var rows = []
+      for (var i = 0; i < service.unreadAppsModel.count; i++) rows.push(service.unreadAppsModel.get(i))
+      return JSON.stringify(rows)
     }
 
     // Dismiss the most recent popup.
@@ -1319,6 +1382,7 @@ Item {
             required property int index
             required property string app
             required property string appIcon
+            required property string desktopEntry
             required property string summary
             required property string body
             required property string image
@@ -1366,6 +1430,7 @@ Item {
               anchors.right: parent.right
               app: cardSlot.app
               appIcon: cardSlot.appIcon
+              desktopEntry: cardSlot.desktopEntry
               summary: cardSlot.summary
               body: cardSlot.body
               image: cardSlot.image

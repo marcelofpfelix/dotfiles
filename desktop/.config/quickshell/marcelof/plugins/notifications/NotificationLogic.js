@@ -57,6 +57,14 @@ function glyphFromHints(hints) {
   return stringHint(hints, "omarchy-glyph")
 }
 
+function desktopEntryFromHints(hints) {
+  return stringHint(hints, "desktop-entry") || stringHint(hints, "desktop_entry")
+}
+
+function resolvedAppIcon(appIcon, desktopEntry, app) {
+  return String(appIcon || desktopEntry || app || "")
+}
+
 // Shell command to run when the card is clicked, sent by
 // omarchy-notification-send --exec. Carrying the action as data means it
 // travels with the popup through the persistence files, so a toast restored
@@ -81,6 +89,7 @@ function snapshotOf(notification, timestamp) {
     originalId: id,
     app: n.appName || "",
     appIcon: n.appIcon || "",
+    desktopEntry: desktopEntryFromHints(n.hints),
     summary: String(n.summary || ""),
     body: n.body || "",
     image: n.image || "",
@@ -95,7 +104,7 @@ function snapshotOf(notification, timestamp) {
 
 // Everything the popup card draws, and therefore everything an in-place
 // update has to write through to the row and its file.
-var POPUP_ROLES = ["app", "appIcon", "summary", "body", "image", "glyph", "exec", "urgency", "expireTimeout"]
+var POPUP_ROLES = ["app", "appIcon", "desktopEntry", "summary", "body", "image", "glyph", "exec", "urgency", "expireTimeout"]
 
 function popupRoles() {
   return POPUP_ROLES
@@ -133,6 +142,7 @@ function historyEntry(value, normalUrgency) {
     originalId: e.originalId || e.id || 0,
     app: e.app || "",
     appIcon: e.appIcon || "",
+    desktopEntry: e.desktopEntry || "",
     summary: e.summary || "",
     body: e.body || "",
     image: e.image || "",
@@ -325,6 +335,48 @@ function popupPlacement(barPosition, barClearance, gapsOut) {
 // They belong in it — they're the newest notifications there are — but the
 // directory read races their archival, so they're carried across by hand and
 // keyed by file name (timestamp + id) to drop the copy the read already saw.
+function fuzzyMatch(value, query) {
+  var text = String(value || "").toLowerCase()
+  var needle = String(query || "").trim().toLowerCase()
+  if (!needle) return true
+  var at = 0
+  for (var i = 0; i < text.length && at < needle.length; i++)
+    if (text.charAt(i) === needle.charAt(at)) at++
+  return at === needle.length
+}
+
+function filterHistoryRows(rows, query, app) {
+  var source = Array.isArray(rows) ? rows : []
+  var scope = String(app || "")
+  return source.filter(function(row) {
+    if (scope && String(row.app || "") !== scope) return false
+    return fuzzyMatch([row.app, row.summary, row.body].join(" "), query)
+  })
+}
+
+function unreadApps(rows) {
+  var groups = ({})
+  var order = []
+  var source = Array.isArray(rows) ? rows : []
+  for (var i = 0; i < source.length; i++) {
+    var row = source[i] || {}
+    if (row.read) continue
+    var app = String(row.app || "Notification")
+    if (isEphemeralApp(app) || app === "Notification") continue
+    var key = "$" + app
+    if (!groups[key]) {
+      groups[key] = { app: app, appIcon: "", desktopEntry: "", count: 0 }
+      order.push(key)
+    }
+    var group = groups[key]
+    group.count++
+    if (!group.desktopEntry && row.desktopEntry) group.desktopEntry = String(row.desktopEntry)
+    if (row.appIcon) group.appIcon = String(row.appIcon)
+    else if (!group.appIcon) group.appIcon = resolvedAppIcon("", row.desktopEntry, app)
+  }
+  return order.map(function(key) { return groups[key] })
+}
+
 function historyRows(raw, liveRows, normalUrgency, limit) {
   var max = limit === undefined || limit === null ? 10 : Number(limit)
   if (isNaN(max)) max = 10
@@ -358,6 +410,8 @@ if (typeof module !== "undefined") {
     isEphemeralApp: isEphemeralApp,
     stringHint: stringHint,
     glyphFromHints: glyphFromHints,
+    desktopEntryFromHints: desktopEntryFromHints,
+    resolvedAppIcon: resolvedAppIcon,
     execFromHints: execFromHints,
     shouldRenderCompactGlyph: shouldRenderCompactGlyph,
     snapshotOf: snapshotOf,
@@ -368,6 +422,9 @@ if (typeof module !== "undefined") {
     normalizedRetentionDays: normalizedRetentionDays,
     parseSettings: parseSettings,
     historyRows: historyRows,
+    fuzzyMatch: fuzzyMatch,
+    filterHistoryRows: filterHistoryRows,
+    unreadApps: unreadApps,
     popupEntry: popupEntry,
     popupFileName: popupFileName,
     imageStem: imageStem,
