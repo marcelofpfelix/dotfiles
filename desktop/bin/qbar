@@ -23,11 +23,11 @@ else
 fi
 
 quickshell_pids() {
-  ps -eo pid=,args= | awk -v bin="$quickshell_bin" -v cfg="$config_path" '$2 == bin && index($0, "--path " cfg) { print $1 }'
+  ps -eo pid=,args= | awk -v cfg="$config_path" 'index($2, "quickshell") && index($0, "--path " cfg) { print $1 }'
 }
 
 list_instances() {
-  ps -eo pid=,args= | awk -v bin="$quickshell_bin" -v cfg="$config_path" '$2 == bin && index($0, "--path " cfg) { pid=$1; $1=""; sub(/^ +/, ""); printf "Process %s:%s\n", pid, $0 }'
+  ps -eo pid=,args= | awk -v cfg="$config_path" 'index($2, "quickshell") && index($0, "--path " cfg) { pid=$1; $1=""; sub(/^ +/, ""); printf "Process %s:%s\n", pid, $0 }'
 }
 
 usage() {

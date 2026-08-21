@@ -31,6 +31,7 @@ ShellRoot {
   property string launcherSmokeHiddenId: ""
   readonly property var appLibrary: appLibraryService
   readonly property var notificationService: pluginServiceHost.serviceFor("omarchy.notifications")
+  readonly property var backgroundService: pluginServiceHost.serviceFor("omarchy.background")
   readonly property var barConfig: pluginConfig.barConfig
   function firstPartyServiceFor(id) { return pluginServiceHost.serviceFor(id) }
   function summon(id, payloadJson) { return root.openShellMenu(id, payloadJson || "{}") }
@@ -300,7 +301,6 @@ ShellRoot {
   property string audioStatusText: ""
   property string recordingStatusText: ""
   property string portalStatusText: ""
-  property string wallpaperSource: shellConfig.defaultWallpaperUrl
   property string tooltipText: ""
   readonly property string stateDir: shellConfig.stateDir
   property real tooltipX: 0
@@ -749,21 +749,16 @@ ShellRoot {
     root.closeTransientPanels()
     imagePicker.open(JSON.stringify({
       imageDirs: shellConfig.home + "/.local/share/backgrounds\n" + shellConfig.home + "/Pictures/Wallpapers\n" + shellConfig.home + "/Pictures/wallpapers",
-      selectedImage: shellSettings.wallpaperPath,
+      selectedImage: root.backgroundService ? root.backgroundService.currentBackground : shellSettings.wallpaperPath,
       showLabels: true,
       filterable: true
     }))
   }
 
-  function applyWallpaperPath(path) {
-    if (String(path || "").length === 0)
-      return
-    root.wallpaperSource = shellConfig.fileUrl(path)
-    shellSettings.wallpaperPath = path
-  }
-
   function setWallpaper(path) {
-    root.applyWallpaperPath(path)
+    if (String(path || "").length === 0) return
+    shellSettings.wallpaperPath = path
+    if (root.backgroundService) root.backgroundService.setBackground(path, false)
     Quickshell.execDetached(shellConfig.wallpaper("set", path))
   }
 
@@ -1405,28 +1400,6 @@ ShellRoot {
     function lock() { root.lockSession() }
   }
 
-  PanelWindow {
-    id: wallpaper
-    screen: root.laptopScreen
-
-    anchors {
-      top: true
-      bottom: true
-      left: true
-      right: true
-    }
-
-    WlrLayershell.layer: WlrLayer.Background
-    color: shellTheme.panel
-
-    Image {
-      anchors.fill: parent
-      source: root.wallpaperSource
-      fillMode: Image.PreserveAspectCrop
-      asynchronous: true
-    }
-  }
-
   OmarchyBar.Bar {
     id: dynamicBar
     omarchyPath: shellConfig.home + "/.config/quickshell/marcelof"
@@ -1525,12 +1498,6 @@ ShellRoot {
       panelWidth: root.menuWidthFor(shellConfig.menuIds.tray)
       panelHeight: Math.min(root.menuHeightFor(shellConfig.menuIds.tray), 84 + Math.max(1, root.allTrayItems.length) * (shellTheme.launcherRowHeight + shellTheme.spacingMd))
     }
-
-  ShellWallpaperService {
-    id: wallpaperService
-    shellRoot: root
-    shellConfig: shellConfig
-  }
 
   ShellScreenService {
     id: screenService
