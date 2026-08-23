@@ -345,11 +345,14 @@ function fuzzyMatch(value, query) {
   return at === needle.length
 }
 
-function filterHistoryRows(rows, query, app) {
+function filterHistoryRows(rows, query, app, readFilter) {
   var source = Array.isArray(rows) ? rows : []
   var scope = String(app || "")
+  var state = String(readFilter || "all")
   return source.filter(function(row) {
     if (scope && String(row.app || "") !== scope) return false
+    if (state === "read" && !row.read) return false
+    if (state === "unread" && row.read) return false
     return fuzzyMatch([row.app, row.summary, row.body].join(" "), query)
   })
 }

@@ -68,7 +68,7 @@ PopupWindow {
         }
 
         Button {
-          text: "Clear all"
+          text: "Delete all"
           iconText: String.fromCodePoint(0xF0156)
           fontFamily: root.fontFamily
           bordered: true
@@ -145,6 +145,30 @@ PopupWindow {
           bordered: true
           onClicked: root.service.setHistoryAppFilter("")
         }
+      }
+
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: Style.spacing.sm
+
+        Repeater {
+          model: [
+            { value: "all", label: "All" },
+            { value: "unread", label: "Unread" },
+            { value: "read", label: "Read" }
+          ]
+
+          Button {
+            required property var modelData
+            text: modelData.label
+            fontFamily: root.fontFamily
+            selected: root.service.historyReadFilter === modelData.value
+            bordered: true
+            onClicked: root.service.setHistoryReadFilter(modelData.value)
+          }
+        }
+
+        Item { Layout.fillWidth: true }
       }
 
       Rectangle {
@@ -263,7 +287,7 @@ PopupWindow {
               }
 
               Button {
-                text: "Clear"
+                text: "Delete"
                 fontFamily: root.fontFamily
                 onClicked: root.service.clearHistoryApp(row.app)
               }

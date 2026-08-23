@@ -104,6 +104,12 @@ const history = [
 assert.deepStrictEqual(logic.filterHistoryRows(history, "icrv", "").map(row => row.app), ["Slack"])
 assert.deepStrictEqual(logic.filterHistoryRows(history, "", "Chrome").map(row => row.app), ["Chrome"])
 assert.deepStrictEqual(logic.filterHistoryRows(history, "alert", "Chrome"), [])
+const readHistory = [
+  { app: "Slack", summary: "Unread", read: false },
+  { app: "Slack", summary: "Read", read: true }
+]
+assert.deepStrictEqual(logic.filterHistoryRows(readHistory, "", "", "unread").map(row => row.summary), ["Unread"])
+assert.deepStrictEqual(logic.filterHistoryRows(readHistory, "", "", "read").map(row => row.summary), ["Read"])
 assert.deepStrictEqual(logic.unreadApps([
   { app: "Slack", appIcon: "", desktopEntry: "com.slack.Slack", read: false },
   { app: "Slack", appIcon: "slack-new", read: false },
@@ -112,6 +118,7 @@ assert.deepStrictEqual(logic.unreadApps([
   { app: "Notification", read: false }
 ]), [{ app: "Slack", appIcon: "slack-new", desktopEntry: "com.slack.Slack", count: 2 }])
 assert.strictEqual(logic.historyEntry({ id: 1, read: true }, 1).read, true)
+assert.strictEqual(logic.parsePopupFiles(logic.serializePopup({ id: 9, timestamp: 9, read: true }, 1), 1)[0].read, true)
 assert.strictEqual(logic.parseSettings('{"retentionDays":14}').retentionDays, 14)
 assert.strictEqual(logic.normalizedRetentionDays(0, 30), 1)
 assert.strictEqual(logic.normalizedRetentionDays(9999, 30), 3650)

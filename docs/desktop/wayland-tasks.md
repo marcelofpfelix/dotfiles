@@ -1612,6 +1612,7 @@ notification center.
 - [x] P0: Replace count-based notification deletion with age-based retention and read state.
   - Completed: history defaults to 30 days, accepts a custom 1-3650 day value in the notification center, prunes JSON and image pairs by timestamp, persists unread/read state, marks a row read without deleting it, deletes individual or per-app history explicitly, and opens/focuses the source app when a card is clicked.
   - Validation: focused Node regression, inherited Omarchy notification suite, QML lint, live archive/read/delete persistence, corrected notification screenshot crop, and visual inspection.
+  - Follow-up 2026-08-23: the center now exposes All/Unread/Read filters, timestamps, labeled Mark read and Delete actions, and explicit Delete app/all wording. Mark read keeps history; Delete removes it; retention remains age-based. The history loader now normalizes each JSON file with `jq -c`, fixing the prior bug where pretty-printed read entries disappeared from later loads.
 
 - [x] P1: Fuzzy-find retained notifications, optionally scoped by application.
   - Acceptance: the notification center has one keyboard-focused search field that fuzzy-matches app, summary, and body; selecting an app group scopes results to that app; clearing the scope restores all retained notifications; Enter opens/focuses the selected notification without deleting it.

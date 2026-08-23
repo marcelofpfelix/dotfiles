@@ -191,32 +191,35 @@ BorderSurface {
         }
       }
     }
-  }
 
-  // History-only read control. It shares the hover affordance with delete.
-  Item {
-    anchors.top: parent.top
-    anchors.right: parent.right
-    anchors.topMargin: root.borderTop + Style.space(3)
-    anchors.rightMargin: root.borderRight + Style.space(24)
-    width: Style.space(18)
-    height: Style.space(18)
-    visible: root.historyMode && !root.read && root.hovered
+    RowLayout {
+      Layout.fillWidth: true
+      Layout.leftMargin: Style.space(12)
+      Layout.rightMargin: Style.space(12)
+      Layout.bottomMargin: Style.space(8)
+      spacing: Style.spacing.sm
+      visible: root.historyMode
 
-    Text {
-      anchors.centerIn: parent
-      text: String.fromCodePoint(0xF012C)
-      color: readArea.containsMouse ? Color.notifications.text : root.dimColor
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.caption
-    }
+      Text {
+        Layout.fillWidth: true
+        text: root.timestamp > 0 ? Qt.formatDateTime(new Date(root.timestamp), "yyyy-MM-dd HH:mm") : ""
+        color: root.dimColor
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+      }
 
-    MouseArea {
-      id: readArea
-      anchors.fill: parent
-      hoverEnabled: true
-      cursorShape: Qt.PointingHandCursor
-      onClicked: root.markReadRequested()
+      Button {
+        visible: !root.read
+        text: "Mark read"
+        fontFamily: root.fontFamily
+        onClicked: root.markReadRequested()
+      }
+
+      Button {
+        text: "Delete"
+        fontFamily: root.fontFamily
+        onClicked: root.closeRequested()
+      }
     }
   }
 
@@ -229,7 +232,7 @@ BorderSurface {
     anchors.rightMargin: root.borderRight + Style.space(3)
     width: Style.space(18)
     height: Style.space(18)
-    visible: opacity > 0
+    visible: !root.historyMode && opacity > 0
     opacity: root.hovered ? 1 : 0
 
     Behavior on opacity { NumberAnimation { duration: 100 } }

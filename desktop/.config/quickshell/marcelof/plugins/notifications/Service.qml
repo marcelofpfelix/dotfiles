@@ -118,6 +118,7 @@ Item {
   property var historyRowsCache: []
   property string historySearchText: ""
   property string historyAppFilter: ""
+  property string historyReadFilter: "all"
   property alias historyPanelModel: historyPanelModel
   ListModel { id: historyPanelModel }
   property alias unreadAppsModel: unreadAppsModel
@@ -712,7 +713,7 @@ Item {
   function startHistoryRead() {
     service.historyReadQueued = false
     readHistoryProc.command = ["bash", "-c",
-      "awk 1 \"$1\"/*.json 2>/dev/null || true", "--", historyDir]
+      "jq -c . \"$1\"/*.json 2>/dev/null || true", "--", historyDir]
     readHistoryProc.running = true
   }
 
@@ -765,7 +766,7 @@ Item {
   }
 
   function applyHistoryFilter() {
-    populateHistoryPanel(NotificationLogic.filterHistoryRows(historyRowsCache, historySearchText, historyAppFilter))
+    populateHistoryPanel(NotificationLogic.filterHistoryRows(historyRowsCache, historySearchText, historyAppFilter, historyReadFilter))
   }
 
   function setHistoryRows(rows) {
@@ -783,6 +784,12 @@ Item {
 
   function setHistoryAppFilter(value) {
     historyAppFilter = String(value || "")
+    applyHistoryFilter()
+  }
+
+  function setHistoryReadFilter(value) {
+    var next = String(value || "all")
+    historyReadFilter = next === "read" || next === "unread" ? next : "all"
     applyHistoryFilter()
   }
 
@@ -846,13 +853,14 @@ Item {
     historyPanelRefreshPending = false
     historyPanelLoading = historyPanelModel.count === 0
     panelHistoryProc.command = ["bash", "-c",
-      "awk 1 \"$1\"/*.json 2>/dev/null || true", "--", historyDir]
+      "jq -c . \"$1\"/*.json 2>/dev/null || true", "--", historyDir]
     panelHistoryProc.running = true
   }
 
   function openHistoryPanel(app) {
     historySearchText = ""
     historyAppFilter = String(app || "")
+    historyReadFilter = "all"
     historyPanelOpen = true
     refreshHistoryPanel()
   }
@@ -862,6 +870,7 @@ Item {
     historyPanelModel.clear()
     historySearchText = ""
     historyAppFilter = ""
+    historyReadFilter = "all"
     historyEntryCount = 0
   }
 
@@ -885,7 +894,7 @@ Item {
     enqueuePopupFileJob(["bash", "-c",
       "file=\"$1/$2.json\" tmp=\"$1/$2.json.tmp\"\n" +
       "[[ -f $file ]] || exit 0\n" +
-      "jq --argjson read \"$3\" '.read = $read' \"$file\" > \"$tmp\" && mv -f \"$tmp\" \"$file\"",
+      "jq -c --argjson read \"$3\" '.read = $read' \"$file\" > \"$tmp\" && mv -f \"$tmp\" \"$file\"",
       "--", historyDir, NotificationLogic.imageStem({ originalId: originalId, timestamp: timestamp }),
       read ? "true" : "false"])
   }
@@ -1148,10 +1157,10 @@ Item {
       settingsFile.reload()
       // Re-show popups that were on screen when the previous shell died.
       // The glob-through-bash tolerates a missing/empty dir (first run).
-      // awk 1 (not cat) so a torn file missing its trailing newline can't
-      // glue itself onto the next file and take a valid popup down with it.
+      // Normalize each file independently so compact and legacy pretty JSON both load;
+      // malformed files are skipped without affecting their neighbors.
       restorePopupsProc.command = ["bash", "-c",
-        "awk 1 \"$1\"/*.json 2>/dev/null || true", "--", service.popupStateDir]
+        "jq -c . \"$1\"/*.json 2>/dev/null || true", "--", service.popupStateDir]
       restorePopupsProc.running = true
       // Safe beside the restore read: it only re-persists entries whose
       // JSON exists, exactly the images the sweep keeps.
@@ -1219,6 +1228,11 @@ Item {
 
     function scope(app: string): string {
       service.setHistoryAppFilter(app)
+      return String(service.historyEntryCount)
+    }
+
+    function filterRead(state: string): string {
+      service.setHistoryReadFilter(state)
       return String(service.historyEntryCount)
     }
 
