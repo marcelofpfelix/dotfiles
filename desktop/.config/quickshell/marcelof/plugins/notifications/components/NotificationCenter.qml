@@ -1,10 +1,11 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
 
-PopupWindow {
+PanelWindow {
   id: root
 
   required property var service
@@ -12,17 +13,20 @@ PopupWindow {
 
   readonly property var anchorWindow: shell && shell.bar ? shell.bar.primaryWindow : null
   readonly property string fontFamily: shell && shell.bar ? shell.bar.fontFamily : Style.font.family
+  readonly property int panelWidth: 700
+  readonly property int panelHeight: 600
+  readonly property int panelTop: anchorWindow ? anchorWindow.height + Style.gapsOut : Style.gapsOut
 
   visible: service.historyPanelOpen
   color: "transparent"
-  implicitWidth: 700
-  implicitHeight: 600
+  screen: anchorWindow ? anchorWindow.screen : null
+  exclusionMode: ExclusionMode.Ignore
+  anchors { top: true; bottom: true; left: true; right: true }
+  WlrLayershell.namespace: "omarchy-notification-center"
+  WlrLayershell.layer: WlrLayer.Overlay
+  WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
   onVisibleChanged: if (visible) Qt.callLater(function() { searchField.forceActiveFocus() })
-
-  anchor.window: anchorWindow
-  anchor.rect.x: anchorWindow ? Math.max(Style.gapsOut, Math.round((anchorWindow.width - implicitWidth) / 2)) : 0
-  anchor.rect.y: anchorWindow ? anchorWindow.height + Style.gapsOut : 0
 
   function iconSource(value) {
     var icon = String(value || "")
@@ -32,8 +36,17 @@ PopupWindow {
     return Quickshell.iconPath(icon, true)
   }
 
-  BorderSurface {
+  MouseArea {
     anchors.fill: parent
+    onClicked: root.service.closeHistoryPanel()
+  }
+
+  BorderSurface {
+    width: Math.min(root.panelWidth, root.width - Style.gapsOut * 2)
+    height: Math.min(root.panelHeight, root.height - root.panelTop - Style.gapsOut)
+    anchors.top: parent.top
+    anchors.topMargin: root.panelTop
+    anchors.horizontalCenter: parent.horizontalCenter
     color: Color.popups.background
     borderSpec: Border.surfaceSpec("popups", "border", Color.popups.border, Math.max(1, Style.space(2)))
     radius: Style.cornerRadius
@@ -113,6 +126,7 @@ PopupWindow {
           text: root.service.historySearchText
           onTextChanged: if (text !== root.service.historySearchText) root.service.setHistorySearchText(text)
           onAccepted: root.service.focusFirstHistoryEntry()
+          Keys.onEscapePressed: root.service.closeHistoryPanel()
         }
 
         Button {
@@ -195,6 +209,7 @@ PopupWindow {
             required property string glyph
             required property string exec
             required property bool read
+            required property bool collapsed
             required property int unread
             required property int urgency
 
@@ -206,6 +221,13 @@ PopupWindow {
               anchors.fill: parent
               visible: row.group
               spacing: Style.spacing.md
+
+              Button {
+                iconText: String.fromCodePoint(row.collapsed ? 0xF0142 : 0xF0140)
+                tooltipText: row.collapsed ? "Expand " + row.app : "Collapse " + row.app
+                fontFamily: root.fontFamily
+                onClicked: root.service.toggleHistoryAppCollapsed(row.app)
+              }
 
               Item {
                 Layout.preferredWidth: Style.space(24)
@@ -259,7 +281,8 @@ PopupWindow {
               }
 
               Button {
-                text: "Delete"
+                iconText: String.fromCodePoint(0xF01B4)
+                tooltipText: "Delete " + row.app + " notifications"
                 fontFamily: root.fontFamily
                 onClicked: root.service.clearHistoryApp(row.app)
               }

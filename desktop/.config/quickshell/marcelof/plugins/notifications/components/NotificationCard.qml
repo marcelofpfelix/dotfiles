@@ -210,13 +210,15 @@ BorderSurface {
 
       Button {
         visible: !root.read
-        text: "Mark read"
+        iconText: String.fromCodePoint(0xF012C)
+        tooltipText: "Mark read"
         fontFamily: root.fontFamily
         onClicked: root.markReadRequested()
       }
 
       Button {
-        text: "Delete"
+        iconText: String.fromCodePoint(0xF01B4)
+        tooltipText: "Delete notification"
         fontFamily: root.fontFamily
         onClicked: root.closeRequested()
       }

@@ -119,6 +119,7 @@ Item {
   property string historySearchText: ""
   property string historyAppFilter: ""
   property string historyReadFilter: "all"
+  property var historyCollapsedApps: ({})
   readonly property int historyUnreadCount: {
     var count = 0
     for (var i = 0; i < historyRowsCache.length; i++)
@@ -767,6 +768,7 @@ Item {
       glyph: String(entry.glyph || ""),
       exec: String(entry.exec || ""),
       read: !!entry.read,
+      collapsed: false,
       unread: 0,
       urgency: Number(entry.urgency || NotificationUrgency.Normal)
     }
@@ -800,6 +802,19 @@ Item {
     applyHistoryFilter()
   }
 
+  function historyAppCollapsed(app) {
+    return historyCollapsedApps["$" + String(app || "")] === true
+  }
+
+  function toggleHistoryAppCollapsed(app) {
+    var key = "$" + String(app || "")
+    var next = ({})
+    for (var existing in historyCollapsedApps) next[existing] = historyCollapsedApps[existing]
+    next[key] = !next[key]
+    historyCollapsedApps = next
+    applyHistoryFilter()
+  }
+
   function populateHistoryPanel(rows) {
     historyPanelModel.clear()
     historyEntryCount = rows.length
@@ -822,6 +837,7 @@ Item {
     for (var g = 0; g < order.length; g++) {
       var app = order[g]
       var group = groups["$" + app]
+      var collapsed = historySearchText.length === 0 && historyAppCollapsed(app)
       historyPanelModel.append({
         kind: "group",
         app: app,
@@ -836,11 +852,12 @@ Item {
         glyph: "",
         exec: "",
         read: false,
+        collapsed: collapsed,
         unread: group.unread,
         urgency: NotificationUrgency.Normal
       })
-      for (var r = 0; r < group.rows.length; r++)
-        historyPanelModel.append(group.rows[r])
+      if (!collapsed)
+        for (var r = 0; r < group.rows.length; r++) historyPanelModel.append(group.rows[r])
     }
 
     historyPanelLoading = false
@@ -1251,6 +1268,10 @@ Item {
       return String(service.historyEntryCount)
     }
 
+    function panelRows(): string {
+      return String(service.historyPanelModel.count)
+    }
+
     function search(query: string): string {
       service.setHistorySearchText(query)
       return String(service.historyEntryCount)
@@ -1264,6 +1285,11 @@ Item {
     function filterRead(state: string): string {
       service.setHistoryReadFilter(state)
       return String(service.historyEntryCount)
+    }
+
+    function toggleAppCollapsed(app: string): string {
+      service.toggleHistoryAppCollapsed(app)
+      return service.historyAppCollapsed(app) ? "collapsed" : "expanded"
     }
 
     function openApp(app: string): string {
