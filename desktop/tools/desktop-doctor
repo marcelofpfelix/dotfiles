@@ -458,8 +458,9 @@ check_shell_layout_contract() {
       root-menu|power-confirm) continue ;;
       launcher) grep -Fq '"provider":"apps"' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
       controls) grep -Fq '"status":' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
-      media-controls) grep -Fq 'qbar shell toggle marcelof.media-controls' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
-      network-tools) grep -Fq 'qbar shell toggle marcelof.network-tools' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
+      media-controls) jq -e '.menu.id == "trigger.media"' "$HOME/.config/omarchy/plugins/marcelof.media-controls/manifest.json" >/dev/null || missing+=("$menu") ;;
+      network-tools) jq -e '.menu.id == "status.network-tools"' "$HOME/.config/omarchy/plugins/marcelof.network-tools/manifest.json" >/dev/null || missing+=("$menu") ;;
+      personal-dashboard) jq -e '.menu.id == "status.dashboard"' "$HOME/.config/omarchy/plugins/marcelof.board-dashboard/manifest.json" >/dev/null || missing+=("$menu") ;;
       *) grep -Fq "\$HOME/bin/qbar $menu" "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
     esac
   done < <(qbar list-menus)
@@ -471,7 +472,7 @@ check_shell_layout_contract() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys hypr-term qbar omarchy-shell omarchy-menu-select omarchy-plugin-validate omarchy-plugin-review omarchy-plugin-list omarchy-plugin-add omarchy-plugin-enable omarchy-plugin-disable omarchy-plugin-remove qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app notificationctl reminderctl work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
+for cmd in hypr-session hypr-keys hypr-term qbar omarchy-shell omarchy-menu-select omarchy-menu-plugin omarchy-plugin-validate omarchy-plugin-review omarchy-plugin-list omarchy-plugin-add omarchy-plugin-enable omarchy-plugin-disable omarchy-plugin-remove qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app notificationctl reminderctl work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes
@@ -553,6 +554,7 @@ run_required calendar-sync-status calendar-sync-status status
 
 section "omarchy compatibility"
 run_required omarchy-shell-self-test omarchy-shell self-test
+run_required omarchy-menu-plugin-self-test omarchy-menu-plugin self-test
 run_required omarchy-plugin-review-self-test omarchy-plugin-review self-test
 run_required omarchy-plugin-add-self-test omarchy-plugin-add self-test
 

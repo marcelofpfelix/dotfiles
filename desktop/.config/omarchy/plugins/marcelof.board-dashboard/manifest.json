@@ -5,6 +5,11 @@
   "version": "1.0.0",
   "author": "Marcelo Felix",
   "description": "On-demand personal Board surfaces and refresh action",
+  "menu": {
+    "id": "status.dashboard",
+    "icon": "󰡨",
+    "label": "Dashboard"
+  },
   "kinds": ["overlay"],
   "entryPoints": { "overlay": "Overlay.qml" }
 }

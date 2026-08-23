@@ -1626,18 +1626,19 @@ notification center.
   - Validation: two-app unread/read/delete flow, restart persistence, missing-icon fallback, bar overflow behavior, idle CPU/RSS comparison, and desktop screenshot review.
   - Completed 2026-08-21: one event-driven unread-app model feeds compact icon-plus-count buttons before the neutral bell; clicking opens scoped history, read/delete updates flow through the existing file queue, and generic notifications reserve no app slot. Live Slack/Espanso/Chrome visual review passed without overlap.
 
-- [ ] P1: Convert remaining synthetic local menus into real manifests.
-  - Scope: `calendar`, `clipboard`, `controls`, `launcher`, `passmenu`, `personal-dashboard`, `power`, `screen`, `settings`, `tray`, `websearch`, and `work-inbox` currently appear in registry output as fixed compatibility menus and cannot be independently disabled.
-  - Acceptance: each retained customization has one manifest, one owner, and a truthful enable/disable contract; disabling it removes only that feature and its menu route. Replaced QML moves to `archive/`, never deletion.
-  - Dependencies: complete the existing parity tasks before converting clipboard, launcher, power, and calendar.
-  - Validation: registry list, enable-disable-restart round trip per plugin, Super+Space route inventory, one owner/process, and focused menu smoke.
+- [x] P1: Remove synthetic plugin records and give portable local panels real manifests.
+  - Completed 2026-08-23: `shell.listPlugins` now follows Omarchy and reports manifests only. Fixed shell surfaces such as calendar, launcher, power, and clipboard remain static menu actions because they are not independently loadable plugins. The portable Board dashboard, media controls, and network tools manifests own their public menu metadata and truthful enable state.
+  - Validation: manifest JSON, QML lint, live manifest-only registry inventory, Network Tools disable-enable round trip, and focused route OCR.
 
-- [ ] P1: Add a unified plugin status panel after synthetic-menu conversion.
-  - Acceptance: one Setup > Plugins view lists all manifests with icon, name, ID, kind, enabled state, and an inline toggle; fixed infrastructure is visible but disabled with a reason. Keep the copied Enable/Disable selectors as scriptable fallback.
-  - Dependency: real manifests for retained customizations; do not build a second plugin registry.
-  - Validation: keyboard and mouse toggles, persistence, disabled-plugin route removal, no shell crash when disabling a loaded panel, and screenshot review.
+- [x] P1: Add one unified plugin management selector.
+  - Completed 2026-08-23: Setup > Plugins > Manage plugins reuses the copied selector, shows ID, state, and kind, and toggles the selected manifest. Enable/Disable remain focused fallback views; no second registry or QML status panel was added.
+  - Validation: selector self-test, shell syntax, live registry state, persistence round trip, and menu screenshot.
 
-- [ ] P1: Audit root-menu completeness from plugin metadata.
-  - Acceptance: every enabled public panel is reachable from Super+Space, disabled plugins leave no dead action, and private services/bar-only helpers do not create useless menu rows.
-  - Dependency: manifests must declare whether they expose a public menu action.
-  - Validation: generated registry/menu comparison and full `qs-menu-smoke`.
+- [x] P1: Generate public custom-plugin routes from enabled manifest metadata.
+  - Completed 2026-08-23: enabled manifests may declare one optional `menu` item. The copied menu model merges defaults, plugin routes, then user extensions; disabling a plugin removes its generated route. Private services and bar-only plugins remain absent.
+  - Validation: merge check, QML lint, live Status/Trigger route OCR, root-menu geometry smoke, and plugin disable-enable round trip.
+
+Upstream was refreshed at Omarchy Quattro commit `1926611`. Omarchy itself keeps
+fixed menu actions in JSONC, lists only real manifests, and manages plugins through
+the selector. The local `menu` manifest field is the only adaptation: it avoids
+duplicating routes for portable custom overlays that must also work on Omarchy.

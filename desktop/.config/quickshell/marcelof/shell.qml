@@ -24,6 +24,7 @@ ShellRoot {
   readonly property var pluginHost: pluginHostObject
   property var dynamicPluginEntries: []
   property var dynamicBarWidgetEntries: []
+  property var pluginMenuItems: []
   property string openDynamicPluginId: ""
   property string pendingDynamicPluginId: ""
   property string pendingDynamicPluginPayload: ""
@@ -312,6 +313,7 @@ ShellRoot {
   function refreshDynamicPluginEntries() {
     var overlays = []
     var widgets = []
+    var menus = []
     for (var id in pluginRegistry.installedPlugins) {
       var manifest = pluginRegistry.installedPlugins[id]
       if (!pluginRegistry.isEnabled(id)) continue
@@ -320,11 +322,20 @@ ShellRoot {
         overlays.push({ id: id, manifest: manifest, sourceUrl: pluginRegistry.entryPointUrl(manifest, panelKind), keepLoaded: manifest.keepLoaded === true })
       if (pluginRegistry.supportsKind(id, pluginRegistry.barWidgetKind))
         widgets.push({ id: id, manifest: manifest, sourceUrl: pluginRegistry.entryPointUrl(manifest, "barWidget") })
+      if (manifest.menu && typeof manifest.menu === "object" && !Array.isArray(manifest.menu)) {
+        var menu = ({})
+        for (var key in manifest.menu) menu[key] = manifest.menu[key]
+        menu.id = String(menu.id || id)
+        if (!menu.action) menu.action = "omarchy-shell shell toggle " + id
+        menus.push(menu)
+      }
     }
     overlays.sort(function(left, right) { return left.id.localeCompare(right.id) })
     widgets.sort(function(left, right) { return left.id.localeCompare(right.id) })
+    menus.sort(function(left, right) { return left.id.localeCompare(right.id) })
     if (!root.samePluginEntries(dynamicPluginEntries, overlays)) dynamicPluginEntries = overlays
     if (!root.samePluginEntries(dynamicBarWidgetEntries, widgets)) dynamicBarWidgetEntries = widgets
+    if (JSON.stringify(pluginMenuItems) !== JSON.stringify(menus)) pluginMenuItems = menus
   }
 
   function registerDynamicPluginLoader(id, loader) {
@@ -972,6 +983,8 @@ ShellRoot {
 
   QtObject {
     id: pluginHostObject
+    readonly property var pluginMenuItems: root.pluginMenuItems
+    readonly property var appLibrary: root.appLibrary
     function hide(pluginId) {
       if (String(pluginId) === shellConfig.pluginIds.wifiQr) { wifiQrOverlay.close(); return true }
       return root.hideShellMenu(pluginId)
@@ -1201,8 +1214,6 @@ ShellRoot {
     function listMenus(): string { return JSON.stringify(shellConfig.menuIds) }
     function listPlugins(): string {
       const plugins = []
-      for (let id in shellConfig.menuRegistry)
-        plugins.push({ id: id, name: id, kinds: ["menu"], enabled: true, active: true, canDisable: false, canEnable: false, firstParty: true, clonedFrom: "" })
       for (let pluginId in pluginRegistry.installedPlugins) {
         const manifest = pluginRegistry.installedPlugins[pluginId]
         const supported = pluginRegistry.supports(pluginId)
@@ -1216,10 +1227,11 @@ ShellRoot {
           canDisable: supported,
           canEnable: supported,
           firstParty: manifest.__isFirstParty === true,
-          clonedFrom: ""
+          clonedFrom: "",
+          menu: manifest.menu || null
         })
       }
-      plugins.sort((left, right) => left.id.localeCompare(right.id))
+      plugins.sort((left, right) => left.name.localeCompare(right.name))
       return JSON.stringify(plugins)
     }
     function rescanPlugins(): string { pluginRegistry.rescan(); return "ok" }

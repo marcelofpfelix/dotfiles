@@ -1,37 +1,67 @@
 #!/bin/bash
 
-# omarchy:summary=Pick a shell plugin to enable or disable
+# omarchy:summary=Pick a shell plugin to manage
 # omarchy:group=menu
 # omarchy:name=plugin
-# omarchy:args=<enable|disable>
+# omarchy:args=<manage|enable|disable>
 
 set -euo pipefail
 
 PLUGIN_ICON=$'\U000f0431'
+mode=${1:-}
 
-case "${1:-}" in
-  enable) filter='.canEnable and (.enabled | not)' ;;
-  disable) filter='.canDisable and .enabled' ;;
-  *)
-    echo "Usage: omarchy-menu-plugin <enable|disable>" >&2
-    exit 1
-    ;;
+plugin_rows() {
+  local mode=$1 plugins=$2 filter
+  case "$mode" in
+    manage) filter='.canEnable or .canDisable' ;;
+    enable) filter='.canEnable and (.enabled | not)' ;;
+    disable) filter='.canDisable and .enabled' ;;
+  esac
+  jq -r --arg icon "$PLUGIN_ICON" --arg mode "$mode" \
+  ". as \$plugins
+   | .[] | select($filter)
+   | \$icon + \"\\t\" + .name + \"\\t\" + .id
+     + (if \$mode == \"manage\" then \" · \" + (if .enabled then \"enabled\" else \"disabled\" end)
+        + \" · \" + ((.kinds // []) | join(\",\")) else \"\" end)" <<<"$plugins"
+}
+
+plugin_action() {
+  local mode=$1 id=$2 plugins=$3
+  [[ $mode == manage ]] || { printf '%s\n' "$mode"; return; }
+  if [[ $(jq -r --arg id "$id" '.[] | select(.id == $id) | .enabled' <<<"$plugins") == true ]]; then
+    printf 'disable\n'
+  else
+    printf 'enable\n'
+  fi
+}
+
+if [[ $mode == self-test ]]; then
+  fixture='[{"id":"media","name":"Media","kinds":["overlay"],"enabled":true,"canEnable":true,"canDisable":true},{"id":"net","name":"Network","kinds":["overlay"],"enabled":false,"canEnable":true,"canDisable":true}]'
+  [[ $(plugin_rows manage "$fixture" | wc -l) -eq 2 ]]
+  [[ $(plugin_action manage media "$fixture") == disable ]]
+  [[ $(plugin_action manage net "$fixture") == enable ]]
+  echo ok
+  exit 0
+fi
+
+case "$mode" in
+  manage|enable|disable) ;;
+  *) echo "Usage: omarchy-menu-plugin <manage|enable|disable>" >&2; exit 1 ;;
 esac
 
 plugins=$(omarchy-plugin-list --json)
 
 # The id rides along as row subtext: it tells same-named plugins apart on
 # screen and comes back with the selection as the key to act on.
-rows=$(jq -r --arg icon "$PLUGIN_ICON" \
-  ". as \$plugins
-   | .[] | select($filter)
-   | \$icon + \"\\t\" + .name + \"\\t\" + .id" <<<"$plugins")
-[[ -n $rows ]] || { notify-send "Plugins" "No plugin to ${1}"; exit 0; }
+rows=$(plugin_rows "$mode" "$plugins")
+[[ -n $rows ]] || { notify-send "Plugins" "No plugin to $mode"; exit 0; }
 
-selection=$(omarchy-menu-select "${1^} plugin" <<<"$rows") || exit 0
+selection=$(omarchy-menu-select "${mode^} plugin" <<<"$rows") || exit 0
 [[ -n $selection ]] || exit 0
 
 id=$(cut -f2 <<<"$selection")
+id=${id%% *}
 [[ -n $id ]] || exit 1
 
-"omarchy-plugin-$1" "$id"
+action=$(plugin_action "$mode" "$id" "$plugins")
+"omarchy-plugin-$action" "$id"

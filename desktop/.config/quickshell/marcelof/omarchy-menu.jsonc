@@ -15,18 +15,15 @@
   "trigger.capture": {"icon":"󰍹","label":"Capture","aliases":["screenshot","record"],"action":"$HOME/bin/qbar screen"},
   "trigger.text-extraction": {"icon":"󰥬","label":"Text extraction","aliases":["ocr","copy text"],"action":"$HOME/bin/screenshot-wayland ocr"},
   "trigger.wallpaper": {"icon":"󰸉","label":"Wallpaper","aliases":["background"],"action":"$HOME/bin/qbar wallpaper"},
-  "trigger.media": {"icon":"󰕾","label":"Media","aliases":["audio","music"],"action":"$HOME/bin/qbar shell toggle marcelof.media-controls"},
 
   "status.bluetooth": {"icon":"\uDB80\uDCAF","label":"Bluetooth","action":"$HOME/bin/qbar bluetooth"},
   "status.audio": {"icon":"󰕾","label":"Audio mixer","aliases":["volume"],"action":"$HOME/bin/qbar media"},
   "status.battery": {"icon":"󰁹","label":"Battery and power","aliases":["power profile"],"action":"$HOME/bin/qbar battery"},
   "status.display": {"icon":"󰒓","label":"Displays","action":"$HOME/bin/qbar display"},
   "status.network": {"icon":"󰖩","label":"Network","aliases":["wifi"],"action":"$HOME/bin/qbar network"},
-  "status.network-tools": {"icon":"󰛳","label":"Network details","aliases":["public ip","reconnect"],"action":"$HOME/bin/qbar shell toggle marcelof.network-tools"},
   "status.wifi-qr": {"icon":"󰐲","label":"Share Wi-Fi","aliases":["qr"],"action":"$HOME/bin/qbar wifi-qr"},
   "status.calendar": {"icon":"󰥔","label":"Time and calendar","aliases":["time","clock"],"action":"$HOME/bin/qbar calendar"},
   "status.work": {"icon":"󰻞","label":"Work inbox","action":"$HOME/bin/qbar work-inbox"},
-  "status.dashboard": {"icon":"󰡨","label":"Dashboard","action":"$HOME/bin/qbar personal-dashboard"},
   "status.notifications": {"icon":"󰂚","label":"Notifications","aliases":["notices"],"action":"$HOME/bin/qbar notifications"},
   "status.tray": {"icon":"󱊖","label":"Tray","action":"$HOME/bin/qbar tray"},
   "status.session": {"icon":"","label":"Session menu","aliases":["logout","reboot","shutdown"],"action":"$HOME/bin/qbar power"},
@@ -35,6 +32,7 @@
   "setup.keybindings": {"icon":"󰌌","label":"Keybindings","aliases":["keys","hotkeys"],"action":"$HOME/bin/qbar keybindings"},
 
   "setup.plugin": {"icon":"󰐱","label":"Plugins","aliases":["plugin","plugins"]},
+  "setup.plugin.manage": {"icon":"󰐱","label":"Manage plugins","action":"$HOME/bin/omarchy-menu-plugin manage"},
   "setup.plugin.enable": {"icon":"󰄬","label":"Enable plugin","action":"$HOME/bin/omarchy-menu-plugin enable"},
   "setup.plugin.disable": {"icon":"󰅖","label":"Disable plugin","action":"$HOME/bin/omarchy-menu-plugin disable"},
 

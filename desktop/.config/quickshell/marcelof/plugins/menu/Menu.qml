@@ -51,6 +51,8 @@ Item {
   property string userMenuPath: Quickshell.env("HOME") + "/.config/omarchy/extensions/omarchy-menu.jsonc"
   property var defaultMenuItems: []
   property var userMenuItems: []
+  readonly property var pluginMenuItems: root.shell && root.shell.pluginMenuItems ? root.shell.pluginMenuItems : []
+  onPluginMenuItemsChanged: rebuildItemsFromSources()
   property bool opened: false
   property string mode: "menu"
   readonly property bool dmenuActive: mode === "select" || mode === "input"
@@ -242,11 +244,16 @@ Item {
     return MenuModel.parseMenuJsonc(raw)
   }
 
-  // Merge defaults + user extension. Later entries override earlier ones
+  // Merge defaults + enabled plugin routes + user extension. Later entries override earlier ones
   // on a per-key basis (so the user can tweak label/icon/action without
   // re-declaring the whole row).
   function rebuildItemsFromSources() {
-    var mergedMenu = MenuModel.mergeMenuSources(root.defaultMenuItems, root.userMenuItems)
+    var pluginItems = []
+    for (var i = 0; i < root.pluginMenuItems.length; i++) {
+      var entry = root.pluginMenuItems[i]
+      if (entry && entry.id) pluginItems.push(root.normalizeItem(entry.id, entry))
+    }
+    var mergedMenu = MenuModel.mergeMenuSources(root.defaultMenuItems, root.userMenuItems, pluginItems)
     root.providerRevision += 1
     root.providersLoaded = ({})
     root.providerQueue = []
