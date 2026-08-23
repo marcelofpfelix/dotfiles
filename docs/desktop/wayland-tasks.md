@@ -1610,9 +1610,10 @@ notification center.
   - Validation: shell syntax, live registry JSON, root-menu smoke, plugin selector launch, and Quickshell reload.
 
 - [x] P0: Replace count-based notification deletion with age-based retention and read state.
-  - Completed: history defaults to 30 days, accepts a custom 1-3650 day value in the notification center, prunes JSON and image pairs by timestamp, persists unread/read state, marks a row read without deleting it, deletes individual or per-app history explicitly, and opens/focuses the source app when a card is clicked.
+  - Completed: history defaults to 30 days, accepts a custom 1-3650 day value in its settings file or IPC, prunes JSON and image pairs by timestamp, persists unread/read state, marks a row read without deleting it, deletes individual or per-app history explicitly, and opens/focuses the source app when a card is clicked.
   - Validation: focused Node regression, inherited Omarchy notification suite, QML lint, live archive/read/delete persistence, corrected notification screenshot crop, and visual inspection.
   - Follow-up 2026-08-23: the center now exposes All/Unread/Read filters, timestamps, labeled Mark read and Delete actions, and explicit Delete app/all wording. Mark read keeps history; Delete removes it; retention remains age-based. The history loader now normalizes each JSON file with `jq -c`, fixing the prior bug where pretty-printed read entries disappeared from later loads.
+  - UI follow-up 2026-08-23: Read all and Delete all share the title row; search and read-state filters share one row; retention is configured in `~/.local/state/omarchy/notifications.json` or through notification IPC instead of occupying panel space. Bulk and per-row read actions now update both visible and archived notification files.
 
 - [x] P1: Fuzzy-find retained notifications, optionally scoped by application.
   - Acceptance: the notification center has one keyboard-focused search field that fuzzy-matches app, summary, and body; selecting an app group scopes results to that app; clearing the scope restores all retained notifications; Enter opens/focuses the selected notification without deleting it.

@@ -68,6 +68,14 @@ PopupWindow {
         }
 
         Button {
+          text: "Read all"
+          fontFamily: root.fontFamily
+          bordered: true
+          enabled: root.service.historyUnreadCount > 0
+          onClicked: root.service.markAllHistoryRead()
+        }
+
+        Button {
           text: "Delete all"
           iconText: String.fromCodePoint(0xF0156)
           fontFamily: root.fontFamily
@@ -98,35 +106,6 @@ PopupWindow {
         Layout.fillWidth: true
         spacing: Style.spacing.md
 
-        Text {
-          text: "Keep history for"
-          color: Color.muted
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.bodySmall
-        }
-
-        NumberField {
-          value: root.service.retentionDays
-          from: 1
-          to: 3650
-          fieldWidth: Style.space(72)
-          fontFamily: root.fontFamily
-          onModified: function(days) { root.service.setRetentionDays(days) }
-        }
-
-        Text {
-          Layout.fillWidth: true
-          text: "days"
-          color: Color.muted
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.bodySmall
-        }
-      }
-
-      RowLayout {
-        Layout.fillWidth: true
-        spacing: Style.spacing.md
-
         TextField {
           id: searchField
           Layout.fillWidth: true
@@ -145,11 +124,6 @@ PopupWindow {
           bordered: true
           onClicked: root.service.setHistoryAppFilter("")
         }
-      }
-
-      RowLayout {
-        Layout.fillWidth: true
-        spacing: Style.spacing.sm
 
         Repeater {
           model: [
@@ -167,8 +141,6 @@ PopupWindow {
             onClicked: root.service.setHistoryReadFilter(modelData.value)
           }
         }
-
-        Item { Layout.fillWidth: true }
       }
 
       Rectangle {
@@ -193,7 +165,7 @@ PopupWindow {
         Text {
           anchors.centerIn: parent
           visible: !root.service.historyPanelLoading && root.service.historyEntryCount === 0
-          text: root.service.historySearchText.length > 0 || root.service.historyAppFilter.length > 0 ? "No matching notifications" : "No notifications"
+          text: root.service.historySearchText.length > 0 || root.service.historyAppFilter.length > 0 || root.service.historyReadFilter !== "all" ? "No matching notifications" : "No notifications"
           color: Color.muted
           font.family: root.fontFamily
           font.pixelSize: Style.font.body

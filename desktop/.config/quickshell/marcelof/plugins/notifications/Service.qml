@@ -119,6 +119,12 @@ Item {
   property string historySearchText: ""
   property string historyAppFilter: ""
   property string historyReadFilter: "all"
+  readonly property int historyUnreadCount: {
+    var count = 0
+    for (var i = 0; i < historyRowsCache.length; i++)
+      if (!historyRowsCache[i].read) count++
+    return count
+  }
   property alias historyPanelModel: historyPanelModel
   ListModel { id: historyPanelModel }
   property alias unreadAppsModel: unreadAppsModel
@@ -738,6 +744,7 @@ Item {
         image: row.image,
         glyph: row.glyph || "",
         exec: row.exec || "",
+        read: !!row.read,
         urgency: row.urgency,
         timestamp: row.timestamp
       }, imagesDir).entry)
@@ -892,11 +899,12 @@ Item {
 
   function updateHistoryEntryFile(originalId, timestamp, read) {
     enqueuePopupFileJob(["bash", "-c",
-      "file=\"$1/$2.json\" tmp=\"$1/$2.json.tmp\"\n" +
-      "[[ -f $file ]] || exit 0\n" +
-      "jq -c --argjson read \"$3\" '.read = $read' \"$file\" > \"$tmp\" && mv -f \"$tmp\" \"$file\"",
-      "--", historyDir, NotificationLogic.imageStem({ originalId: originalId, timestamp: timestamp }),
-      read ? "true" : "false"])
+      "for dir in \"$1\" \"$2\"; do\n" +
+      "  file=\"$dir/$3.json\" tmp=\"$dir/$3.json.tmp\"\n" +
+      "  [[ -f $file ]] || continue\n" +
+      "  jq -c --argjson read \"$4\" '.read = $read' \"$file\" > \"$tmp\" && mv -f \"$tmp\" \"$file\"\n" +
+      "done", "--", popupStateDir, historyDir,
+      NotificationLogic.imageStem({ originalId: originalId, timestamp: timestamp }), read ? "true" : "false"])
   }
 
   function markHistoryEntryRead(originalId, timestamp) {
@@ -907,8 +915,30 @@ Item {
       rows[i].read = true
       changed = true
     }
+    for (var p = 0; p < popupModel.count; p++) {
+      var popup = popupModel.get(p)
+      if (popup.originalId !== originalId || popup.timestamp !== timestamp || popup.read) continue
+      popupModel.setProperty(p, "read", true)
+      changed = true
+    }
     if (!changed) return
     updateHistoryEntryFile(originalId, timestamp, true)
+    setHistoryRows(rows)
+  }
+
+  function markAllHistoryRead() {
+    if (historyUnreadCount === 0) return
+    var rows = visiblePanelRows("", -1, 0)
+    for (var i = 0; i < rows.length; i++) rows[i].read = true
+    for (var p = 0; p < popupModel.count; p++) popupModel.setProperty(p, "read", true)
+    enqueuePopupFileJob(["bash", "-c",
+      "for dir in \"$1\" \"$2\"; do\n" +
+      "  for file in \"$dir\"/*.json; do\n" +
+      "    [[ -f $file ]] || continue\n" +
+      "    tmp=\"$file.tmp\"\n" +
+      "    jq -c '.read = true' \"$file\" > \"$tmp\" && mv -f \"$tmp\" \"$file\"\n" +
+      "  done\n" +
+      "done", "--", popupStateDir, historyDir])
     setHistoryRows(rows)
   }
 
@@ -1254,6 +1284,11 @@ Item {
       var parts = String(key || "").split(":")
       if (parts.length !== 2) return "invalid"
       service.markHistoryEntryRead(Number(parts[1]), Number(parts[0]))
+      return "ok"
+    }
+
+    function markAllRead(): string {
+      service.markAllHistoryRead()
       return "ok"
     }
 
