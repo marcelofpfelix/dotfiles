@@ -1,11 +1,10 @@
 import QtQuick
-import Quickshell.Io
 import qs.Ui
 
 BarIndicator {
   id: root
 
-  property bool recording: false
+  property bool recording: !!root.bar && !!root.bar.shell && String(root.bar.shell.recordingStatusText || "").indexOf("recording") === 0
 
   active: recording
   activeText: "󰻂"
@@ -14,9 +13,7 @@ BarIndicator {
   inactiveTooltipText: "Screen Recording"
 
   function refresh() {
-    if (!root.bar || statusProc.running) return
-    statusProc.command = ["pgrep", "--quiet", "-f", "^gpu-screen-recorder"]
-    statusProc.running = true
+    if (root.bar && root.bar.shell) root.bar.shell.refreshScreenState()
   }
 
   onBarChanged: refresh()
@@ -28,16 +25,9 @@ BarIndicator {
     function onRefreshRequested() { root.refresh() }
   }
 
-  Process {
-    id: statusProc
-    onExited: function(exitCode) {
-      root.recording = exitCode === 0
-    }
-  }
-
   onPressed: function() {
     if (root.bar) {
-      root.bar.run(root.recording ? "omarchy-capture-screenrecording --stop-recording" : "omarchy-menu toggle trigger.capture.screenrecord")
+      root.recording ? root.bar.shell.runScreenRecord("stop") : root.bar.shell.toggleScreenPanel()
     }
   }
 }

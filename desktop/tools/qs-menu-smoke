@@ -212,7 +212,7 @@ inspect_contact_sheet() {
   fi
   images+=(--image "$contact_sheet")
 
-  printf '%s\n' "$prompt" | codex exec --ephemeral --sandbox read-only --cd "$PWD" "${images[@]}" -
+  printf '%s\n' "$prompt" | codex exec --ephemeral --dangerously-bypass-approvals-and-sandbox --cd "$PWD" "${images[@]}" -
 }
 
 

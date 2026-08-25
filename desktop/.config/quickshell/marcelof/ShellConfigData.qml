@@ -166,7 +166,7 @@ QtObject {
     "root-menu": { width: 440, height: 780 },
     notifications: { width: 640, height: 420 },
     network: { width: 640, height: 320 },
-    power: { width: 640, height: 360 },
+    power: { width: 460, height: 180 },
     tray: { width: 640, height: 420 }
   })
 

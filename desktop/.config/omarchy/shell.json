@@ -11,7 +11,8 @@
       ],
       "center": [
         { "id": "marcelof.status-actions", "kind": "clock" },
-        { "id": "marcelof.status-actions", "kind": "notifications" }
+        { "id": "marcelof.status-actions", "kind": "notifications" },
+        { "id": "omarchy.indicators", "items": ["Dnd", "NightLight", "ScreenRecording"] }
       ],
       "right": [
         { "id": "marcelof.board-status" },
@@ -27,6 +28,7 @@
       ]
     }
   },
+  "disabledPlugins": ["omarchy.lock", "omarchy.idle", "omarchy.polkit"],
   "plugins": [
     { "id": "marcelof.board-dashboard" },
     { "id": "marcelof.media-controls" },

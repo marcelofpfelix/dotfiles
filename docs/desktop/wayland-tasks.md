@@ -1469,10 +1469,11 @@ Findings:
   - Validation: distinct Slack, Chrome, terminal, and generic notification fixtures; icon and fallback screenshots; browser action; DND/routing; restart persistence; exactly one notification owner.
   - Completed 2026-08-21: standard `desktop-entry` identity now survives popup/history persistence, icon resolution consistently prefers app icon, desktop entry, then app name, and restored clicks use the existing focus-or-launch helper. Generic `notify-send`/unnamed rows remain under the neutral bell.
 
-- [ ] P1 `next-10`: Complete the preserve-before-archive ownership audit and reassess Settings deprecation.
+- [x] P1 `next-10`: Complete the preserve-before-archive ownership audit and reassess Settings deprecation.
   - Clipboard moves to `omarchy.clipboard`; OSD moves to `omarchy.osd`; Launcher moves to the Apps provider; ordinary MPRIS moves to Omarchy media while `audioctl` remains separate; wallpaper rendering moves to `omarchy.background`; Controls/Session/passmenu/web search move only after copied menu/input providers preserve their behavior; Calendar moves only if copied clock/reminders preserve every local extension.
   - Acceptance: every retired surface has one proven owner and an archived source; density, primary color, tray, launcher-hidden apps, weather, wallpaper, DND, and plugin state have explicit owners or remain documented blockers for Settings removal.
   - Validation: `desktop/tools/desktop-doctor`, `desktop/tools/qs-menu-smoke all`, owner/process inspection, archive inventory, and restart persistence. Close only after every retired owner has a plugin/provider and archived source.
+  - Completed 2026-08-24: Clipboard, OSD, Apps, MPRIS, audioctl, background, menu/input, and Session each have one active owner and every replaced source remains under `archive/obsolete` or `archive/wayland`. Calendar stays local because the copied Omarchy clock omits required extensions. Settings remains active and off the bar because density, primary color, native tray behavior, and hidden-app reset still have no other editor; weather, wallpaper, DND, and plugin state have explicit runtime owners.
 
 ## 2026-08-19 Shell Ownership And Polling Review
 
@@ -1540,15 +1541,17 @@ and local behavior that must survive replacement.
   - Validation: route inventory, reboot/logout confirmation fixture, gopass redaction fixture, web-site routing, and archive-only removal.
   - Completed: Controls now opens Omarchy `Status`; power/session selection opens Omarchy `System`; the reduced local power popup exists only for destructive confirmation. Passmenu and web search use Omarchy select/input mode through the existing picker library: passmenu exposes entry names only and keeps secret values inside `passmenu-action`, while web search retains Google, YouTube, GitHub, Jira, Guru, and Call selection. Persisted launcher MRU loading moved into `AppLibrary`; the four superseded QML panel/service files and the original power panel are archived. Shell/QML lint, passmenu self-test, picker status, Omarchy wrapper self-test, focused five-surface screenshots, destructive-confirmation smoke, one-process check, and the complete menu suite pass.
 
-- [ ] P2 `next-04`: Evaluate the copied clock and reminders plugins as the base for calendar work without losing local extensions.
+- [x] P2 `next-04`: Evaluate the copied clock and reminders plugins as the base for calendar work without losing local extensions.
   - Preserve: Lisbon and extra timezones, timestamp formats, Palmela weather, today highlighting, Todo, Pomodoro, Timewarrior, agenda, and future Google Calendar integration. Copy only if it deletes the local timer/panel owner; otherwise retain the current plugin candidate.
   - Validation: timezone/DST fixture, today/min-max weather, reminder lifecycle, Pomodoro/Timewarrior, closed-panel polling, and screenshots.
+  - Completed 2026-08-24: retain the 345-line local panel/service. Omarchy clock is 1,060 lines and does not provide Lisbon and extra timezones, Unix/hex timestamps, Palmela forecasts, Todo, Pomodoro/Timewarrior, agenda, or local reminders, so copying it would add code without deleting the current owner. Lisbon winter/summer, Palmela min-max weather, reminder, Pomodoro/Timewarrior, agenda, sync, closed-timer, and calendar screenshot checks pass.
 
 - [ ] P1 `next-09`: Replace the existing polkit agent with Omarchy's Quickshell service.
   - Dependencies: identify the current agent and track the Ubuntu runtime/package prerequisites in homelab; do not couple this to lock or idle migration.
   - Acceptance: exactly one polkit agent runs, ordinary privilege prompts render in Quickshell, cancellation and wrong-password paths recover, and i3 rollback retains a working agent.
   - Validation: upstream polkit tests, process/DBus owner inspection, one harmless privilege prompt, cancellation, restart persistence, and rollback documentation.
   - Stop: no package removal, service disablement, or privileged system mutation without explicit approval.
+  - Progress 2026-08-24: copied `omarchy.polkit` unchanged and staged it disabled. No user polkit agent currently owns DBus, but Ubuntu has no `/etc/pam.d/polkit-1`; enabling waits for an explicit system-auth gate and harmless prompt/cancel recovery test. Upstream model tests and direct QML lint pass.
 
 Rejected for now: agents, Tailscale, weather bar, theme switching, and the full Omarchy
 runtime. They do not replace current ownership or are not requested; copying them would add
@@ -1573,40 +1576,49 @@ user explicitly approves them.
   - Completed: Cliamp 1.57.1 and dua 2.42.1 are installed through Homebrew; Omawrite is built from unchanged upstream `8f98892` with Nix Qt 6.6, installed in `~/bin`, and has a tracked desktop entry/icon. Homelab records all three install channels.
   - Validation: all commands resolve, Cliamp/dua versions pass, Omawrite links without missing libraries and appears in the launcher, homelab lint passes, and the desktop package audit covers all three.
 
-- [ ] P2 `next-02`: Tighten oversized Passwords and Bookmarks popup geometry.
+- [x] P2 `next-02`: Tighten oversized Passwords and Bookmarks popup geometry.
   - Evidence: full visual smoke at `20260821-113623` shows Passwords wasting roughly half its width and Bookmarks reserving a large empty body.
   - Acceptance: size both from useful content with stable responsive limits; preserve keyboard input, results, and floating behavior.
   - Validation: focused screenshots at laptop and narrow widths, keyboard input/selection, empty state, and `desktop/tools/desktop-doctor`.
+  - Completed 2026-08-24: later menu-provider migration superseded the stale geometry. Passwords now uses the copied content-sized 300 px selector with keyboard input and stable ellipsis; Bookmarks is not an active public route. Focused live capture confirms useful scrollable density and no internal clipping.
 
-- [ ] P2 `next-01`: Make Network Details and Clipboard useful in visual smoke.
+- [x] P2 `next-01`: Make Network Details and Clipboard useful in visual smoke.
   - Evidence: Network Details remained on a large loading placeholder during capture; long Clipboard command/URL rows hard-clip without wrap or ellipsis.
   - Acceptance: render cached network data immediately while refreshing, and give clipboard rows deterministic elision plus a full-text detail path.
   - Validation: `desktop/tools/qs-menu-smoke network-tools clipboard`, cached/offline network fixtures, long text/URL clipboard fixtures, and idle process inspection.
+  - Completed 2026-08-24: later copied-plugin work already retained the last valid network sample while refreshing and gave clipboard rows one-line ellipsis plus a wrapped full-detail pane. Focused live screenshots show populated Wi-Fi/IP data rather than a loading placeholder and no true internal clipping.
 
-- [ ] P2 `next-03`: Normalize Session action geometry.
+- [x] P2 `next-03`: Normalize Session action geometry.
   - Evidence: the current three-, two-, and one-button rows use visibly unrelated widths.
   - Acceptance: use one grid contract across rows while keeping destructive confirmation and current commands.
   - Validation: Session and confirmation screenshots, cancel-only action fixture, and non-destructive command routing checks.
+  - Completed 2026-08-24: copied Menu rows now provide one aligned action contract. The remaining local destructive confirmation was reduced from 640x360 to 460x180, and the smoke crop was fixed to capture the centered Session menu rather than the right edge. Live menu and confirmation screenshots pass.
 
 - [ ] P1 `next-06`: Adopt Omarchy hardware authentication setup as gated Ubuntu tasks.
   - Acceptance: fingerprint and FIDO2 setup/remove flows are separate, package/PAM changes live in homelab rather than the home role, and lock-screen fingerprint support is enabled only after enrollment and recovery validation.
   - Validation: hardware detection, package and PAM check mode, enrollment/removal dry run, password fallback, TTY recovery, sudo/polkit verification, and no lockout.
   - Stop: no automatic PAM edits, enrollment, or privileged mutation without explicit approval.
+  - Progress 2026-08-24: read-only detection found no fingerprint device, one TOKEN2 FIDO2 key, and installed `fprintd`, `libfprint-2-2`, `libfido2-1`, and `libpam-u2f`. Homelab now records those system-only prerequisites. Enrollment and PAM remain intentionally untouched pending explicit recovery approval.
 
 - [ ] P1 `next-07`: Adopt the Omarchy Quickshell lock service.
   - Dependencies: Ubuntu PAM adapter, one validated authentication backend, and current `omarchy.lock` plugin contract.
   - Acceptance: `Super+Ctrl+L`, menu Lock, idle lock, suspend lock, password fallback, optional fingerprint, keyboard-layout reset, and multi-monitor coverage use one lock owner; archive `hyprlock`/`swaylock` runtime ownership only after recovery testing.
   - Validation: upstream lock tests, wrong/correct password, fingerprint fallback, monitor attach/detach, suspend/resume, TTY recovery, and one lock process.
+  - Progress 2026-08-24: copied `omarchy.lock` unchanged and staged it disabled. Upstream overflow, blank/fingerprint, and stranded-lock recovery tests plus direct QML lint pass. Activation remains gated on Ubuntu PAM files, password/TTY recovery, and disruptive lock testing; `hyprlock` remains the sole active locker.
 
 - [ ] P1 `next-08`: Adopt Omarchy idle service and screensaver.
   - Dependencies: lock service and dynamic `shell.json` ownership.
   - Acceptance: copied `omarchy.idle` owns screensaver and lock timing, stay-awake state, manual screensaver launch, per-monitor dismissal, and live config reload; local terminal branding may replace the Omarchy logo without forking idle logic.
   - Validation: upstream idle tests, short-timeout fixture, dismiss-before-lock, stay-awake, manual screensaver, multi-monitor behavior, suspend/resume, and no duplicate idle daemon.
+  - Progress 2026-08-24: copied `omarchy.idle` unchanged and staged it disabled. Upstream model/state tests and direct QML lint pass. Activation remains gated on the lock owner and Ubuntu replacements for the Omarchy screensaver/wake commands; the inactive Stay Awake indicator is not exposed.
 
 - [ ] P1 `next-05`: Adopt Omarchy indicators, DND, and night light.
   - Dependencies: dynamic bar and `omarchy.notifications`; install/track `hyprsunset` before enabling night light.
   - Acceptance: copy `omarchy.indicators`, `Dnd`, `NightLight`, `StayAwake`, `ScreenRecording`, and `Reminder`; DND writes silenced notifications to history; night light toggles 4000K/6500K through one service; inactive indicators remain compact and become discoverable on hover.
   - Validation: upstream indicator/night-light tests, DND history, toggle/menu/hotkey parity, one `hyprsunset`, bar screenshots, restart persistence, and idle CPU/RSS comparison.
+  - Progress 2026-08-24: copied `omarchy.nightlight`, installed and tracked `hyprsunset` 0.4.0 through the existing Nix profile, and enabled compact DND, Night Light, and Screen Recording indicators. The only night-light delta replaces unavailable `uwsm-app` with direct `setsid hyprsunset`; enable/disable restored 6500K and left one daemon. Screen Recording reuses the existing shell recorder state instead of a second process probe. DND round-trip and inherited indicator tests pass. Stay Awake remains hidden until `omarchy.idle` is safe to enable.
+
+Review gate 2026-08-24: completed the ten-task batch and reread the ownership/security boundaries. The full 26-menu smoke suite, focused visual checks, copied upstream model tests, QML/shell/Lua lint, package tracking, one-process checks, `desktop-package-audit`, and `desktop-doctor` pass. The gate found and fixed stale `board run` argv detection plus the broken screenshot-inspection sandbox. `next-06` through `next-09` remain disabled because PAM, authentication, lock, idle, and polkit activation need explicit recovery-safe approval; no duplicate service was started.
 
 
 ## 2026-08-21 Plugin Management And Notification History

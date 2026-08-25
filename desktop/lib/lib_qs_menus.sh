@@ -56,7 +56,7 @@ qs_menu_crop_geometry() {
   local width=720 height=700 x y
 
   case "$panel" in
-    root-menu) width=500; height=840; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
+    root-menu|power) width=500; height=840; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     launcher) width=960; height=820; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     clipboard|passmenu) width=800; height=660; x=$(((max_w - width) / 2)); y=$(((max_h - height) / 2)) ;;
     keybindings) width=1300; height=$max_h; x=$(((max_w - width) / 2)); y=0 ;;
