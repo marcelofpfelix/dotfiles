@@ -33,7 +33,7 @@ function M.quickshell_cmd(home)
 end
 
 function M.board_run_cmd(home)
-  local board_cmd = home .. "/bin/board --config " .. home .. "/.config/board/board.toml run"
+  local board_cmd = home .. "/bin/board run"
   return "pgrep -fx " .. string.format("%q", board_cmd) .. " >/dev/null 2>&1 || " .. board_cmd
 end
 

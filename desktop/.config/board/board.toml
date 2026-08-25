@@ -1,8 +1,7 @@
 [[check]]
 name = "scripts"
 label = "Scripts"
-kind = "command"
-command = ["env", "BAR_COLOR_FORMAT=quickshell", "check-scripts"]
+kind = "native-script-status"
 interval = "10s"
 timeout = "2s"
 fresh_for = "30s"
@@ -10,8 +9,11 @@ fresh_for = "30s"
 [[check]]
 name = "alerts"
 label = "Alerts"
-kind = "command"
-command = ["env", "BAR_COLOR_FORMAT=quickshell", "alerts"]
+kind = "native-alertmanager"
+filters = ['squad="telephony.proxy.squad"']
+critical_destination = "incidentio"
+warning_destination = "slack"
+excluded_channel = "#term-vendor-alerts"
 interval = "10s"
 timeout = "2s"
 fresh_for = "30s"
@@ -40,14 +42,6 @@ interval = "30s"
 timeout = "2s"
 fresh_for = "90s"
 
-[[check]]
-name = "agents"
-label = "Agents"
-kind = "command"
-command = ["/home/marcelof/bin/agent-tmux", "check"]
-interval = "10s"
-timeout = "2s"
-fresh_for = "30s"
 
 [[check]]
 name = "gpg"
@@ -127,17 +121,17 @@ fresh_for = "3m"
 
 [actions.personal.refresh]
 label = "Refresh"
-command = ["board", "--config", "/home/marcelof/.config/board/board.toml", "once"]
+command = ["board", "once"]
 confirm = false
 timeout = "10s"
 
 [[surface]]
 name = "quickshell-bar"
-checks = ["scripts", "alerts", "time", "resolv", "safe", "gpg", "docker", "agents", "cpu", "mem", "temp", "weather"]
+checks = ["scripts", "alerts", "time", "resolv", "safe", "gpg", "docker", "cpu", "mem", "temp", "weather"]
 
 [[surface]]
 name = "tmux-top"
-checks = ["agents", "gpg", "docker", "cpu", "mem"]
+checks = ["gpg", "docker", "cpu", "mem"]
 
 [[surface]]
 name = "quickshell-panels"
