@@ -44,15 +44,6 @@ fresh_for = "90s"
 
 
 [[check]]
-name = "gpg"
-label = "GPG"
-kind = "command"
-command = ["check-gpg"]
-interval = "30s"
-timeout = "2s"
-fresh_for = "90s"
-
-[[check]]
 name = "docker"
 label = "Docker"
 kind = "native-docker"
@@ -127,11 +118,11 @@ timeout = "10s"
 
 [[surface]]
 name = "quickshell-bar"
-checks = ["scripts", "alerts", "time", "resolv", "safe", "gpg", "docker", "cpu", "mem", "temp", "weather"]
+checks = ["scripts", "alerts", "time", "resolv", "safe", "docker", "cpu", "mem", "temp", "weather"]
 
 [[surface]]
 name = "tmux-top"
-checks = ["gpg", "docker", "cpu", "mem"]
+checks = ["docker", "cpu", "mem"]
 
 [[surface]]
 name = "quickshell-panels"

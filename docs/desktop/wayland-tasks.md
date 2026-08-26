@@ -1552,6 +1552,7 @@ and local behavior that must survive replacement.
   - Validation: upstream polkit tests, process/DBus owner inspection, one harmless privilege prompt, cancellation, restart persistence, and rollback documentation.
   - Stop: no package removal, service disablement, or privileged system mutation without explicit approval.
   - Progress 2026-08-24: copied `omarchy.polkit` unchanged and staged it disabled. No user polkit agent currently owns DBus, but Ubuntu has no `/etc/pam.d/polkit-1`; enabling waits for an explicit system-auth gate and harmless prompt/cancel recovery test. Upstream model tests and direct QML lint pass.
+  - Review 2026-08-26: registration succeeds, but a harmless `pkexec id` request waits without rendering the `omarchy-polkit` layer. The plugin was returned to disabled; activation requires fixing that end-to-end prompt path before password or cancellation testing.
 
 Rejected for now: agents, Tailscale, weather bar, theme switching, and the full Omarchy
 runtime. They do not replace current ownership or are not requested; copying them would add
@@ -1611,12 +1612,17 @@ user explicitly approves them.
   - Acceptance: copied `omarchy.idle` owns screensaver and lock timing, stay-awake state, manual screensaver launch, per-monitor dismissal, and live config reload; local terminal branding may replace the Omarchy logo without forking idle logic.
   - Validation: upstream idle tests, short-timeout fixture, dismiss-before-lock, stay-awake, manual screensaver, multi-monitor behavior, suspend/resume, and no duplicate idle daemon.
   - Progress 2026-08-24: copied `omarchy.idle` unchanged and staged it disabled. Upstream model/state tests and direct QML lint pass. Activation remains gated on the lock owner and Ubuntu replacements for the Omarchy screensaver/wake commands; the inactive Stay Awake indicator is not exposed.
+  - Review 2026-08-26: still disabled. Required `omarchy-system-lock`, `omarchy-system-wake`, and `omarchy-launch-screensaver` helpers are absent, and current upstream issue #6995 documents a second-screensaver race during lock transition. Do not enable until upstream fixes the race and Ubuntu adapters pass short-timeout and TTY-recovery tests.
 
 - [ ] P1 `next-05`: Adopt Omarchy indicators, DND, and night light.
   - Dependencies: dynamic bar and `omarchy.notifications`; install/track `hyprsunset` before enabling night light.
   - Acceptance: copy `omarchy.indicators`, `Dnd`, `NightLight`, `StayAwake`, `ScreenRecording`, and `Reminder`; DND writes silenced notifications to history; night light toggles 4000K/6500K through one service; inactive indicators remain compact and become discoverable on hover.
   - Validation: upstream indicator/night-light tests, DND history, toggle/menu/hotkey parity, one `hyprsunset`, bar screenshots, restart persistence, and idle CPU/RSS comparison.
   - Progress 2026-08-24: copied `omarchy.nightlight`, installed and tracked `hyprsunset` 0.4.0 through the existing Nix profile, and enabled compact DND, Night Light, and Screen Recording indicators. The only night-light delta replaces unavailable `uwsm-app` with direct `setsid hyprsunset`; enable/disable restored 6500K and left one daemon. Screen Recording reuses the existing shell recorder state instead of a second process probe. DND round-trip and inherited indicator tests pass. Stay Awake remains hidden until `omarchy.idle` is safe to enable.
+
+- [x] P0: Stop background GPG secret decryption from Board.
+  - Completed 2026-08-26: removed the 30-second `check-gpg` command check from the Quickshell and tmux surfaces. `check-gpg` remains an explicit diagnostic; the desktop no longer decrypts a gopass entry merely to render status.
+  - Validation: source and installed Board config contain no GPG check, Board doctor/surfaces pass, and no `check-gpg` child is started by the scheduler.
 
 Review gate 2026-08-24: completed the ten-task batch and reread the ownership/security boundaries. The full 26-menu smoke suite, focused visual checks, copied upstream model tests, QML/shell/Lua lint, package tracking, one-process checks, `desktop-package-audit`, and `desktop-doctor` pass. The gate found and fixed stale `board run` argv detection plus the broken screenshot-inspection sandbox. `next-06` through `next-09` remain disabled because PAM, authentication, lock, idle, and polkit activation need explicit recovery-safe approval; no duplicate service was started.
 
