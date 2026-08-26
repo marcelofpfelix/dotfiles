@@ -26,7 +26,7 @@ Item {
   }
   function refresh() {
     if (!render.running) {
-      render.command = command(["render", "text", surface])
+      render.command = command(["render", "--format", "text", "--surface", surface])
       render.running = true
     }
   }

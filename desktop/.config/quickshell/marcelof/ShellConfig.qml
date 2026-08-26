@@ -52,8 +52,8 @@ QtObject {
   function shellQuote(value) { return "'" + String(value).replace(/'/g, "'\"'\"'") + "'" }
   function hyprStateWatch() { return [bin("hypr-state"), "watch"] }
   function boardCommand(args) { return ["board", "--config", boardConfig].concat(args) }
-  function boardQuickshellBar() { return ["env", "BAR_COLOR_FORMAT=quickshell"].concat(boardCommand(["render", "--watch", "quickshell", boardQuickshellSurface])) }
-  function boardText(surface) { return boardCommand(["render", "text", surface]) }
+  function boardQuickshellBar() { return ["env", "BAR_COLOR_FORMAT=quickshell"].concat(boardCommand(["render", "--watch", "--format", "quickshell", "--surface", boardQuickshellSurface])) }
+  function boardText(surface) { return boardCommand(["render", "--format", "text", "--surface", surface]) }
   function boardAction(action) { return boardCommand(["action", action]) }
   function weather(location, mode) { return ["sh", "-c", "WEATHER_LOCATION=" + shellQuote(location) + " " + bin("check-weather") + (mode ? " " + mode : "")] }
   function brightnessPercent() { return ["sh", "-c", "brightnessctl -m 2>/dev/null | awk -F, '{print $4}' || printf -- --"] }

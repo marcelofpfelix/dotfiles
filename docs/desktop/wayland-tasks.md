@@ -343,9 +343,9 @@ Task source: this file is the canonical local queue for the Hyprland/Quickshell 
   - Current behavior: the calendar popup refreshes `pomodoroctl status`, shows mode, remaining time, label, Timewarrior state, and exposes Start/Pause/Resume/Stop/5m/15m controls.
   - Validation: `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `desktop/tools/qs-menu-smoke calendar`, and `desktop/tools/desktop-doctor`.
 - [x] Add a board-rendered personal dashboard shell to Quickshell.
-  - Sources: rush `board/docs/personal-dashboards.md`, current Quickshell controls/work-inbox panel patterns, and installed board `render text personal.*` surfaces.
+  - Sources: rush `board/docs/personal-dashboards.md`, current Quickshell controls/work-inbox panel patterns, and installed board `render --format text --surface personal.*` surfaces.
   - Current behavior: `qbar personal-dashboard` opens a right-side Quickshell popup with Today, Money, Health, and Habits tabs rendered only from `board --config ~/.config/board/board.toml render text`; Controls exposes it as Dash.
-  - Validation: `board render text personal.today`, `qmllint`, `desktop/tools/qs-menu-smoke personal-dashboard`, and `desktop/tools/desktop-doctor`.
+  - Validation: `board render --format text --surface personal.today`, `qmllint`, `desktop/tools/qs-menu-smoke personal-dashboard`, and `desktop/tools/desktop-doctor`.
 - [x] Add board actions to the personal dashboard once board exposes an action CLI.
   - Current behavior: `board action` is implemented in rush with nested TOML action definitions, no-shell argv execution, `--dry-run`, and `--yes` for confirmed actions. The Personal dashboard exposes a `Fresh` button that calls `board --config ~/.config/board/board.toml action personal.refresh`; QML still renders only `board render text` output and delegates action execution to `board`.
   - Validation: `cargo test -p board`, `cargo build -p board --release`, install to `~/bin/board`, `board action --help`, `board --config desktop/.config/board/board.toml action --dry-run personal.refresh`, `board --config ~/.config/board/board.toml action personal.refresh`, `qmllint ...`, `home -y`, `qbar reload`, `desktop/tools/qs-menu-smoke personal-dashboard`, and `desktop/tools/desktop-doctor`.
@@ -510,7 +510,7 @@ Review snapshot: 2026-08-03. Sources: local reference clones for Caelestia, end-
 - [x] P1: Move board status config into data files and keep Rust code generic.
   - Sources: current board native/script check split, user request to separate config from code.
   - Acceptance: check names, labels, thresholds, script paths, and enabled/disabled flags live in board config; Rust keeps only native check implementations and render plumbing.
-  - Validation: `cargo test -p board`, source and live `board --config ... doctor`, source and live `board --config ... checks`, live `board --config ... render text quickshell-bar`, `home -y`.
+  - Validation: `cargo test -p board`, source and live `board --config ... doctor`, source and live `board --config ... checks`, live `board --config ... render --format text --surface quickshell-bar`, `home -y`.
   - Current behavior: board defaults are TOML-backed; labels, thresholds, enabled flags, script commands, weather location, time-panel timezones, and surface membership live in config. `StatusItem.name` stays the stable cache/metric key; human output uses config `label`.
 
 - [x] P2: Add a repetition audit helper for Quickshell and Hyprland config.
@@ -667,8 +667,8 @@ Review snapshot: 2026-08-03. Sources: local reference clones for Caelestia, end-
 - [x] P1: Add a tiny system-health details page instead of crowding the bar.
   - Sources: Caelestia dashboard modules, board native checks, current bar status pressure.
   - Acceptance: bar keeps short icons only; details for clock sync, DNS, Docker, safe status, CPU, memory, temperature, weather, fan, and battery health live in one popup page.
-  - Validation: `board render text quickshell-bar`, `desktop/tools/qs-menu-smoke controls personal-dashboard`.
-  - Current behavior: the existing Personal dashboard now includes a `system` tab backed by `board render text quickshell-bar`, keeping the bar compact while exposing board health details in a popup surface. Validation passed for focused `qmllint`, `board --config desktop/.config/board/board.toml render text quickshell-bar`, `home -y`, `/home/marcelof/bin/qbar reload`, and `desktop/tools/qs-menu-smoke controls personal-dashboard` at `/home/marcelof/.local/state/quickshell/menu-smoke/20260803-200754`.
+  - Validation: `board render --format text --surface quickshell-bar`, `desktop/tools/qs-menu-smoke controls personal-dashboard`.
+  - Current behavior: the existing Personal dashboard now includes a `system` tab backed by `board render --format text --surface quickshell-bar`, keeping the bar compact while exposing board health details in a popup surface. Validation passed for focused `qmllint`, `board --config desktop/.config/board/board.toml render --format text --surface quickshell-bar`, `home -y`, `/home/marcelof/bin/qbar reload`, and `desktop/tools/qs-menu-smoke controls personal-dashboard` at `/home/marcelof/.local/state/quickshell/menu-smoke/20260803-200754`.
 
 - [x] P2: Add wallpaper/theme preview workflow without a full theme engine.
   - Sources: Caelestia wallpaper handling, end-4 wallpaper/theme panels, current Catppuccin lavender primary color.
@@ -725,7 +725,7 @@ Task source: latest local review request. Priority is code repetition and simple
 - [x] P0: Move board check metadata out of Rust.
   - Sources: current board config, user request to keep config in one place and code generic.
   - Acceptance: board check labels, thresholds, enabled flags, script paths, and surface membership live in TOML; Rust keeps only native check implementations and rendering.
-  - Validation: `cargo test -p board`, source and live `board --config ... doctor`, source and live `board --config ... checks`, live `board --config ... render text quickshell-bar`, release install to `~/bin/board`, `home -y`.
+  - Validation: `cargo test -p board`, source and live `board --config ... doctor`, source and live `board --config ... checks`, live `board --config ... render --format text --surface quickshell-bar`, release install to `~/bin/board`, `home -y`.
   - Current behavior: config owns check labels, thresholds, enabled flags, script commands, weather location, time-panel timezones, and surface membership. Rust keeps native check implementations, render plumbing, and stable `StatusItem.name` cache/metric keys; human `checks` and TUI output use config labels.
 
 - [x] P1: Make the menu registry the single source across QML, scripts, and key help.
@@ -788,13 +788,13 @@ Task source: latest local review request. Priority is code repetition and simple
   - Sources: rush `board/docs/design.md`, current `StatusText.qml`, current bar `board render` every second.
   - Acceptance: one note records idle CPU, process spawn rate, and the active `StatusText` timers for the current shell; the result decides whether a daemon/watch change is worth doing now.
   - Validation: `ps -eo comm,args`, `pidstat` or `perf stat` when available, `desktop/bin/qbar status`, and a short before/after note in this file.
-  - Current behavior: before the change, `ShellBar.qml` ran `board render quickshell quickshell-bar` through `StatusText` every second. A short `pidstat` sample showed Quickshell around 0.66% CPU idle and no persistent board renderer, so the waste was process churn more than board CPU.
+  - Current behavior: before the change, `ShellBar.qml` ran `board render --format quickshell --surface quickshell-bar` through `StatusText` every second. A short `pidstat` sample showed Quickshell around 0.66% CPU idle and no persistent board renderer, so the waste was process churn more than board CPU.
 
 - [x] P0: Replace the per-second `board render` bar poll with a board daemon/watch path.
   - Sources: rush board design says `board run` owns scheduling and Quickshell should read snapshots or subscribe to daemon events instead of polling cache files every second.
-  - Acceptance: Quickshell no longer starts a new `board render quickshell quickshell-bar` process every second; it consumes one long-running board stream or snapshot watcher, and `board render` stays useful for CLI/debug fallback.
+  - Acceptance: Quickshell no longer starts a new `board render --format quickshell --surface quickshell-bar` process every second; it consumes one long-running board stream or snapshot watcher, and `board render` stays useful for CLI/debug fallback.
   - Validation: `desktop/bin/qbar status`, process-spawn count before/after, `desktop/tools/qs-menu-smoke controls personal-dashboard`, and `desktop/tools/desktop-doctor`.
-  - Current behavior: `board render --watch quickshell quickshell-bar` is installed and runs as one long-lived child of Quickshell. `StatusText.watch` consumes the newline-delimited stream, while one-shot `board render quickshell quickshell-bar` still works for CLI/debug.
+  - Current behavior: `board render --watch --format quickshell --surface quickshell-bar` is installed and runs as one long-lived child of Quickshell. `StatusText.watch` consumes the newline-delimited stream, while one-shot `board render --format quickshell --surface quickshell-bar` still works for CLI/debug.
 
 - [x] P0: Keep Quickshell-native service facts out of board unless measurement proves a need.
   - Sources: Quickshell UPower/PipeWire/SystemTray/Notifications services and rush board boundary.
@@ -805,7 +805,7 @@ Task source: latest local review request. Priority is code repetition and simple
 - [x] P1: Move remaining hot command-backed status checks toward native board modules or event hooks.
   - Sources: board design native/module/event sections, current `kind = "command"` checks for scripts, alerts, agents, and gpg.
   - Acceptance: hot-path render never runs shell scripts; command checks either run only in the board scheduler, become native modules, or receive event updates plus slow reconciliation.
-  - Validation: `board --config ~/.config/board/board.toml checks`, `board render quickshell quickshell-bar` under tracing, and no command-backed check executes from the common render path.
+  - Validation: `board --config ~/.config/board/board.toml checks`, `board render --format quickshell --surface quickshell-bar` under tracing, and no command-backed check executes from the common render path.
   - Current behavior: `board render` and `board render --watch` are cache-only for `kind = "command"`; missing command cache renders `pending`, stale command cache keeps the last scheduler value, and `board run` is started from both Hyprland profiles. `desktop/tools/desktop-doctor` now fails if the scheduler is not running.
 
 - [x] P1: Move battery thresholds and icon/color policy into declarative shell config only if the rules change again.
@@ -843,7 +843,7 @@ Task source: latest local review request. Priority is code repetition and simple
 - [x] P1: Compact Personal dashboard empty area.
   - Sources: `desktop/tools/qs-menu-smoke --inspect` reported a very large empty area after the Personal dashboard status list.
   - Acceptance: Personal keeps its existing board-backed surfaces and scroll behavior, but the default surface renders readable todo content instead of falling back to the icon-only bar.
-  - Validation: `board --config desktop/.config/board/board.toml doctor`, `board --config desktop/.config/board/board.toml render text personal.today`, `qmllint desktop/.config/quickshell/marcelof/ShellConfigData.qml desktop/.config/quickshell/marcelof/ShellPersonalDashboardPanel.qml`, `desktop/tools/qs-menu-smoke --inspect personal-dashboard`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
+  - Validation: `board --config desktop/.config/board/board.toml doctor`, `board --config desktop/.config/board/board.toml render --format text --surface personal.today`, `qmllint desktop/.config/quickshell/marcelof/ShellConfigData.qml desktop/.config/quickshell/marcelof/ShellPersonalDashboardPanel.qml`, `desktop/tools/qs-menu-smoke --inspect personal-dashboard`, `desktop/tools/qs-menu-smoke`, and `desktop/tools/desktop-doctor`.
   - Current behavior: Personal dashboard height is 240px, `personal.today` maps to the todo board check, placeholder personal surfaces no longer fall back to the bar, personal surfaces render as plain preformatted text, and the action button uses a short Run label. Focused image inspection at `/home/marcelof/.local/state/quickshell/menu-smoke/20260804-203103` reported no clipping, overlap, unreadable text, broken controls, or meaningful regression.
 
 - [x] P1: Compact Web search floating popup.
@@ -941,7 +941,7 @@ Source review:
 - Current Omarchy clone: `/tmp/omarchy-quattro`, branch `quattro`, refreshed with `git pull --ff-only`; last observed commit `ebdc026`.
 - Upstream reference docs: https://github.com/basecamp/omarchy/blob/quattro/docs/omarchy-shell.md and `/tmp/omarchy-quattro/AGENTS.md`.
 - Local source of truth: `docs/desktop/quickshell-architecture.md`, `docs/desktop/wayland.md`, and this task file. The wiki has older/general desktop notes, but executable Wayland/Quickshell work belongs here.
-- Current local state: `desktop/bin/qbar` already wraps `qs ipc --path ~/.config/quickshell/marcelof/shell.qml`; `shell.qml` exposes a central `bar` IPC target plus smaller `websearch`, `lock`, `launcher`, `network`, `passmenu`, and `power` targets; Hyprland starts Quickshell and a separate `board run`; `ShellBar.qml` consumes `board render --watch quickshell quickshell-bar`.
+- Current local state: `desktop/bin/qbar` already wraps `qs ipc --path ~/.config/quickshell/marcelof/shell.qml`; `shell.qml` exposes a central `bar` IPC target plus smaller `websearch`, `lock`, `launcher`, `network`, `passmenu`, and `power` targets; Hyprland starts Quickshell and a separate `board run`; `ShellBar.qml` consumes `board render --watch --format quickshell --surface quickshell-bar`.
 - Direction: copy Omarchy patterns and small components where they shrink local code or make scripting reliable. Omarchy-style runtime names are allowed when they remove local glue, but they must stay behind local entrypoints such as `qbar`. Do not import distro update machinery, installer/reset flows, or the full plugin installer unless built-in local routing becomes too large to keep declarative.
 
 Claim rule: complete one task at a time, keep `default` i3-compatible behavior intact, and run the listed validation before marking a task done.
@@ -981,9 +981,9 @@ Claim rule: complete one task at a time, keep `default` i3-compatible behavior i
   - Sources: Omarchy single shell process model; current board boundary in `quickshell-architecture.md`.
   - Acceptance: battery, audio/mic, brightness, tray, notifications, workspaces, privacy, and current popup state remain Quickshell-native; board keeps health/status checks and personal dashboards. Any board-backed bar segment must be one watched stream or cached snapshot, not repeated hot shell execution.
   - Dependencies: measure before replacing `board render --watch`; this task may be docs/validation only if current behavior is already one long-lived stream.
-  - Validation: process tree check for one `board render --watch quickshell quickshell-bar`, `board --config desktop/.config/board/board.toml doctor`, `desktop/tools/desktop-doctor`, and `desktop/tools/qs-menu-smoke controls media notifications`.
+  - Validation: process tree check for one `board render --watch --format quickshell --surface quickshell-bar`, `board --config desktop/.config/board/board.toml doctor`, `desktop/tools/desktop-doctor`, and `desktop/tools/qs-menu-smoke controls media notifications`.
   - Stop conditions: do not rewrite board modules into QML without measured CPU, memory, or latency evidence.
-  - Current behavior: no rewrite needed. `ShellBar.qml` consumes `board --config ... render --watch quickshell quickshell-bar` through one watched `StatusText`; the live process tree showed one Quickshell child `board --config /home/marcelof/.config/board/board.toml render --watch quickshell quickshell-bar` plus the separate scheduler `board --config ... run`. Board owns health checks and personal dashboard surfaces; battery, privacy, tray, workspaces, popups, and interaction state stay Quickshell-native. Validation passed for `board --config desktop/.config/board/board.toml doctor`, `hypr-session smoke`, full `desktop/tools/qs-menu-smoke` at `~/.local/state/quickshell/menu-smoke/20260814-183334`, and full `desktop/tools/desktop-doctor`.
+  - Current behavior: no rewrite needed. `ShellBar.qml` consumes `board --config ... render --watch --format quickshell --surface quickshell-bar` through one watched `StatusText`; the live process tree showed one Quickshell child `board --config /home/marcelof/.config/board/board.toml render --watch --format quickshell --surface quickshell-bar` plus the separate scheduler `board --config ... run`. Board owns health checks and personal dashboard surfaces; battery, privacy, tray, workspaces, popups, and interaction state stay Quickshell-native. Validation passed for `board --config desktop/.config/board/board.toml doctor`, `hypr-session smoke`, full `desktop/tools/qs-menu-smoke` at `~/.local/state/quickshell/menu-smoke/20260814-183334`, and full `desktop/tools/desktop-doctor`.
 
 - [x] P1: Adapt Omarchy notification and OSD structure where it removes local duplication.
   - Sources: Omarchy `plugins/notifications/Service.qml`, notification card components, and OSD model; current `ShellNotificationCenter.qml`, `ShellOverlays.qml`, and `desktop-osd` path.
@@ -1172,7 +1172,7 @@ Use this pass to replace local custom glue only where Omarchy's structure makes 
   - Current behavior: QML menu ids, aliases, lifecycle callbacks, actions, sizes, and rows live in `ShellConfigData.qml`. The smaller Bash registry remains the script boundary for display labels and screenshot crops; generating it from QML would add more machinery than it removes.
 
 - [x] P1: Defer Omarchy bar widget registry until it removes real duplication.
-  - Sources: Omarchy `plugins/bar/Bar.qml`, `BarModel.js`, widget manifests, and shared `Ui/BarWidget.qml`; local `ShellBar.qml` and `board render --watch quickshell quickshell-bar`.
+  - Sources: Omarchy `plugins/bar/Bar.qml`, `BarModel.js`, widget manifests, and shared `Ui/BarWidget.qml`; local `ShellBar.qml` and `board render --watch --format quickshell --surface quickshell-bar`.
   - Acceptance: document exact bar widgets that would become registry-backed, but do not replace `ShellBar.qml` until a focused diff removes real duplication. `board` remains the status renderer for health checks and personal dashboard data.
   - Dependencies: first finish built-in menu registry; avoid a plugin layout editor unless the user asks for draggable/reorderable bar widgets.
   - Validation: docs-only until implementation starts; then `qmllint ShellBar.qml` and `desktop/tools/qs-menu-smoke controls media notifications`.
@@ -1459,7 +1459,7 @@ Findings:
   - Replacement rule: archive a user-facing owner only in the same change that proves its replacement plugin/provider preserves the listed behavior. Keep replaced files under `archive/obsolete`, never delete them.
 
 - [x] P0: Package Board shell surfaces as two portable plugins before replacing the bar host.
-  - Completed: `marcelof.board-status` owns the single `board render --watch quickshell quickshell-bar` stream and preserves rich bar colors. `marcelof.board-dashboard` owns the on-demand System, Today, Money, Health, and Habits surfaces plus refresh and `board action personal.refresh`.
+  - Completed: `marcelof.board-status` owns the single `board render --watch --format quickshell --surface quickshell-bar` stream and preserves rich bar colors. `marcelof.board-dashboard` owns the on-demand System, Today, Money, Health, and Habits surfaces plus refresh and `board action personal.refresh`.
   - Board remains the only collector, scheduler, cache, renderer, and action owner. The embedded Board watcher was removed and `ShellPersonalDashboardPanel.qml` moved to `archive/obsolete` after live visual validation.
   - Validation: both manifests pass `omarchy-plugin-validate` and `qmllint`; both persist enabled across restart; process inspection and `desktop-doctor` require one watch stream; the dashboard route and screenshot passed without clipping or monitor spill.
 

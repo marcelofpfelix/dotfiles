@@ -347,10 +347,10 @@ check_board_status() {
     return
   fi
 
-  if board --config "$config" render quickshell quickshell-bar >/dev/null 2>&1; then
+  if board --config "$config" render --format quickshell --surface quickshell-bar >/dev/null 2>&1; then
     ok board-render quickshell-bar
   else
-    fail board-render "quickshell-bar failed" "board --config $config render quickshell quickshell-bar"
+    fail board-render "quickshell-bar failed" "board --config $config render --format quickshell --surface quickshell-bar"
   fi
 
   if pgrep -fx "$HOME/bin/board run" >/dev/null 2>&1; then
@@ -359,7 +359,7 @@ check_board_status() {
     fail board-run stopped "$HOME/bin/board run"
   fi
 
-  watch_count=$(pgrep -fc "^board --config $config render --watch quickshell quickshell-bar$")
+  watch_count=$(pgrep -fc "^board --config $config render --watch --format quickshell --surface quickshell-bar$")
   if [ "$watch_count" -eq 1 ]; then
     ok board-watch "one plugin-owned stream"
   else

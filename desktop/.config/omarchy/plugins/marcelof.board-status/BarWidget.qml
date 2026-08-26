@@ -18,8 +18,8 @@ BarWidget {
 
   Process {
     command: ["env", "BAR_COLOR_FORMAT=quickshell", "board", "--config",
-      Quickshell.env("HOME") + "/.config/board/board.toml", "render", "--watch",
-      "quickshell", "quickshell-bar"]
+      Quickshell.env("HOME") + "/.config/board/board.toml", "render", "--watch", "--format",
+      "quickshell", "--surface", "quickshell-bar"]
     running: true
     stdout: SplitParser {
       splitMarker: "\n"
