@@ -1062,6 +1062,7 @@ ShellRoot {
   Binding { target: Color; property: "background"; value: shellTheme.panel }
   Binding { target: Color; property: "accent"; value: shellSettings.primaryColor }
   Binding { target: Color; property: "urgent"; value: shellTheme.error }
+  Binding { target: Color; property: "warning"; value: shellTheme.warning }
   Binding { target: Color; property: "muted"; value: shellTheme.textMuted }
   Binding { target: Style; property: "fontFamily"; value: shellTheme.fontFamily }
   Binding { target: Style; property: "fontBaseSize"; value: shellTheme.fontMd }

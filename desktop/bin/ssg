@@ -77,7 +77,7 @@ connect() {
 
   host="$1"
   remote_gpgconf="${remote_path}; command -v gpgconf >/dev/null 2>&1 || { echo \"gpgconf not found on remote PATH\" >&2; exit 127; }; gpgconf"
-  remote_prepare="${remote_path}; command -v ssg >/dev/null 2>&1 || { echo \"ssg not found on remote PATH\" >&2; exit 127; }; ssg prepare"
+  remote_prepare="${remote_path}; command -v ssg >/dev/null 2>&1 || { echo \"ssg not found on remote PATH\" >&2; exit 127; }; ssg prepare >/dev/null"
 
   local_extra_socket="$(gpgconf --list-dir agent-extra-socket)"
   if [[ ! -S "$local_extra_socket" ]]; then
@@ -91,16 +91,9 @@ connect() {
 
   remote_agent_socket="$(ssh "$host" "$remote_gpgconf --list-dir agent-socket")"
 
-  echo "Laptop extra socket: $local_extra_socket"
-  echo "Remote agent socket: $remote_agent_socket"
-  echo
-  echo "Preparing remote socket..."
   ssh "$host" "$remote_prepare"
 
-  echo
-  echo "Opening forwarded SSH session."
-  echo "Inside the session, gopass/GPG decrypt requests should be authorized by the laptop agent."
-  echo
+  echo "GPG agent forwarding to $host"
 
   ssh \
     -t \

@@ -192,8 +192,8 @@ Panel {
     slotSize: Style.bar.iconSlot * (root.showPercentage && !vertical ? 2 : 1)
     tooltipText: ""
     foreground: root.discharging
-      ? (root.batteryFraction <= 0.15 ? root.bar.urgent : (root.batteryFraction <= 0.30 ? root.bar.warning : root.bar.primary))
-      : root.bar.muted
+      ? (root.batteryFraction <= 0.15 ? Color.urgent : (root.batteryFraction <= 0.30 ? Color.warning : Color.accent))
+      : Color.muted
     onPressed: function(b) {
       if (!root.batteryPresent) return
       if (b === Qt.RightButton) root.togglePercentage()

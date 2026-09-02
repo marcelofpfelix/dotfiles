@@ -20,6 +20,7 @@ QtObject {
   property color background: "#101315"
   property color accent: "#cacccc"
   property color urgent: "#a55555"
+  property color warning: "#f9e2af"
   property color muted: "#707880"
 
   // Flat dictionary of "section.key" -> raw string from shell.toml.
