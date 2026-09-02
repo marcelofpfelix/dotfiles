@@ -1,6 +1,6 @@
 ---
 collections:
-  - name: git+https://github.com/marcelofpfelix/ansible-role-home.git
+  - name: git+https://github.com/marcelofpfelix/ansible-collection-homelab.git
     type: git
     version: main
 
