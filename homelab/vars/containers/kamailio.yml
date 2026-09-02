@@ -1,0 +1,9 @@
+---
+conteiner_id: "{{ id.kamailio }}"
+
+container_registry: registry.docker.internal.bandonga.com
+
+ports: "-p 5070:5060 -p 5071:5061"
+labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=5070"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+extra_args: "--cap-add NET_ADMIN --cap-add NET_BROADCAST --privileged --ulimit core=-1"

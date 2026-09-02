@@ -1,0 +1,57 @@
+---
+# Router 2 - VyOS (Enterprise router platform)
+conteiner_id: "{{ id.router2_vyos }}"
+
+# Network configuration
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+# Capabilities for routing operations
+extra_args: "--cap-add NET_ADMIN --cap-add NET_RAW --cap-add SYS_ADMIN --restart=unless-stopped --privileged"
+
+# Image configuration
+container: vyos
+tag: current
+image: "{{ container }}/vyos"
+container_registry: docker.io
+registryns: vyos
+
+# Environment variables
+default:
+  CONTAINER: "{{ container }}"
+
+# Volume for VyOS configuration persistence
+volumes: "-v {{ dir.vol }}{{ container }}-router2/config:/config"
+
+# Enable copy template for custom VyOS configs
+copy_template: true
+
+# ##############################################################################
+# VyOS Router Configuration
+# ##############################################################################
+# This container runs VyOS, a Debian-based network operating system
+# Supports: BGP, OSPF, RIP, static routing, VPN, firewall, NAT
+#
+# Access CLI: docker exec -it router2-vyos vbash
+#
+# VyOS uses a Juniper-inspired CLI with configure mode
+#
+# Protocols available:
+# - BGP (full feature set)
+# - OSPF (v2 and v3)
+# - RIP/RIPng
+# - Static routes
+# - Policy routing
+# - VPN (IPSec, OpenVPN, WireGuard)
+# - NAT and firewall
+#
+# Configuration files will be in: /etc/docker/vyos-router2/config/
+#
+# Example VyOS commands:
+#   configure
+#   show interfaces
+#   show ip route
+#   show ip bgp summary
+#   commit
+#   save
+#
+# Note: VyOS uses configure/commit/save workflow unlike Cisco's immediate mode

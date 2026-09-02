@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-package_file="${HOMELAB_DESKTOP_PACKAGES:-$HOME/gwt/marcelofpfelix/homelab/main/vars/install/desktop.yml}"
+dotfiles_root="${DOTFILES_ROOT:-$HOME/gwt/marcelofpfelix/dotfiles/main}"
+package_file="${HOMELAB_DESKTOP_PACKAGES:-$dotfiles_root/homelab/vars/install/desktop.yml}"
 status=0
 
 required_packages=(

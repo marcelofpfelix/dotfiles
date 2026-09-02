@@ -1,0 +1,28 @@
+# Allowlist pattern: ignore everything, then include only what the image needs.
+*
+
+# Python dependency metadata
+!pyproject.toml
+!uv.lock
+
+# Ansible core files
+!ansible.cfg
+!inventory.ini
+!requirements.yml
+
+# Ansible playbooks and configuration
+!*.yml
+!tasks/
+!vars/
+!plugins/
+!roles/
+!playbooks/
+group_vars/
+host_vars/
+templates/
+vars/work/
+
+# Runtime entrypoint
+!ci/
+ci/*
+!ci/entrypoint.sh

@@ -1,0 +1,25 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.2.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+  - repo: local
+    hooks:
+      - id: ansible-lint
+        name: Ansible lint
+        entry: uv run --extra dev ansible-lint
+        language: system
+        pass_filenames: false
+  - repo: https://github.com/IamTheFij/ansible-pre-commit
+    rev: v0.1.2
+    hooks:
+      - id: encryption-check
+        files: ((?:^|\/)vault|\.vault|vars.yml$|(?:^|\/)hosts|vars.yml)

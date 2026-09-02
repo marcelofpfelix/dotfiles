@@ -22,10 +22,10 @@ teardown() {
 }
 
 @test "git_repo_path resolves WORKTREE=true to gwt main path" {
-  WORKTREE=true run git_repo_path marcelofpfelix homelab
+  WORKTREE=true run git_repo_path marcelofpfelix dotfiles
 
   [ "$status" -eq 0 ]
-  [ "$output" = "$HOME/gwt/marcelofpfelix/homelab/main" ]
+  [ "$output" = "$HOME/gwt/marcelofpfelix/dotfiles/main" ]
 }
 
 @test "git_repo_path appends optional subpath" {

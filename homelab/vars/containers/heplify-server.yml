@@ -1,0 +1,36 @@
+---
+# image
+registryns: sipcapture
+
+# run config
+conteiner_id: "{{ id.heplify }}"
+ports: "-p 9096:9096 -p 9060:9060"
+labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=9090"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+# env vars
+default:
+  HEPLIFYSERVER_PROMADDR: 0.0.0.0:9096
+  HEPLIFYSERVER_HEPADDR: 0.0.0.0:9060
+  HEPLIFYSERVER_HEPTLSADDR: 0.0.0.0:9060
+  HEPLIFYSERVER_LOGLVL: info
+  HEPLIFYSERVER_LOGSTD: true
+  HEPLIFYSERVER_DBDRIVER: postgres
+  HEPLIFYSERVER_DBSHEMA: homer7
+  HEPLIFYSERVER_DBDATATABLE: homer_data
+  HEPLIFYSERVER_DBCONFTABLE: homer_config
+  HEPLIFYSERVER_DBDROPDAYS: 5
+  HEPLIFYSERVER_DBADDR: "{{ net.pfx }}.{{ id.postgres }}:5432"
+  HEPLIFYSERVER_DBUSER: homer
+  HEPLIFYSERVER_DBPASS: password
+  HEPLIFYSERVER_DEDUP: false
+  HEPLIFY_PORT: 9060
+  PRIVATE_IP: "{{ net.pfx }}.{{ conteiner_id }}"
+  SERVER_HOSTNAME: "{{ ansible_hostname }}"
+  SERVICE_9060_NAME: heplify
+  SERVICE_9096_NAME: heplify-prom
+  SERVICE_9096_TAGS: metrics
+  POSTGRESQL_USER: homer
+  POSTGRESQL_PASSWORD: password
+  HEPLIFYSERVER_PROMTARGETIP:
+  HEPLIFYSERVER_PROMTARGETNAME:

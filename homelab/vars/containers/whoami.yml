@@ -1,0 +1,5 @@
+---
+registryns: traefik
+
+conteiner_id: "{{ id.whoami }}"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"

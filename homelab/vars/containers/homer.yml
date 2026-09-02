@@ -1,0 +1,18 @@
+---
+# image
+registryns: sipcapture
+
+# run config
+conteiner_id: "{{ id.homer }}"
+ports: "-p 8002:80/tcp -p 8003:443/tcp"
+network: "--net {{ dnet }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+postgres_id: 12
+
+
+default:
+  HTTP_PORT: 80
+  HTTPS_PORT: 443
+  DB_HOST: "{{ net.pfx }}.{{ postgres_id }}"
+  DB_USER: homer
+  DB_PASS: password

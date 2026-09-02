@@ -1,0 +1,13 @@
+---
+# image
+registryns: jpillora # programster
+conteiner_id: "{{ id.dnsmasq }}"
+
+
+# run config
+ports: "-p 53:53/udp --cap-add NET_ADMIN"
+volumes: "-v {{ dir.vol }}{{ container }}/dnsmasq.conf:/etc/dnsmasq.conf"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+# extra:
+copy_template: true

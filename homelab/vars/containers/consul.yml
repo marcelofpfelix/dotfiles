@@ -1,0 +1,15 @@
+---
+# image
+
+# run config
+conteiner_id: "{{ id.consul }}"
+labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=8500"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+# task config
+copy_template: true
+
+# env vars
+default:
+  CONSUL_BIND_INTERFACE: "eth0"
+  VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:1234

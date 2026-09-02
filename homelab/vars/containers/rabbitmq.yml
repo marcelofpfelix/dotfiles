@@ -1,0 +1,43 @@
+---
+conteiner_id: "{{ id.rabbitmq }}"
+
+ports: "-p 15672:15672 -p 5672:5672"
+volumes: "-v {{ dir.vol }}{{ container }}/postgres:/var/lib/postgresql/data"
+labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=15672"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+copy_template: true
+
+default:
+  CONSUL_BIND_INTERFACE: "eth0"
+
+# ##############################################################################
+
+# https://hub.docker.com/_/rabbitmq
+
+# rabbitmq-plugins enable rabbitmq_management
+
+# http://127.0.0.1:15672
+# guest:guest
+
+# ---
+# container: rabbitmq
+# tag: latest
+# image: "{{ container }}"
+# conteiner_id: "{{ id.rabbitmq }}"
+
+# container_registry: index.docker.io
+# registryns: library
+
+# command: ""
+# ports: "-p 15672:15672 -p 5672:5672"
+# volumes: "-v {{ dir.vol }}{{ container }}/postgres:/var/lib/postgresql/data"
+# labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=15672"
+# extra_args: ""
+# network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+# env: "--env-file /etc/docker/{{ container }}.env"
+# registry_path: "{{ container_registry }}/{{ registryns }}/{{ image }}:{{ tag }}"
+# container_args: "--hostname {{ container }} {{network}} {{ports}} {{extra_args}} {{volumes}} {{labels}} {{env}} {{registry_path}} {{command}}"
+
+
+# DEFAULT:

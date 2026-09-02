@@ -13,7 +13,16 @@ FloatingWindow {
   property int panelWidth: 720
   property int panelHeight: 560
 
-  signal focusCleared()
+  property var closeAction: null
+
+  function open() { panelOpen = true }
+  function close() {
+    if (closeAction)
+      closeAction()
+    else
+      panelOpen = false
+  }
+  function toggle() { panelOpen ? close() : open() }
 
   screen: shellRoot.laptopScreen
   visible: panelOpen
@@ -26,6 +35,6 @@ FloatingWindow {
   HyprlandFocusGrab {
     active: floatingPopup.visible
     windows: [floatingPopup]
-    onCleared: floatingPopup.focusCleared()
+    onCleared: floatingPopup.close()
   }
 }

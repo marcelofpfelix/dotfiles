@@ -24,7 +24,7 @@ ShellFloatingPopup {
 
   function toggleSearch(site) {
     if (shellRoot.webSearchOpen) {
-      shellRoot.webSearchOpen = false
+      webSearchPanel.close()
       return
     }
     openSearch(site)
@@ -35,11 +35,9 @@ ShellFloatingPopup {
     if (query.length === 0)
       return
     const url = shellRoot.webSearchSiteUrl(shellRoot.webSearchSite) + encodeURIComponent(query)
-    shellRoot.webSearchOpen = false
+    webSearchPanel.close()
     Quickshell.execDetached(webSearchPanel.shellConfig.openUrl(url))
   }
-  onFocusCleared: webSearchPanel.shellRoot.webSearchOpen = false
-
   ShellFrame {
     anchors.fill: parent
 
@@ -70,7 +68,7 @@ ShellFloatingPopup {
         id: webSearchInput
         width: parent.width
         inputHeight: theme.searchHeightLarge
-        onEscapePressed: shellRoot.webSearchOpen = false
+        onEscapePressed: webSearchPanel.close()
         onAccepted: webSearchPanel.runSearch()
       }
     }

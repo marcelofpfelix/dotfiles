@@ -1,0 +1,43 @@
+---
+# Switch 2 - Open vSwitch (SDN-capable switch)
+conteiner_id: "{{ id.switch2_ovs }}"
+
+# Network configuration
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+# Capabilities for network and OVS operations
+extra_args: "--cap-add NET_ADMIN --cap-add NET_RAW --cap-add SYS_ADMIN --restart=unless-stopped --privileged"
+
+# Image configuration
+container: openvswitch
+tag: latest
+image: "{{ container }}/ovs"
+container_registry: docker.io
+registryns: openvswitch
+
+# Ports for OVSDB and OpenFlow (optional, for external management)
+ports: "-p 6640:6640 -p 6653:6653"
+
+# Environment variables
+default:
+  CONTAINER: "{{ container }}"
+
+# Volume for OVS database persistence
+volumes: "-v {{ dir.vol }}{{ container }}-switch2/db:/var/lib/openvswitch -v {{ dir.vol }}{{ container }}-switch2/log:/var/log/openvswitch"
+
+# Enable copy template for custom OVS configs
+copy_template: true
+
+# ##############################################################################
+# Open vSwitch Configuration
+# ##############################################################################
+# This container runs Open vSwitch with OpenFlow support
+# Supports: VLANs, tunnels (VXLAN, GRE), OpenFlow, LACP
+#
+# Access CLI: docker exec -it switch2-ovs ovs-vsctl show
+# OpenFlow: docker exec -it switch2-ovs ovs-ofctl dump-flows <bridge>
+#
+# OVSDB port: 6640
+# OpenFlow port: 6653
+#
+# Configuration will persist in: /etc/docker/openvswitch-switch2/

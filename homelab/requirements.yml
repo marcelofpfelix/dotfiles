@@ -1,0 +1,10 @@
+---
+collections:
+  - name: git+https://github.com/marcelofpfelix/ansible-collection-homelab.git
+    type: git
+    version: main
+
+  - name: community.docker
+  - name: geerlingguy.mac
+    version: ">=2.3.0"
+  - name: community.general

@@ -1,0 +1,49 @@
+---
+# Router 1 - Debian + FRRouting (Full-featured router)
+conteiner_id: "{{ id.router1_frr }}"
+
+# Network configuration
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+# Capabilities for routing operations
+extra_args: "--cap-add NET_ADMIN --cap-add NET_RAW --cap-add SYS_ADMIN --restart=unless-stopped --privileged"
+
+# Image configuration
+container: frr
+tag: latest
+image: "frrouting/{{ container }}"
+container_registry: docker.io
+registryns: frrouting
+
+# Environment variables
+default:
+  CONTAINER: "{{ container }}"
+
+# Volume for FRR configuration persistence
+volumes: "-v {{ dir.vol }}{{ container }}-router1/config:/etc/frr"
+
+# Enable copy template for custom FRR configs
+copy_template: true
+
+# ##############################################################################
+# FRRouting Router Configuration
+# ##############################################################################
+# This container runs FRR as a full router with all protocols
+# Supports: BGP, OSPF, IS-IS, RIP, EIGRP, PIM, LDP, BFD, VRRP
+#
+# Access CLI: docker exec -it router1-frr vtysh
+#
+# Protocols available:
+# - BGP (AS path, communities, route maps, peers)
+# - OSPF (areas, authentication, summarization)
+# - Static routes
+# - Policy-based routing
+# - Route redistribution
+#
+# Configuration files will be in: /etc/docker/frr-router1/config/
+#
+# Example vtysh commands:
+#   show ip route
+#   show ip bgp summary
+#   show ip ospf neighbor
+#   configure terminal

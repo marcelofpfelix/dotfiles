@@ -1,0 +1,7 @@
+---
+registryns: "prom"
+
+conteiner_id: "{{ id.pushgateway }}"
+ports: "-p 9091:9091"
+labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=9091"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"

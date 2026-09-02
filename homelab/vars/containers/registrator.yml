@@ -1,0 +1,10 @@
+---
+registryns: gliderlabs
+
+conteiner_id: "{{ id.registrator }}"
+command: "-resync=60 -cleanup=true -internal=true consul://consul.docker.internal.bandonga.com"
+volumes: "-v /var/run/docker.sock:/tmp/docker.sock"
+
+default:
+    SERVICE_IGNORE: true
+    PREFIX: SERVICE_

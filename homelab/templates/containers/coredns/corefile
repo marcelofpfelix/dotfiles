@@ -1,0 +1,76 @@
+
+# Base configuration used by the following blocks in this file
+(base) {
+    log . {
+        class denial error
+    }
+    errors
+    prometheus :15353
+    bind 0.0.0.0
+    reload
+    cache {$CACHE_MAX_TTL}
+}
+
+
+# AD
+# IPA
+
+
+(external) {
+    #forward . {$EXTERNAL_IP1} {$EXTERNAL_IP2} {$EXTERNAL_IP3} {$EXTERNAL_IP4} {$EXTERNAL_IP5} {$EXTERNAL_IP6} {
+    #  policy round_robin
+    #  max_fails 1
+    #}
+   	#alternate SERVFAIL,REFUSED . {$EXTERNAL_IP1} {$EXTERNAL_IP2} {$EXTERNAL_IP3} {$EXTERNAL_IP4} {$EXTERNAL_IP5} {$EXTERNAL_IP6}
+    forward . 192.168.1.112
+}
+
+
+# EXTERNAL
+.:53 {
+    import base
+    import external
+
+}
+
+#example.com:53 {
+#    file /root/example.db
+#    log
+#    errors
+#}
+
+# CONSUL
+(forwardconsul) {
+    loadbalance round_robin
+    forward . {{ main_net.pfx }}.{{ server.id }}.{{ id.consul }} # {$CONSUL_CLIENT_IP}:{$CONSUL_CLIENT_PORT}
+}
+
+query.consul:53 {
+    import base
+    import forwardconsul
+    health :19253
+}
+service.consul:53 {
+    import base
+    import forwardconsul
+}
+connect.consul:53 {
+    import base
+    import forwardconsul
+}
+
+ingress.consul:53 {
+    import base
+    import forwardconsul
+}
+node.consul:53 {
+    import base
+    import forwardconsul
+}
+
+
+# region mappings
+dc2.consul:53 {
+    import base
+    import forwardconsul
+}

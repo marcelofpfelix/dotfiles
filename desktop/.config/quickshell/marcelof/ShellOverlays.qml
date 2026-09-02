@@ -61,10 +61,18 @@ Item {
     }
   }
 
+  TextMetrics {
+    id: osdTextMetrics
+    font.family: theme.fontFamily
+    font.styleName: theme.fontStyle
+    font.pixelSize: theme.fontXl
+    text: overlays.osdBodyText
+  }
+
   PopupWindow {
     visible: overlays.osdOpen
     color: theme.transparent
-    implicitWidth: 280
+    implicitWidth: Math.min(520, Math.max(280, Math.ceil(osdTextMetrics.advanceWidth) + theme.fontIcon + theme.spacingXl + theme.spacingXxl * 2))
     implicitHeight: 68
     anchor.window: overlays.anchorWindow
     anchor.rect.x: Math.max(8, Math.round((overlays.anchorWindow.width - implicitWidth) / 2))

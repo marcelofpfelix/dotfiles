@@ -1,0 +1,5 @@
+---
+ports: "-p 443:443 -p 80:80 -p 8080:8080"
+volumes: "-v {{ dir.vol }}{{ container }}/traefik.yml:/etc/traefik/traefik.yml -v /var/run/docker.sock:/var/run/docker.sock"
+network: "--net=host"
+extra_args: "--restart=unless-stopped" #   --api.insecure=true --providers.docker

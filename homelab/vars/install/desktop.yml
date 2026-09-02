@@ -1,0 +1,77 @@
+# temporary record of the software used
+# use nix to install
+
+distro: ubuntu
+  # alternative: arch, debian
+
+ui:
+  - hyprland # wayland compositor
+  - hyprland-protocols
+  - xdg-desktop-portal-hyprland
+  - quickshell
+  - board # local status renderer used by Quickshell and tmux
+  - walker
+  - elephant # Walker provider backend
+  - nixGL # Nix GL wrapper required for Nix Hyprland on Ubuntu
+  - grim
+  - slurp
+  - swappy
+  - imagemagick-6.q16 # identify/compare for Quickshell screenshot smoke assertions
+  - tesseract-ocr
+  - wf-recorder
+  - brightnessctl
+  - ddcutil # external monitor DDC brightness controls
+  - wl-clipboard
+  - wev
+  - libinput-tools
+  - espanso-wayland # text expansion for Wayland; installed from upstream deb
+  - cliphist
+  - playerctl
+  - pavucontrol
+  - mpv # local and YouTube playlist playback backend
+  - ffmpeg # generated ambience and local audio decode backend
+  - hyprlock
+  - hyprpicker
+  - jq
+  - libnotify-bin
+  - network-manager
+  - network-manager-gnome # nm-connection-editor for the Quickshell network panel
+  - obsidian # Wayland note app installed from upstream deb
+  - pulseaudio-utils
+  - swaylock
+  - lm-sensors # fan speed status
+  - upower # battery percentage and health
+  - power-profiles-daemon # powerprofilesctl backend
+  - bluez # Bluetooth D-Bus backend for Quickshell
+  - xdg-desktop-portal-gtk # GTK file chooser portal backend
+  - wireplumber
+  - xdg-utils
+  - dex
+
+cli:
+  - act
+  - bat
+  - btop
+  - chrony # native NTP time synchronization; home.yml keeps makestep 1 -1
+  - docker-buildx
+  - herdr
+  - htop
+  - hunk
+  - oath-toolkit
+  - hermes-agent
+  - mise
+  - notesmd-cli # headless Brain CLI; Homebrew tap yakitrak/yakitrak
+  - pi-coding-agent
+  - sipexer
+  - sngrep
+  - task
+  - taskwarrior-tui
+  - tcpdump
+  - timewarrior
+  - tock
+  - try
+  - wireshark # provides the tshark CLI on macOS Homebrew
+
+archive_x11:
+  - i3 # archived X11 wm
+  - polybar # archived X11 bar

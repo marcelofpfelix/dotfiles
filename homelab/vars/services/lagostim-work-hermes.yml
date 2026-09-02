@@ -1,0 +1,29 @@
+---
+service_name: lagostim-work-hermes
+service_description: Lagostim work Hermes Docker Compose service
+service_runtime_bundle_dir: /Users/marcelof/.local/libexec/lagostim-hermes
+service_runtime_bundle_files:
+  - {src: /Volumes/NVMe/gwt/marcelofpfelix/lagostim/main/scripts/hermes-service.sh, dest: hermes-service.sh, mode: "0755"}
+  - {src: /Volumes/NVMe/gwt/marcelofpfelix/lagostim/main/scripts/service-work-hermes.sh, dest: service-work-hermes.sh, mode: "0755"}
+  - {src: /Volumes/NVMe/gwt/marcelofpfelix/lagostim/main/scripts/stop-work-hermes.sh, dest: stop-work-hermes.sh, mode: "0755"}
+  - {src: /Volumes/NVMe/gwt/marcelofpfelix/homelab/main/files/lagostim/docker-compose.yml, dest: docker-compose.yml, mode: "0644"}
+service_exec_start: /Users/marcelof/.local/libexec/lagostim-hermes/service-work-hermes.sh
+service_exec_stop: /Users/marcelof/.local/libexec/lagostim-hermes/stop-work-hermes.sh
+service_working_directory: /Users/marcelof/.local/libexec/lagostim-hermes
+service_environment:
+  DOCKER_CONTEXT: colima
+  HERMES_COMPOSE_FILE: /Users/marcelof/.local/libexec/lagostim-hermes/docker-compose.yml
+  LAGOSTIM_SOURCE_ROOT: /Volumes/NVMe/gwt/marcelofpfelix/lagostim/main
+  LAGOSTIM_DOCKER_ROOT: /Volumes/NVMe/docker/lagostim
+  AGENTS_REPO_ROOT: /Volumes/NVMe/gwt/marcelofpfelix/agents/main
+  HERMES_NVME_ROOT: /Volumes/NVMe
+  HERMES_GWT_ROOT: /Volumes/NVMe/gwt
+  HERMES_EXISTING_CONTAINER_ONLY: "1"
+  WORK_HERMES_API_SERVER_KEY_GOPASS_PATH: lagostim/work-hermes/api-server-key
+  WORK_HERMES_SLACK_APP_TOKEN_GOPASS_PATH: lagostim/work-hermes/slack-app-token
+  WORK_HERMES_SLACK_BOT_TOKEN_GOPASS_PATH: lagostim/work-hermes/slack-bot-token
+  WORK_HERMES_SLACK_ALLOWED_USERS_GOPASS_PATH: lagostim/work-hermes/slack-allowed-users
+  WORK_HERMES_DISCORD_BOT_TOKEN_GOPASS_PATH: lagostim/work-hermes/discord-bot-token
+  WORK_HERMES_TELEGRAM_BOT_TOKEN_GOPASS_PATH: homelab/telegram/john
+  WORK_HERMES_TELEGRAM_ALLOWED_USERS_GOPASS_PATH: lagostim/work-hermes/telegram-allowed-users
+  LITELLM_API_KEY_GOPASS_PATH: ai/litellm

@@ -247,28 +247,17 @@ quickshell_bar_status() {
     fi
 
     local needles=(
-        "launcher) ipc_target launcher open"
-        "tray|tray-manage) ipc trayManage"
-        "controls) ipc controls"
-        "media|audio) ipc media"
-        "screen|screenshot|record) ipc screen"
-        "wallpaper) ipc wallpaper"
-        "calendar) ipc calendar"
-        "personal-dashboard|dashboard|personal) ipc personalDashboard"
-        "settings) ipc settings"
-        "dnd) ipc dnd"
+        "menu_toggle() { ipc_target shell toggle"
+        "menu_summon() { ipc_target shell summon"
+        "launcher) menu_summon launcher"
+        "controls) menu_toggle controls"
+        "notifications) menu_toggle notifications"
+        "network) menu_toggle network"
+        "clipboard) menu_toggle clipboard"
+        "close-panels) ipc_target shell closePanels"
         "osd-volume) ipc osdVolume"
-        "osd-brightness) ipc osdBrightness"
-        "osd-kbd) ipc osdKbd"
-        "osd-mic) ipc osdMic"
-        "notifications) ipc notifications"
-        "network) ipc_target network toggle"
-        "websearch) ipc_target websearch toggle"
-        "power|session) ipc power"
-        "keybindings|keys) ipc keybindings"
-        "clipboard) ipc clipboard"
         "clipboard-update) ipc clipboardUpdate"
-        "close-panels) ipc closePanels"
+        "websearch) ipc_target websearch toggle"
     )
 
     for needle in "${needles[@]}"; do

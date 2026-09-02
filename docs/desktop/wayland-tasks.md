@@ -72,7 +72,7 @@
 - [x] Safe color-format sample proves Quickshell rich text and plain output modes.
 - [x] `hypr-session status` and `hypr-session smoke` check required Wayland tools, Quickshell, board, notification owner, portals, clock sync, audio state, inactive dunst, legacy launcher masks, Hyprland/Quickshell config validity, generated keybinding help, Quickshell IPC menu targets, `qs-bar` menu commands, and optional `hyprpicker`.
 - [x] `desktop/tools/desktop-doctor` wraps the live Wayland smoke check with current profile, Quickshell status, board status, picker helper status, clipboard helper status, audio state, audioctl pause/resume/status regression checks, screenshot helper status, wallpaper helper status, screen-record status, notification-smoke readiness, and static browser wrapper flag checks.
-- [x] `desktop/tools/desktop-package-audit` verifies active Wayland helper package intent, including local `board`, is tracked in the sibling homelab install list, and `desktop/tools/desktop-doctor` runs it.
+- [x] `desktop/tools/desktop-package-audit` verifies active Wayland helper package intent, including local `board`, is tracked in the embedded `homelab/` install list, and `desktop/tools/desktop-doctor` runs it.
 - [x] `desktop/tools/qs-menu-smoke` opens, captures, closes, and checks Quickshell launcher/control/media/notification/calendar/wallpaper/screen/keybinding/clipboard/websearch/network/tray/power/power-confirm menu screenshots plus `contact.png` for visual regression checks; `desktop/tools/desktop-doctor` now fails when the latest smoke run predates live Quickshell QML.
 
 ## References
@@ -933,3 +933,162 @@ Task source: latest local review request. Priority is code repetition and simple
   - Acceptance: validation and agent-only helpers do not live in user-facing `desktop/bin`, duplicate wrappers are merged where practical, board uses a direct supported command for agent status, and `desktop-doctor` does not run `audioctl self-test` while helper-owned noise/music are active.
   - Validation: `bash -n desktop/bin/agent-tmux desktop/tools/ai-stack-doctor desktop/tools/desktop-doctor desktop/tools/desktop-accept`, `agent-tmux check`, `board --config ~/.config/board/board.toml once`, full `desktop/tools/qs-menu-smoke`, and full `desktop/tools/desktop-doctor`.
   - Current behavior: `ai-stack-doctor` lives under `desktop/tools`, `check-agents` is merged into `agent-tmux check`, live stale `~/bin/check-agents` and `~/bin/ai-stack-doctor` were archived out of PATH, board scheduler was restarted with the updated config, and full `desktop-doctor` passes while skipping the audio self-test during active helper playback.
+
+## 2026-08-14 Omarchy Quattro IPC and Shell Optimization Follow-Up
+
+Source review:
+
+- Current Omarchy clone: `/tmp/omarchy-quattro`, branch `quattro`, refreshed with `git pull --ff-only`; last observed commit `ebdc026`.
+- Upstream reference docs: https://github.com/basecamp/omarchy/blob/quattro/docs/omarchy-shell.md and `/tmp/omarchy-quattro/AGENTS.md`.
+- Local source of truth: `docs/desktop/quickshell-architecture.md`, `docs/desktop/wayland.md`, and this task file. The wiki has older/general desktop notes, but executable Wayland/Quickshell work belongs here.
+- Current local state: `desktop/bin/qs-bar` already wraps `qs ipc --path ~/.config/quickshell/marcelof/shell.qml`; `shell.qml` exposes a central `bar` IPC target plus smaller `websearch`, `lock`, `launcher`, `network`, `passmenu`, and `power` targets; Hyprland starts Quickshell and a separate `board run`; `ShellBar.qml` consumes `board render --watch quickshell quickshell-bar`.
+- Direction: copy Omarchy patterns where they shrink local code or make scripting reliable. Do not import Omarchy-named runtime binaries, distro update machinery, or the full plugin installer unless built-in local routing becomes too large to keep declarative.
+
+Claim rule: complete one task at a time, keep `default` i3-compatible behavior intact, and run the listed validation before marking a task done.
+
+- [x] P0: Add a small local `shell` IPC target above the current `bar` actions.
+  - Sources: Omarchy `shell` IPC target with `ping`, `summon`, `hide`, `toggle`, and `call`; current local `qs-bar` and `shell.qml` IPC handlers.
+  - Acceptance: `qs-bar shell ping`, `qs-bar shell toggle launcher`, `qs-bar shell hide launcher`, and `qs-bar close-panels` work without restarting Quickshell; existing commands such as `qs-bar launcher`, `qs-bar controls`, `qs-bar notifications`, and `qs-bar power` keep working.
+  - Dependencies: reuse the existing menu ids from `ShellConfigData.qml` and existing toggle/hide functions in `shell.qml`; no new plugin registry yet.
+  - Validation: `bash -n desktop/bin/qs-bar`, `qmllint desktop/.config/quickshell/marcelof/shell.qml`, `desktop/tools/qs-menu-smoke launcher controls notifications power`, and manual `qs-bar shell ping`.
+  - Stop conditions: stop if Quickshell IPC cannot pass variable menu ids safely; fall back to explicit method names rather than adding a parser.
+  - Current behavior: local `shell` IPC target exposes `ping`, `toggle`, `hide`, `summon`, and `closePanels`; `qs-bar shell ping`, `qs-bar shell summon launcher`, and `qs-bar shell hide launcher` were live-tested after `home -y` and `qs-bar restart`; targeted `desktop/tools/qs-menu-smoke launcher controls notifications power` passed at `~/.local/state/quickshell/menu-smoke/20260814-175546`.
+
+- [x] P0: Move popup open, close, toggle, and focus behavior into one shared panel lifecycle.
+  - Sources: Omarchy `shell/Ui/Panel.qml`; current duplicated handlers in `ShellLauncherPanel.qml`, `ShellNetworkPanel.qml`, `ShellPassMenuPanel.qml`, `ShellPowerMenu.qml`, and root `shell.qml` state functions.
+  - Acceptance: launcher, clipboard, passmenu, web search, calendar, notifications, controls, media, wallpaper, screen, network, settings, and power use the same open/close/toggle semantics; pressing the same key twice closes the popup; Escape and `qs-bar close-panels` close every transient popup.
+  - Dependencies: extend existing `ShellPanel.qml` or `ShellFloatingPopup.qml`; do not add a new abstraction if a small helper property on the current components is enough.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/*.qml`, `desktop/tools/qs-menu-smoke`, and manual double-toggle tests for `Win+D`, `Win+,`, `Win+/`, `Win+Ctrl+A`, and `Win+Esc`.
+  - Stop conditions: do not change Hyprland window rules or popup geometry in the same task unless the shared lifecycle exposes a real mismatch.
+
+- [x] P1: Replace hardcoded menu command routing with a declarative built-in menu registry.
+  - Sources: Omarchy `shell.json` bar/plugin layout idea; current `ShellConfigData.qml.menuIds`, `desktop/lib/lib_qs_menus.sh`, and `desktop/bin/qs-bar` case statement.
+  - Acceptance: one local data map defines menu id, IPC target, open action, keybinding label, smoke-test name, and default size where practical; `qs-bar list-menus`, keybinding help, and smoke tests read the same names or generated output.
+  - Dependencies: built-in registry only; no third-party plugin install/update support.
+  - Validation: `bash -n desktop/bin/qs-bar desktop/lib/lib_qs_menus.sh desktop/tools/qs-menu-smoke`, `qmllint desktop/.config/quickshell/marcelof/ShellConfigData.qml`, `qs-bar list-menus`, and `desktop/tools/qs-menu-smoke --list` if available.
+  - Stop conditions: if generating shell code from QML data gets awkward, keep Bash and QML registries separate but add a doctor check that they agree.
+  - Current behavior: kept the existing two small registries instead of adding code generation: QML owns menu ids and sizes in `ShellConfigData.qml`, Bash owns shell-facing labels/smoke names in `desktop/lib/lib_qs_menus.sh`. `qs-bar` now routes legacy menu commands such as `launcher`, `controls`, `notifications`, `network`, `clipboard`, and `close-panels` through the generic `shell` IPC target; Quickshell exposes `shell listMenus` for scriptable discovery of QML menu ids. Validation passed for `bash -n desktop/bin/qs-bar desktop/lib/lib_qs_menus.sh desktop/tools/qs-menu-smoke`, `qmllint desktop/.config/quickshell/marcelof/shell.qml desktop/.config/quickshell/marcelof/ShellConfigData.qml`, `desktop/bin/qs-bar list-menus`, `desktop/tools/qs-menu-smoke --list`, `home -y`, `qs-bar restart`, `qs-bar shell ping`, `qs-bar shell listMenus`, `qs-bar launcher`, `qs-bar controls`, and `qs-bar notifications`.
+
+- [x] P1: Make `qs-bar` IPC behavior match the useful parts of `omarchy-shell`.
+  - Sources: Omarchy `bin/omarchy-shell` quiet mode, IPC timeout, display recovery, and clear error handling.
+  - Acceptance: `qs-bar -q <action>` suppresses noisy failures for keybind/autostart use; calls from SSH or TTY recover `WAYLAND_DISPLAY` from the runtime dir when possible; IPC failures do not automatically restart Quickshell unless the user explicitly asks for `restart` or the target is known to be starting.
+  - Dependencies: keep current `qs-bar start|stop|restart|status`; no new binary name.
+  - Validation: `bash -n desktop/bin/qs-bar`, `qs-bar status`, `qs-bar -q shell ping`, `env -u WAYLAND_DISPLAY qs-bar shell ping` from inside a live session, and `desktop/tools/desktop-doctor`.
+  - Stop conditions: avoid broad process killing from quiet IPC paths.
+  - Current behavior: `qs-bar -q` quiet mode, a 2s IPC timeout, and TTY/SSH `WAYLAND_DISPLAY` recovery are implemented; `qs-bar shell ...` and legacy per-menu IPC paths no longer restart Quickshell on IPC failure. Live checks passed for `env -u WAYLAND_DISPLAY qs-bar shell ping`, `qs-bar launcher`, quiet unknown calls, and a forced `QS_BIN=/bin/false qs-bar launcher` failure while the existing Quickshell process stayed running.
+
+- [x] P1: Keep board as backend health state, but stop pushing interactive shell state through text render paths.
+  - Sources: Omarchy single shell process model; current board boundary in `quickshell-architecture.md`.
+  - Acceptance: battery, audio/mic, brightness, tray, notifications, workspaces, privacy, and current popup state remain Quickshell-native; board keeps health/status checks and personal dashboards. Any board-backed bar segment must be one watched stream or cached snapshot, not repeated hot shell execution.
+  - Dependencies: measure before replacing `board render --watch`; this task may be docs/validation only if current behavior is already one long-lived stream.
+  - Validation: process tree check for one `board render --watch quickshell quickshell-bar`, `board --config desktop/.config/board/board.toml doctor`, `desktop/tools/desktop-doctor`, and `desktop/tools/qs-menu-smoke controls media notifications`.
+  - Stop conditions: do not rewrite board modules into QML without measured CPU, memory, or latency evidence.
+  - Current behavior: no rewrite needed. `ShellBar.qml` consumes `board --config ... render --watch quickshell quickshell-bar` through one watched `StatusText`; the live process tree showed one Quickshell child `board --config /home/marcelof/.config/board/board.toml render --watch quickshell quickshell-bar` plus the separate scheduler `board --config ... run`. Board owns health checks and personal dashboard surfaces; battery, privacy, tray, workspaces, popups, and interaction state stay Quickshell-native. Validation passed for `board --config desktop/.config/board/board.toml doctor`, `hypr-session smoke`, full `desktop/tools/qs-menu-smoke` at `~/.local/state/quickshell/menu-smoke/20260814-183334`, and full `desktop/tools/desktop-doctor`.
+
+- [ ] P1: Adapt Omarchy notification and OSD structure where it removes local duplication.
+  - Sources: Omarchy `plugins/notifications/Service.qml`, notification card components, and OSD model; current `ShellNotificationCenter.qml`, `ShellOverlays.qml`, and `desktop-osd` path.
+  - Acceptance: notification app icons, actions, sticky state, grouped history, and OSD visuals keep their current features but use smaller shared components and consistent spacing; no regression in notification action smoke tests.
+  - Dependencies: preserve current notification history file and DND/routing policy.
+  - Validation: `desktop/tools/desktop-notification-smoke actions routing`, `desktop/tools/qs-menu-smoke --inspect notifications`, `desktop/tools/qs-menu-smoke controls`, and `qmllint` on touched QML.
+  - Stop conditions: do not replace the notification server with another daemon.
+  - Progress: adapted the smallest useful Omarchy layout idea without importing its plugin framework: notification rows now size collapsed/expanded height from measured content, and the OSD popup width is measured from the rendered message instead of fixed at 280px. Validation passed for `qmllint desktop/.config/quickshell/marcelof/ShellNotificationCenter.qml desktop/.config/quickshell/marcelof/ShellOverlays.qml`, `desktop/tools/desktop-notification-smoke actions routing`, `desktop/tools/qs-menu-smoke notifications`, `qs-bar osd-volume`, full `desktop/tools/qs-menu-smoke` at `~/.local/state/quickshell/menu-smoke/20260814-183644`, and full `desktop/tools/desktop-doctor`.
+
+- [ ] P2: Add shell-owned lock, idle, and polkit review tasks after IPC and panels are stable.
+  - Sources: Omarchy Quattro moved lock screen, idle behavior, and polkit into the shell process; current local lock path delegates to `hyprlock`, `swaylock`, or `loginctl` and idle inhibit uses `desktop-inhibit`.
+  - Acceptance: document whether each of lock, idle, and polkit should stay delegated or move into Quickshell; create implementation tasks only for items that reduce real runtime complexity or fix a current bug.
+  - Dependencies: finish shell IPC and shared panel lifecycle first.
+  - Validation: `hypr-session smoke`, lock/unlock manual test, suspend/inhibit manual test, and polkit prompt manual test if changed.
+  - Stop conditions: do not fake a secure lock window in QML; keep real locker delegation unless there is a proven secure replacement.
+
+- [ ] P2: Document copy-license rules for upstream QML snippets.
+  - Sources: Omarchy MIT license and existing local reference rule.
+  - Acceptance: `docs/desktop/wayland.md` or `quickshell-architecture.md` states that small copied snippets from MIT references must keep attribution when substantial, while behavior-only rewrites need only a source note in tasks.
+  - Dependencies: none.
+  - Validation: docs-only review and `rg -n "Omarchy|MIT|Reference Rule|attribution" docs/desktop`.
+
+## 2026-08-15 Omarchy Manual Compatibility Follow-Up
+
+Source review:
+
+- Current manual fetched from `https://omarchy.org/manual/` into `/tmp/omarchy-manual-review`; 51 chapters were reviewed.
+- Relevant manual chapters: Navigation, The Top Bar, Themes, Hotkeys, Unified Clipboard & History, Reminders, Notices, Text Extraction & Dictation, Screenshots & Recording, Toggles/Idle/Screensaver, Monitors, Keyboard/Mouse/Trackpad, Networking, System sleep, Fonts, Backgrounds, Branding, Common tweaks, Troubleshooting, FAQ, Security.
+- Copy rule: copy behavior, component structure, and small layout ideas whenever they fit the local stack. Do not copy `omarchy-*` command names, Arch package/update flows, installer/reset/snapshot machinery, or distro security defaults into dotfiles.
+- Local boundary: user-facing Wayland/Quickshell work belongs in this file and `docs/desktop/wayland.md`; system security/service changes belong in homelab tasks.
+
+Claim rule: complete one task at a time. Keep `default` i3-compatible, keep `omarchy` profile Omarchy-like, validate each task before marking done, and archive old code instead of deleting it.
+
+- [ ] P0: Finish notification history CLI/TUI parity.
+  - Sources: manual Notices and Hotkeys chapters; existing persisted `~/.local/state/quickshell/marcelof/notifications.jsonl`; current `notification-focus-app`; existing pending `notificationctl` task.
+  - Acceptance: `notificationctl list`, `notificationctl open <id>`, `notificationctl clear <id|app|all>`, and `notificationctl tui` operate on the same safe persisted history. Live notifications can still invoke Quickshell actions; restored entries can focus/open their source app but do not pretend old D-Bus callbacks are live.
+  - Dependencies: reuse the existing notification JSONL and Quickshell IPC; do not add a second notification daemon.
+  - Validation: `bash -n desktop/bin/notificationctl`, `notificationctl self-test` with fake state, `desktop/tools/desktop-notification-smoke actions routing`, and `desktop/tools/qs-menu-smoke notifications`.
+  - Stop conditions: stop if action replay would require storing unsafe callback state; list and focus old entries instead.
+
+- [ ] P0: Audit and complete bar click/scroll behavior against the manual.
+  - Sources: manual Top Bar chapter; current `ShellBar.qml`, `ShellControlPanel.qml`, `ShellMediaPanel.qml`, `ShellNetworkPanel.qml`, `ShellPowerMenu.qml`, and `ShellCalendarPanel.qml`.
+  - Acceptance: each visible bar item has documented left, right, middle, and scroll behavior where useful. Audio, mic, display/brightness, clock, network, notifications, power, tray, workspaces, privacy indicators, and launcher/menu affordances either match Omarchy behavior or document the local difference.
+  - Dependencies: reuse existing panels and helpers; do not add new one-off scripts for click actions.
+  - Validation: `docs/desktop/wayland.md` behavior table or bullet list, `qmllint desktop/.config/quickshell/marcelof/ShellBar.qml`, `desktop/tools/qs-menu-smoke controls media notifications calendar network power`, and manual scroll checks for audio/brightness.
+  - Stop conditions: do not bind destructive actions to scroll/middle click; keep power actions behind confirmation.
+
+- [ ] P1: Add local notice commands for time, weather, and battery.
+  - Sources: manual Notices chapter; current `check-time-panel`, `check-weather`, UPower state in Quickshell, and `desktop-osd`/notification toast surfaces.
+  - Acceptance: generic local commands or `qs-bar shell` actions show time, weather, and battery notices as Quickshell notifications or OSDs. Add matching menu rows under Controls or Settings only if they reuse existing rows.
+  - Dependencies: reuse existing time/weather/battery data; no polling daemon and no upstream command names.
+  - Validation: `qs-bar shell ...` or helper self-tests, `desktop/tools/desktop-notification-smoke`, `desktop/tools/qs-menu-smoke controls calendar power`, and `desktop/tools/desktop-doctor`.
+  - Stop conditions: if battery data is already clearer in the power panel, expose only time/weather notices.
+
+- [ ] P1: Add a small reminder workflow.
+  - Sources: manual Reminders chapter; current Pomodoro/Timewarrior notes and notification history.
+  - Acceptance: `reminderctl add <duration> <message>`, `reminderctl list`, and `reminderctl clear` store local reminders, trigger Quickshell notifications, and expose a compact panel/list in Controls or Calendar. Keep countdown reminders separate from Pomodoro.
+  - Dependencies: local state under `~/.local/state/quickshell/marcelof`; use systemd user timers only if a sleeping shell process is not enough.
+  - Validation: `bash -n desktop/bin/reminderctl`, `reminderctl self-test`, manual short reminder, `desktop/tools/desktop-notification-smoke`, and `desktop/tools/qs-menu-smoke calendar controls`.
+  - Stop conditions: do not integrate Google Calendar or Taskwarrior in this task.
+
+- [ ] P1: Improve NetworkManager panel toward manual parity.
+  - Sources: manual Networking and FAQ chapters; current `network-status`, `ShellNetworkPanel.qml`, `nm-applet`, and `nmtui` fallback.
+  - Acceptance: network popup shows connection state, Wi-Fi signal/band where `nmcli` exposes it, local IP, on-demand public IP, DNS summary, and safe actions for Wi-Fi toggle and reconnect. Optional follow-up rows for DNS presets and speed test are task-gated.
+  - Dependencies: NetworkManager/nmcli only; secrets must not be displayed unless explicitly requested by a separate command.
+  - Validation: `network-status bar`, `NETWORK_STATUS_PUBLIC_IP=0 network-status details`, `qmllint desktop/.config/quickshell/marcelof/ShellNetworkPanel.qml`, and `desktop/tools/qs-menu-smoke network controls`.
+  - Stop conditions: no password reveal in Quickshell; no firewall or SSH daemon changes in dotfiles.
+
+- [ ] P1: Improve display and power panel parity.
+  - Sources: manual Top Bar, Monitors, System sleep, Common tweaks, and FAQ chapters; current `external-brightness`, `power-status`, `monitor`, `ShellControlPanel.qml`, and `ShellPowerMenu.qml`.
+  - Acceptance: display/power surfaces expose screen brightness, external brightness, battery health, AC/battery power profile state, text scale or monitor scale status where practical, suspend/hibernate visibility, and clear current monitor identity. Persist separate AC/battery profile preference only if `powerprofilesctl` supports the local hardware cleanly.
+  - Dependencies: reuse `brightnessctl`, `ddcutil`, `powerprofilesctl`, `monitor`, and existing session menu confirmation.
+  - Validation: `external-brightness self-test`, `power-status status`, `desktop/tools/qs-menu-smoke controls power screen`, and `desktop/tools/desktop-doctor`.
+  - Stop conditions: do not change monitor layout automatically in this task; do not enable hibernate without explicit user approval.
+
+- [ ] P1: Add a minimal local theme compatibility model without a full theme engine.
+  - Sources: manual Themes, Fonts, Backgrounds, Branding, and Making your own theme chapters; current `ShellTheme.qml`, `ShellConfigData.qml`, Settings primary-color swatches, Ghostty/GTK dark settings, and wallpaper picker.
+  - Acceptance: one local theme state file records primary color, dark/light preference, font token, and wallpaper path; Quickshell reads it through existing settings/state paths; Settings can edit only values already supported. Document how this maps to Omarchy theme concepts.
+  - Dependencies: no generated app-wide templates unless a current app already has a tracked config path and validation.
+  - Validation: `qmllint desktop/.config/quickshell/marcelof/ShellTheme.qml desktop/.config/quickshell/marcelof/ShellSettings.qml desktop/.config/quickshell/marcelof/ShellSettingsPanel.qml`, `desktop/tools/qs-menu-smoke settings wallpaper`, and `desktop/tools/desktop-doctor`.
+  - Stop conditions: skip boot unlock, Plymouth, broad app templating, and theme marketplace support.
+
+- [ ] P1: Compare current hotkeys to Omarchy manual categories and close useful gaps.
+  - Sources: manual Hotkeys and Navigation chapters; current `desktop/bin/hypr-keys`, `profiles/default.lua`, and `profiles/omarchy.lua`.
+  - Acceptance: a generated comparison lists manual category, current default behavior, current `omarchy` profile behavior, and decision. Add free, useful bindings to the `omarchy` profile first; only change `default` when it improves i3-compatible behavior without conflict.
+  - Dependencies: reuse `hypr-keys`; no manually maintained duplicate key list.
+  - Validation: `hypr-keys default`, `hypr-keys omarchy`, `luac -p desktop/.config/hypr/profiles/default.lua desktop/.config/hypr/profiles/omarchy.lua`, `hypr-session test`, and `HYPR_PROFILE=omarchy hypr-session test`.
+  - Stop conditions: do not break `Win+D`, `Win+Enter`, `Win+V`, `Win+W`, or existing i3-parity expectations.
+
+- [ ] P2: Review shell-owned lock, idle, and polkit against manual Quickshell ownership.
+  - Sources: manual Toggles/Idle/Screensaver, Hardware authentication, and Top Bar chapters; existing task for shell-owned lock/idle/polkit review.
+  - Acceptance: document what stays delegated (`hyprlock`, `swaylock`, `loginctl`, system polkit) and what, if anything, should move into Quickshell. Implement only changes that reduce real bugs or duplicated runtime state.
+  - Dependencies: keep secure lock handled by a real locker unless there is a proven secure replacement.
+  - Validation: `hypr-session smoke`, manual lock/unlock, manual idle inhibit, and polkit prompt manual test if changed.
+  - Stop conditions: no fake QML lock screen for security; no fingerprint/Fido setup in dotfiles.
+
+- [ ] P2: Split distro/system compatibility into homelab tasks.
+  - Sources: manual Security, Networking, System snapshots, Updates, System sleep, Hardware authentication, and Unattended installs chapters.
+  - Acceptance: create or document homelab-owned tasks for firewall/LocalSend exception, SSHD enablement policy, Docker exposure lockdown, time sync repair, package update workflow, hibernation, snapshots/backups, fingerprint/Fido setup, and Tailscale. Dotfiles should only link to those tasks.
+  - Dependencies: homelab repo owns system changes; dotfiles can only validate or document.
+  - Validation: docs-only in dotfiles plus homelab syntax checks when homelab tasks are created.
+  - Stop conditions: do not run firewall, SSH, hibernation, or system reset commands from the home role.
+
+- [ ] P2: Add upstream snippet attribution policy.
+  - Sources: manual review, Omarchy MIT license, and current reference-import rule.
+  - Acceptance: docs state that substantial copied QML/shell snippets from Omarchy or other MIT references keep attribution near the adapted code or in the task entry; behavior-only rewrites need a source note but not copied branding.
+  - Dependencies: none.
+  - Validation: `rg -n "Reference|MIT|attribution|Omarchy" docs/desktop`.

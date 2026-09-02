@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pre-commit:
+    env:
+      ANSIBLE_VAULT_PASSWORD_FILE: .vault_pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        run: python -m pip install uv
+
+      - name: Validate pre-commit config
+        run: uv run --extra dev pre-commit validate-config
+
+      - name: Prepare Ansible
+        run: |
+          printf '%s\n' ci > .vault_pass
+          chmod 600 .vault_pass
+          for attempt in 1 2 3; do
+            uv run --extra dev ansible-galaxy install -r requirements.yml && break
+            if [ "$attempt" = 3 ]; then
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Run YAML lint
+        run: uv run --extra dev pre-commit run check-yaml --all-files
+
+      - name: Run Ansible lint
+        run: uv run --extra dev pre-commit run ansible-lint --all-files
+
+      - name: Run pre-commit
+        run: uv run --extra dev pre-commit run --all-files
