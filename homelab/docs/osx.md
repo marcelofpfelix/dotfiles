@@ -57,8 +57,10 @@ Useful package groups to model in Ansible:
 - Shell: `tmux`, `zoxide`, `starship`, `atuin`, `fzf`, `eza`, `direnv`,
   `television`, `tmuxup`
 - CLI: `gh`, `uv`, `coreutils`, `gum`, `gopass`, `iproute2mac`, `ansible`,
-  `beads`, `task`, `taskwarrior-tui`, `timewarrior`, `tock`, `wireshark`,
-  `herdr`, `hunk`, `oath-toolkit`, `sipexer`, `pi`, `hermes`
+  `beads`, `task`, `taskwarrior-tui`, `timewarrior`, `tock`, `sngrep`,
+  `tcpdump`, `wireshark` (provides `tshark`), `herdr`, `htop`, `btop`, `hunk`,
+  `mise`, `try`, `oath-toolkit`, `sipexer`, `pi`, `hermes`,
+  `notesmd-cli`
 - Containers: `colima`, `kubectl`, `docker-buildx`
 - Editors: `nvim`
 - Sync: `syncthing`
@@ -66,7 +68,8 @@ Useful package groups to model in Ansible:
 
 Additional package sources to evaluate:
 
-- Homebrew taps: `hashicorp/tap`, `sielicki/dystemctl`, `modem-dev/tap`
+- Homebrew taps: `hashicorp/tap`, `sielicki/dystemctl`, `modem-dev/tap`,
+  `yakitrak/yakitrak`
 - Homebrew packages from taps: `hashicorp/tap/vault`, `modem-dev/tap/hunk`
 - Homebrew casks: `font-fira-code-nerd-font`
 - Tentative casks: `codex`; npm may remain the working install path
@@ -85,6 +88,11 @@ Additional package sources to evaluate:
 
 Runtime setup notes:
 
+- Install the headless Brain CLI with `brew tap yakitrak/yakitrak` followed by
+  `brew install yakitrak/yakitrak/notesmd-cli`. Obsidian is an optional
+  desktop editor and does not need to run for agent access.
+- Keep QMD optional until its release-age and native SQLite compatibility gates
+  pass and its retrieval benefit has been measured.
 - Install Node from the repository `.nvmrc` and run `nvm use`.
 - Time tracking uses `timewarrior` plus `tock`; their runtime configuration is
   tracked in the dotfiles repo.

@@ -1,4 +1,4 @@
-.PHONY: help pre build clean shell version inventory ping check private-link private-unlink private-status
+.PHONY: help pre build clean shell version inventory ping check private-link private-unlink private-status test-lagostim-compose test-lagostim-launchd
 
 ################################################################################
 # variables
@@ -27,6 +27,12 @@ pre: ## run pre-commit
 	uv run --extra dev pre-commit run --all-files
 
 check: pre ## run linting and quality checks
+
+test-lagostim-compose: ## validate the canonical Hermes Compose definition
+	bash test/lagostim_compose_test.sh
+
+test-lagostim-launchd: ## validate local launchd runtime bundles for Hermes
+	ruby test/lagostim_launchd_test.rb
 
 help: ## show help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage: \033[36m\033[0m\n"} /^[$$()% 0-9a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s:\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)

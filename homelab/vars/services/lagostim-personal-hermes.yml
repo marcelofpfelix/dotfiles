@@ -1,12 +1,24 @@
 ---
 service_name: lagostim-personal-hermes
 service_description: Lagostim personal Hermes Docker Compose service
-service_exec_start: /Users/marcelof/gwt/marcelofpfelix/lagostim/main/scripts/service-personal-hermes.sh
-service_exec_stop: /Users/marcelof/gwt/marcelofpfelix/lagostim/main/scripts/stop-personal-hermes.sh
-service_working_directory: /Users/marcelof/gwt/marcelofpfelix/lagostim/main
+service_runtime_bundle_dir: /Users/marcelof/.local/libexec/lagostim-hermes
+service_runtime_bundle_files:
+  - {src: /Volumes/NVMe/gwt/marcelofpfelix/lagostim/main/scripts/hermes-service.sh, dest: hermes-service.sh, mode: "0755"}
+  - {src: /Volumes/NVMe/gwt/marcelofpfelix/lagostim/main/scripts/service-personal-hermes.sh, dest: service-personal-hermes.sh, mode: "0755"}
+  - {src: /Volumes/NVMe/gwt/marcelofpfelix/lagostim/main/scripts/stop-personal-hermes.sh, dest: stop-personal-hermes.sh, mode: "0755"}
+  - {src: /Volumes/NVMe/gwt/marcelofpfelix/homelab/main/files/lagostim/docker-compose.yml, dest: docker-compose.yml, mode: "0644"}
+service_exec_start: /Users/marcelof/.local/libexec/lagostim-hermes/service-personal-hermes.sh
+service_exec_stop: /Users/marcelof/.local/libexec/lagostim-hermes/stop-personal-hermes.sh
+service_working_directory: /Users/marcelof/.local/libexec/lagostim-hermes
 service_environment:
-  LAGOSTIM_DOCKER_ROOT: /Users/marcelof/docker/lagostim
+  DOCKER_CONTEXT: colima
+  HERMES_COMPOSE_FILE: /Users/marcelof/.local/libexec/lagostim-hermes/docker-compose.yml
+  LAGOSTIM_SOURCE_ROOT: /Volumes/NVMe/gwt/marcelofpfelix/lagostim/main
+  LAGOSTIM_DOCKER_ROOT: /Volumes/NVMe/docker/lagostim
+  AGENTS_REPO_ROOT: /Volumes/NVMe/gwt/marcelofpfelix/agents/main
+  HERMES_NVME_ROOT: /Volumes/NVMe
+  HERMES_GWT_ROOT: /Volumes/NVMe/gwt
+  HERMES_EXISTING_CONTAINER_ONLY: "1"
   PERSONAL_HERMES_API_SERVER_KEY_GOPASS_PATH: lagostim/personal-hermes/api-server-key
   PERSONAL_HERMES_TELEGRAM_BOT_TOKEN_GOPASS_PATH: homelab/telegram/eusebio
   LITELLM_API_KEY_GOPASS_PATH: ai/litellm
-  OPENAI_API_KEY_GOPASS_PATH: ai/openai

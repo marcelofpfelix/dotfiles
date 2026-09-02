@@ -15,7 +15,7 @@ CLI="""
 use: home
 long: |
   Deploy home dotfiles repo
-  Using homelab ansible repo
+  Using the embedded homelab Ansible project
 flags:
   - use: target
     short: Target server
@@ -46,13 +46,13 @@ if git_repo_path_bool "${WORKTREE:-true}"; then
     dotfiles="$gwt_root/marcelofpfelix/dotfiles/main"
     homework="$gwt_root/marcelofpfelix/homework/main"
     workdir="$gwt_root/team-telnyx/tel-proxy/marcelo/home"
-    homelab="$gwt_root/marcelofpfelix/homelab/main"
 else
     dotfiles="$(git_repo_path marcelofpfelix dotfiles)"
     homework="$(git_repo_path marcelofpfelix homework)"
     workdir="$(git_repo_path team-telnyx tel-proxy home)"
-    homelab="$(git_repo_path marcelofpfelix homelab)"
 fi
+
+homelab="${dotfiles}/homelab"
 
 homelab_overlay=""
 homelab_run="$homelab"

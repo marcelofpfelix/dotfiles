@@ -1,0 +1,145 @@
+name: lagostim-agents
+
+# Canonical non-secret Compose source for active Hermes gateways. Image build
+# inputs remain in Lagostim; mutable state and credentials remain outside Git.
+
+x-hermes-build: &hermes-build
+  context: ${LAGOSTIM_SOURCE_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/lagostim/main}
+  dockerfile: Dockerfile.hermes
+
+x-hermes-personal-image: &hermes-personal-image
+  build:
+    <<: *hermes-build
+    target: hermes-personal
+  image: lagostim/hermes-personal:latest
+
+x-hermes-family-image: &hermes-family-image
+  build:
+    <<: *hermes-build
+    target: hermes-family
+  image: lagostim/hermes-family:latest
+
+x-hermes-work-image: &hermes-work-image
+  build:
+    <<: *hermes-build
+    target: hermes-work
+  image: lagostim/hermes-work:latest
+
+x-hermes-common: &hermes-common
+  restart: unless-stopped
+  pull_policy: missing
+  # Gateway sessions use this safe fallback; interactive `hermes --in` calls
+  # deliberately override it. Do not pin terminal.cwd in profile config.
+  working_dir: /workspace
+  command: gateway run
+  healthcheck:
+    test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8642/health', timeout=5)\""]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+    start_period: 45s
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+  tmpfs:
+    - /tmp:size=512m,mode=1777
+  shm_size: 1gb
+  networks: [agents]
+
+services:
+  personal-hermes:
+    <<: [*hermes-common, *hermes-personal-image]
+    container_name: personal-hermes
+    profiles: [personal, hermes, all]
+    env_file:
+      - path: ${LAGOSTIM_SOURCE_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/lagostim/main}/.env
+        required: false
+      - path: ${PERSONAL_HERMES_PROFILE_ENV:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/personal-hermes/.env}
+        required: false
+    environment:
+      TZ: ${TZ:-Europe/Lisbon}
+      HERMES_UID: ${HOST_UID:-501}
+      HERMES_GID: ${HOST_GID:-20}
+      API_SERVER_ENABLED: ${PERSONAL_HERMES_API_SERVER_ENABLED:-true}
+      API_SERVER_HOST: ${PERSONAL_HERMES_API_SERVER_HOST:-0.0.0.0}
+      API_SERVER_KEY: ${PERSONAL_HERMES_API_SERVER_KEY:?PERSONAL_HERMES_API_SERVER_KEY is required}
+      API_SERVER_CORS_ORIGINS: ${PERSONAL_HERMES_API_SERVER_CORS_ORIGINS:-http://127.0.0.1:9119,http://localhost:9119}
+      HERMES_DASHBOARD: ${PERSONAL_HERMES_DASHBOARD:-0}
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-}
+    ports:
+      - 127.0.0.1:${PERSONAL_HERMES_GATEWAY_PORT:-8642}:8642
+    volumes:
+      - {type: bind, source: "${PERSONAL_HERMES_DATA:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/personal-hermes}", target: /opt/data, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${PERSONAL_WORKSPACE_ROOT:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/personal-hermes/workspace}", target: /workspace, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${HERMES_NVME_ROOT:-/Volumes/NVMe}", target: /Volumes/NVMe, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${HERMES_GWT_ROOT:-/Volumes/NVMe/gwt}", target: /Users/marcelof/gwt, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${AGENTS_REPO_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/agents/main}/profiles/personal/eusebio/SOUL.md", target: /opt/data/SOUL.md, read_only: true, bind: {create_host_path: false}}
+      - {type: bind, source: "${AGENTS_REPO_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/agents/main}/profiles/personal/eusebio/IDENTITY.md", target: /opt/data/IDENTITY.md, read_only: true, bind: {create_host_path: false}}
+      - {type: bind, source: "${AGENTS_REPO_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/agents/main}/profiles/personal/eusebio/AGENTS.md", target: /workspace/AGENTS.md, read_only: true, bind: {create_host_path: false}}
+
+  constanca-hermes:
+    <<: [*hermes-common, *hermes-family-image]
+    container_name: constanca-hermes
+    profiles: [constanca, hermes, all]
+    env_file:
+      - path: ${LAGOSTIM_SOURCE_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/lagostim/main}/.env
+        required: false
+      - path: ${CONSTANCA_HERMES_PROFILE_ENV:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/constanca-hermes/.env}
+        required: false
+    environment:
+      TZ: ${TZ:-Europe/Lisbon}
+      HERMES_UID: ${HOST_UID:-501}
+      HERMES_GID: ${HOST_GID:-20}
+      API_SERVER_ENABLED: ${CONSTANCA_HERMES_API_SERVER_ENABLED:-true}
+      API_SERVER_HOST: ${CONSTANCA_HERMES_API_SERVER_HOST:-0.0.0.0}
+      API_SERVER_KEY: ${CONSTANCA_HERMES_API_SERVER_KEY:-}
+      API_SERVER_CORS_ORIGINS: ${CONSTANCA_HERMES_API_SERVER_CORS_ORIGINS:-http://127.0.0.1:9121,http://localhost:9121}
+      HERMES_DASHBOARD: ${CONSTANCA_HERMES_DASHBOARD:-0}
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-}
+    ports:
+      - 127.0.0.1:${CONSTANCA_HERMES_GATEWAY_PORT:-8644}:8642
+      - ${CONSTANCA_HERMES_WEB_TEST_BIND_IP:-0.0.0.0}:${CONSTANCA_HERMES_WEB_TEST_PORT:-8888}:8888
+    volumes:
+      - {type: bind, source: "${CONSTANCA_HERMES_DATA:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/constanca-hermes}", target: /opt/data, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${CONSTANCA_WORKSPACE_ROOT:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/constanca-hermes/workspace}", target: /workspace, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${HERMES_NVME_ROOT:-/Volumes/NVMe}", target: /Volumes/NVMe, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${HERMES_GWT_ROOT:-/Volumes/NVMe/gwt}", target: /Users/marcelof/gwt, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${AGENTS_REPO_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/agents/main}/profiles/family/constanca/SOUL.md", target: /opt/data/SOUL.md, read_only: true, bind: {create_host_path: false}}
+      - {type: bind, source: "${AGENTS_REPO_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/agents/main}/profiles/family/constanca/IDENTITY.md", target: /opt/data/IDENTITY.md, read_only: true, bind: {create_host_path: false}}
+      - {type: bind, source: "${AGENTS_REPO_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/agents/main}/profiles/family/constanca/AGENTS.md", target: /workspace/AGENTS.md, read_only: true, bind: {create_host_path: false}}
+
+  work-hermes:
+    <<: [*hermes-common, *hermes-work-image]
+    container_name: work-hermes
+    profiles: [work, hermes, all]
+    env_file:
+      - path: ${LAGOSTIM_SOURCE_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/lagostim/main}/.env
+        required: false
+      - path: ${WORK_HERMES_PROFILE_ENV:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/work-hermes/.env}
+        required: false
+    environment:
+      TZ: ${TZ:-Europe/Lisbon}
+      HERMES_UID: ${HOST_UID:-501}
+      HERMES_GID: ${HOST_GID:-20}
+      API_SERVER_ENABLED: ${WORK_HERMES_API_SERVER_ENABLED:-true}
+      API_SERVER_HOST: 0.0.0.0
+      API_SERVER_KEY: ${WORK_HERMES_API_SERVER_KEY:-}
+      API_SERVER_CORS_ORIGINS: ${WORK_HERMES_API_SERVER_CORS_ORIGINS:-http://127.0.0.1:9120,http://localhost:9120}
+      HERMES_DASHBOARD: ${WORK_HERMES_DASHBOARD:-0}
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-}
+    ports:
+      - 127.0.0.1:${WORK_HERMES_GATEWAY_PORT:-8643}:8642
+    volumes:
+      - {type: bind, source: "${WORK_HERMES_DATA:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/work-hermes}", target: /opt/data, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${WORK_HERMES_SSH_DIR:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/work-hermes/ssh}", target: /opt/data/ssh, read_only: true, bind: {create_host_path: false}}
+      - {type: bind, source: "${WORK_WORKSPACE_ROOT:-${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}/work-hermes/workspace}", target: /workspace, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${HERMES_NVME_ROOT:-/Volumes/NVMe}", target: /Volumes/NVMe, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${HERMES_GWT_ROOT:-/Volumes/NVMe/gwt}", target: /Users/marcelof/gwt, read_only: false, bind: {create_host_path: false}}
+      - {type: bind, source: "${AGENTS_REPO_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/agents/main}/profiles/work/john/SOUL.md", target: /opt/data/SOUL.md, read_only: true, bind: {create_host_path: false}}
+      - {type: bind, source: "${AGENTS_REPO_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/agents/main}/profiles/work/john/IDENTITY.md", target: /opt/data/IDENTITY.md, read_only: true, bind: {create_host_path: false}}
+      - {type: bind, source: "${AGENTS_REPO_ROOT:-/Volumes/NVMe/gwt/marcelofpfelix/agents/main}/profiles/work/john/AGENTS.md", target: /workspace/AGENTS.md, read_only: true, bind: {create_host_path: false}}
+
+networks:
+  agents:
+    driver: bridge

@@ -2,6 +2,19 @@
 - name: Updating {{ target | default('desktop') }}
   hosts: "{{ target | default('desktop') }}"
   pre_tasks:
+    - name: Check for Telnyx service catalogue
+      ansible.builtin.stat:
+        path: "{{ workfiles }}/laptop/vars/services.yml"
+      delegate_to: localhost
+      register: telnyx_service_catalog
+      tags:
+        - home_catalog
+    - name: Load Telnyx service catalogue
+      ansible.builtin.include_vars:
+        file: "{{ workfiles }}/laptop/vars/services.yml"
+      when: telnyx_service_catalog.stat.exists
+      tags:
+        - home_catalog
     - name: Load homelab secrets
       ansible.builtin.include_tasks: tasks/load-secrets.yml
   roles:

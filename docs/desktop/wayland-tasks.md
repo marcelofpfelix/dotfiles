@@ -72,7 +72,7 @@
 - [x] Safe color-format sample proves Quickshell rich text and plain output modes.
 - [x] `hypr-session status` and `hypr-session smoke` check required Wayland tools, Quickshell, board, notification owner, portals, clock sync, audio state, inactive dunst, legacy launcher masks, Hyprland/Quickshell config validity, generated keybinding help, Quickshell IPC menu targets, `qs-bar` menu commands, and optional `hyprpicker`.
 - [x] `desktop/tools/desktop-doctor` wraps the live Wayland smoke check with current profile, Quickshell status, board status, picker helper status, clipboard helper status, audio state, audioctl pause/resume/status regression checks, screenshot helper status, wallpaper helper status, screen-record status, notification-smoke readiness, and static browser wrapper flag checks.
-- [x] `desktop/tools/desktop-package-audit` verifies active Wayland helper package intent, including local `board`, is tracked in the sibling homelab install list, and `desktop/tools/desktop-doctor` runs it.
+- [x] `desktop/tools/desktop-package-audit` verifies active Wayland helper package intent, including local `board`, is tracked in the embedded `homelab/` install list, and `desktop/tools/desktop-doctor` runs it.
 - [x] `desktop/tools/qs-menu-smoke` opens, captures, closes, and checks Quickshell launcher/control/media/notification/calendar/wallpaper/screen/keybinding/clipboard/websearch/network/tray/power/power-confirm menu screenshots plus `contact.png` for visual regression checks; `desktop/tools/desktop-doctor` now fails when the latest smoke run predates live Quickshell QML.
 
 ## References

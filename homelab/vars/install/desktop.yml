@@ -51,19 +51,26 @@ ui:
 cli:
   - act
   - bat
+  - btop
   - chrony # native NTP time synchronization; home.yml keeps makestep 1 -1
   - docker-buildx
   - herdr
+  - htop
   - hunk
   - oath-toolkit
   - hermes-agent
+  - mise
+  - notesmd-cli # headless Brain CLI; Homebrew tap yakitrak/yakitrak
   - pi-coding-agent
   - sipexer
+  - sngrep
   - task
   - taskwarrior-tui
+  - tcpdump
   - timewarrior
   - tock
-  - wireshark
+  - try
+  - wireshark # provides the tshark CLI on macOS Homebrew
 
 archive_x11:
   - i3 # archived X11 wm
