@@ -28,6 +28,15 @@ M.terminal_classes = {
 }
 
 
+function M.quickshell_cmd(home)
+  return "env QT_QUICK_BACKEND=software " .. home .. "/.nix-profile/bin/quickshell --path " .. home .. "/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize"
+end
+
+function M.board_run_cmd(home)
+  local board_cmd = home .. "/bin/board run"
+  return "pgrep -fx " .. string.format("%q", board_cmd) .. " >/dev/null 2>&1 || " .. board_cmd
+end
+
 M.arrow_directions = {
   { key = "LEFT", direction = "left" },
   { key = "DOWN", direction = "down" },
@@ -84,6 +93,16 @@ function M.active_window_is_terminal()
   return M.terminal_classes[window.class:lower()] == true
 end
 
+function M.universal_clipboard_shortcut(default_mods, default_key, terminal_mods, terminal_key)
+  return function()
+    if M.active_window_is_terminal() then
+      M.send_shortcut_once(terminal_mods, terminal_key)()
+    else
+      M.send_shortcut_once(default_mods, default_key)()
+    end
+  end
+end
+
 function M.apply_default_monitors()
   local preferred = "preferred"
   hl.monitor({ output = "eDP-1", mode = preferred, position = "auto", scale = 1 })
@@ -96,7 +115,6 @@ function M.apply_common_popup_rules()
     { match = { title = "hypr-floating" }, size = { 800, 600 } },
     { match = { title = "hypr-popup-tmux" }, size = { 800, 600 } },
     { match = { class = "floating" }, size = { 800, 600 } },
-    { match = { title = "quickshell-launcher" }, size = { 720, 726 } },
     { match = { title = "quickshell-clipboard" }, size = { 720, 500 } },
     { match = { title = "quickshell-passmenu" }, size = { 720, 544 } },
     { match = { title = "quickshell-websearch" }, size = { 640, 112 } },

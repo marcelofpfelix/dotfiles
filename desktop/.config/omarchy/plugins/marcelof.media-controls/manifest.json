@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "marcelof.media-controls",
+  "name": "Media Controls",
+  "version": "1.0.0",
+  "author": "Marcelo Felix",
+  "description": "MPRIS and saved local music/noise controls",
+  "menu": {
+    "id": "trigger.media",
+    "icon": "󰕾",
+    "label": "Media",
+    "aliases": ["audio", "music"]
+  },
+  "kinds": ["overlay"],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  }
+}

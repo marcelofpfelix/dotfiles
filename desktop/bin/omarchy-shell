@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:$PATH"
+
+quiet=0
+if [[ ${1:-} == "-q" ]]; then
+  quiet=1
+  shift
+fi
+
+qbar_bin=${QBAR_BIN:-qbar}
+audioctl_bin=${AUDIOCTL_BIN:-audioctl}
+notificationctl_bin=${NOTIFICATIONCTL_BIN:-notificationctl}
+
+usage() {
+  printf "use: omarchy-shell [-q] <target> <method> [args...]\n" >&2
+}
+
+say_ok() { (( quiet )) || printf "ok\n"; }
+
+run_qbar() {
+  if (( quiet )); then
+    "$qbar_bin" -q "$@"
+  else
+    "$qbar_bin" "$@"
+  fi
+}
+
+run_audioctl() { "$audioctl_bin" "$@"; }
+run_notificationctl() { "$notificationctl_bin" "$@"; }
+
+panel_menu() {
+  case "$1" in
+    omarchy.menu|menu) printf "menu\n" ;;
+    omarchy.clock|clock) printf "clock\n" ;;
+    omarchy.audio|omarchy.media|audio|media) printf "audio\n" ;;
+    omarchy.network|network) printf "network\n" ;;
+    omarchy.power|power) printf "power\n" ;;
+    omarchy.clipboard|clipboard) printf "clipboard\n" ;;
+    omarchy.notifications|notifications) printf "notifications\n" ;;
+    omarchy.weather|weather) printf "calendar\n" ;;
+    omarchy.monitor|monitor) printf "screen\n" ;;
+    *) return 1 ;;
+  esac
+}
+
+run_panel_method() {
+  local menu=$1 method=$2
+  shift 2
+  case "$method" in
+    ping|refresh) say_ok ;;
+    open|show|summon) run_qbar shell summon "$menu" "{}" ;;
+    close|hide) run_qbar shell hide "$menu" ;;
+    toggle) run_qbar shell toggle "$menu" "{}" ;;
+    *) return 1 ;;
+  esac
+}
+
+self_test() {
+  local tmp log
+  tmp=$(mktemp -d)
+  log=$tmp/log
+  mkdir -p "$tmp/bin"
+  printf "#!/usr/bin/env bash\nprintf 'qbar %%s\n' \"\$*\" >>\"$log\"\nprintf 'ok\n'\n" >"$tmp/bin/qbar"
+  printf "#!/usr/bin/env bash\nprintf 'audioctl %%s\n' \"\$*\" >>\"$log\"\n" >"$tmp/bin/audioctl"
+  printf "#!/usr/bin/env bash\nprintf 'notificationctl %%s\n' \"\$*\" >>\"$log\"\n" >"$tmp/bin/notificationctl"
+  chmod +x "$tmp/bin/qbar" "$tmp/bin/audioctl" "$tmp/bin/notificationctl"
+  QBAR_BIN="$tmp/bin/qbar" "$0" -q omarchy.clock toggle >/dev/null
+  QBAR_BIN="$tmp/bin/qbar" "$0" -q shell listPlugins >/dev/null
+  QBAR_BIN="$tmp/bin/qbar" "$0" -q notifications toggleDnd >/dev/null
+  AUDIOCTL_BIN="$tmp/bin/audioctl" "$0" -q media playPause
+  NOTIFICATIONCTL_BIN="$tmp/bin/notificationctl" "$0" -q notifications clear
+  grep -Fq "qbar -q shell toggle clock {}" "$log"
+  grep -Fq "qbar -q shell listPlugins" "$log"
+  grep -Fq "qbar -q shell toggleDnd" "$log"
+  grep -Fq "audioctl play-pause-all" "$log"
+  grep -Fq "notificationctl clear all" "$log"
+  rm -rf "$tmp"
+  printf "omarchy-shell self-test: ok\n"
+}
+
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+  self-test|--self-test) self_test; exit 0 ;;
+esac
+
+if (( $# < 2 )); then
+  usage
+  exit 2
+fi
+
+target=$1
+method=$2
+shift 2
+
+case "$target:$method" in
+  shell:toggle|shell:summon)
+    if (( $# == 1 )); then
+      set -- "$1" "{}"
+    fi
+    run_qbar shell "$method" "$@"
+    ;;
+  shell:*)
+    run_qbar shell "$method" "$@"
+    ;;
+  notifications:ping)
+    say_ok
+    ;;
+  notifications:dndState|notifications:isDnd)
+    run_qbar shell dndState
+    ;;
+  notifications:toggleDnd)
+    run_qbar shell toggleDnd
+    ;;
+  notifications:setDnd)
+    run_qbar shell setDnd "${1:-}"
+    ;;
+  notifications:showHistory)
+    run_qbar notifications
+    ;;
+  notifications:clear)
+    run_notificationctl clear all
+    ;;
+  media:ping)
+    say_ok
+    ;;
+  media:status)
+    run_audioctl status
+    ;;
+  media:playPause)
+    run_audioctl play-pause-all
+    ;;
+  media:pause)
+    run_audioctl pause-all
+    ;;
+  media:play)
+    run_audioctl resume-all
+    ;;
+  lock:lock)
+    run_qbar lock
+    ;;
+  lock:status|lock:isLocked)
+    printf "false\n"
+    ;;
+  omarchy.indicators:refresh|omarchy.system-update:refresh|omarchy.system-update:clear)
+    say_ok
+    ;;
+  *)
+    if menu=$(panel_menu "$target"); then
+      run_panel_method "$menu" "$method" "$@" && exit 0
+    fi
+    (( quiet )) && exit 0
+    printf "omarchy-shell: unsupported local target %s %s\n" "$target" "$method" >&2
+    exit 2
+    ;;
+esac

@@ -63,6 +63,17 @@ Some aliases and scripts use these when present:
 - `gpaste-client` or `copyq`
 - `notify-send` or `terminal-notifier`
 
+## Herdr Plugins
+
+Install the pane-navigation plugin pinned to the reviewed revision:
+
+```sh
+herdr plugin install paulbkim-dev/vim-herdr-navigation \
+  --ref 820d48f5d9c9a7dece6a4bebfa3982ec30bbfbb7 --yes
+```
+
+The matching Neovim integration is tracked at `default/.config/nvim/after/plugin/herdr_nav.lua`.
+
 ## AI Heavy-User Stack
 
 Core binaries expected on the main workstation:

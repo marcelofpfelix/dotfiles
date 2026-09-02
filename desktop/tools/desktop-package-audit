@@ -19,14 +19,18 @@ required_packages=(
   swappy
   imagemagick-6.q16
   tesseract-ocr
+  cliamp
+  dua-cli
+  omawrite
   wf-recorder
   brightnessctl
   ddcutil
+  hyprsunset
   wl-clipboard
   wev
   libinput-tools
   espanso-wayland
-  cliphist
+  wlrctl
   playerctl
   pavucontrol
   mpv

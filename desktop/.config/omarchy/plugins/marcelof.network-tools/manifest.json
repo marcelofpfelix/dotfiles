@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "marcelof.network-tools",
+  "name": "Network Tools",
+  "version": "1.0.0",
+  "author": "Marcelo Felix",
+  "description": "On-demand network details, reconnect, and settings",
+  "menu": {
+    "id": "status.network-tools",
+    "icon": "󰛳",
+    "label": "Network details",
+    "description": "Public IP, reconnect, and settings",
+    "aliases": ["public ip", "reconnect"]
+  },
+  "kinds": ["overlay"],
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  }
+}

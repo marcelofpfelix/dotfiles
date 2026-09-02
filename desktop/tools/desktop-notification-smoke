@@ -20,7 +20,7 @@ actions_supported() {
 send_action_notification() {
   local log="${XDG_RUNTIME_DIR:-/tmp}/desktop-notification-smoke.action"
   notify-send -a desktop-notification-smoke -A open=Open -A done=Done -t 10000 "Desktop notification action smoke" "Open notifications; this card should show Open and Done buttons." >"$log" 2>/dev/null &
-  qs-bar notifications >/dev/null 2>&1 || true
+  qbar notifications >/dev/null 2>&1 || true
   printf "action-log %s\n" "$log"
 }
 
@@ -29,26 +29,116 @@ send_routing_notifications() {
   : >"$log"
   notify-send -a desktop-neutral-smoke "Desktop neutral smoke" "This should be stored in history without a popup toast." >>"$log" 2>&1 || true
   notify-send -a desktop-critical-smoke -u critical "Desktop critical smoke" "This should still show a popup toast." >>"$log" 2>&1 || true
-  qs-bar notifications >/dev/null 2>&1 || true
+  qbar notifications >/dev/null 2>&1 || true
   printf "routing-log %s\n" "$log"
 }
 
 send_sticky_notification() {
   local log="${XDG_RUNTIME_DIR:-/tmp}/desktop-notification-smoke.sticky"
   notify-send -a desktop-sticky-smoke -A done=Done -t 0 "Desktop sticky smoke" "This no-timeout card should remain until dismissed or Done is clicked." >"$log" 2>/dev/null &
-  qs-bar notifications >/dev/null 2>&1 || true
+  qbar notifications >/dev/null 2>&1 || true
   printf "sticky-log %s\n" "$log"
+}
+
+notification_count() {
+  qs -p "$HOME/.config/quickshell/marcelof/shell.qml" ipc call notifications count
+}
+
+count_clear() {
+  qbar notifications-clear >/dev/null
+  qbar notifications >/dev/null
+  sleep 0.5
+  [[ $(notification_count) == 0 ]]
+
+  qbar notifications-clear >/dev/null
+  notify-send -a desktop-notification-count-smoke -t 30000 "Count smoke one" "first fixture"
+  notify-send -a desktop-notification-count-smoke -t 30000 "Count smoke two" "second fixture"
+  sleep 0.5
+  [[ $(notification_count) == 2 ]]
+
+  qbar notifications-clear >/dev/null
+  sleep 0.5
+  [[ $(notification_count) == 0 ]]
+  printf "count-clear ok\n"
+}
+
+grouped_panel() {
+  qbar notifications-clear >/dev/null
+  notify-send -a Slack -i slack -t 30000 "Slack grouped one" "first fixture"
+  notify-send -a Slack -i slack -t 30000 "Slack grouped two" "second fixture"
+  notify-send -a "Google Chrome" -i google-chrome -t 30000 "Chrome grouped" "browser fixture"
+  sleep 0.5
+
+  qbar notifications >/dev/null
+  sleep 0.5
+  [[ $(qs -p "$HOME/.config/quickshell/marcelof/shell.qml" ipc call notifications panelCount) == 3 ]]
+
+  qs -p "$HOME/.config/quickshell/marcelof/shell.qml" ipc call notifications clearApp Slack >/dev/null
+  sleep 0.5
+  [[ $(qs -p "$HOME/.config/quickshell/marcelof/shell.qml" ipc call notifications panelCount) == 1 ]]
+
+  qbar notifications-clear >/dev/null
+  sleep 0.5
+  [[ $(qs -p "$HOME/.config/quickshell/marcelof/shell.qml" ipc call notifications panelCount) == 0 ]]
+  qbar notifications >/dev/null
+  printf "grouped-panel ok\n"
+}
+
+logic() {
+  local desktop_root logic_file
+  desktop_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+  logic_file="$desktop_root/.config/quickshell/marcelof/plugins/notifications/NotificationLogic.js"
+  node - "$logic_file" <<'JS'
+const logic = require(process.argv[2])
+const assert = require('assert')
+
+assert.strictEqual(logic.snapshotOf({ id: 1 }, 1).read, false)
+assert.strictEqual(logic.snapshotOf({ id: 2, hints: { "desktop-entry": "com.slack.Slack" } }, 1).desktopEntry, "com.slack.Slack")
+assert.strictEqual(logic.resolvedAppIcon("slack-icon", "com.slack.Slack", "Slack"), "slack-icon")
+assert.strictEqual(logic.resolvedAppIcon("", "com.slack.Slack", "Slack"), "com.slack.Slack")
+assert.strictEqual(logic.resolvedAppIcon("", "", "Slack"), "Slack")
+const history = [
+  { app: "Slack", summary: "Incident review", body: "Production alert" },
+  { app: "Chrome", summary: "Build complete", body: "Ready" }
+]
+assert.deepStrictEqual(logic.filterHistoryRows(history, "icrv", "").map(row => row.app), ["Slack"])
+assert.deepStrictEqual(logic.filterHistoryRows(history, "", "Chrome").map(row => row.app), ["Chrome"])
+assert.deepStrictEqual(logic.filterHistoryRows(history, "alert", "Chrome"), [])
+const readHistory = [
+  { app: "Slack", summary: "Unread", read: false },
+  { app: "Slack", summary: "Read", read: true }
+]
+assert.deepStrictEqual(logic.filterHistoryRows(readHistory, "", "", "unread").map(row => row.summary), ["Unread"])
+assert.deepStrictEqual(logic.filterHistoryRows(readHistory, "", "", "read").map(row => row.summary), ["Read"])
+assert.deepStrictEqual(logic.unreadApps([
+  { app: "Slack", appIcon: "", desktopEntry: "com.slack.Slack", read: false },
+  { app: "Slack", appIcon: "slack-new", read: false },
+  { app: "Chrome", read: true },
+  { app: "notify-send", read: false },
+  { app: "Notification", read: false }
+]), [{ app: "Slack", appIcon: "slack-new", desktopEntry: "com.slack.Slack", count: 2 }])
+assert.strictEqual(logic.historyEntry({ id: 1, read: true }, 1).read, true)
+assert.strictEqual(logic.parsePopupFiles(logic.serializePopup({ id: 9, timestamp: 9, read: true }, 1), 1)[0].read, true)
+assert.strictEqual(logic.parseSettings('{"retentionDays":14}').retentionDays, 14)
+assert.strictEqual(logic.normalizedRetentionDays(0, 30), 1)
+assert.strictEqual(logic.normalizedRetentionDays(9999, 30), 3650)
+const rows = ['old', 'new'].map((summary, index) =>
+  logic.serializePopup({ id: index + 1, timestamp: index + 1, summary }, 1)
+).join('\n')
+assert.deepStrictEqual(logic.historyRows(rows, [], 1, -1).map(row => row.summary), ['new', 'old'])
+console.log('notification-logic ok')
+JS
 }
 
 case "${1:-run}" in
   --status|status)
     command -v notify-send >/dev/null 2>&1
-    command -v qs-bar >/dev/null 2>&1
+    command -v qbar >/dev/null 2>&1
     owner
     actions_supported
     ;;
   -h|--help)
-    printf "use: desktop-notification-smoke [--status|actions|routing|sticky]\n"
+    printf "use: desktop-notification-smoke [--status|actions|routing|sticky|count-clear|grouped-panel|logic]\n"
     ;;
   run|actions)
     owner
@@ -65,8 +155,19 @@ case "${1:-run}" in
     actions_supported
     send_sticky_notification
     ;;
+  count-clear)
+    owner
+    count_clear
+    ;;
+  grouped-panel)
+    owner
+    grouped_panel
+    ;;
+  logic)
+    logic
+    ;;
   *)
-    printf "use: desktop-notification-smoke [--status|actions|routing|sticky]\n" >&2
+    printf "use: desktop-notification-smoke [--status|actions|routing|sticky|count-clear|grouped-panel|logic]\n" >&2
     exit 2
     ;;
 esac

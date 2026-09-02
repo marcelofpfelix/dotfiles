@@ -2,11 +2,13 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import QtQuick
+import qs.Ui as OmarchyUi
 
 FloatingWindow {
   id: floatingPopup
 
   readonly property QtObject theme: ShellTheme {}
+  property alias controller: panelController
 
   required property var shellRoot
   property bool panelOpen: false
@@ -15,14 +17,27 @@ FloatingWindow {
 
   property var closeAction: null
 
-  function open() { panelOpen = true }
-  function close() {
+  function setOpen(value) {
+    if (value) {
+      panelOpen = true
+      return
+    }
     if (closeAction)
       closeAction()
     else
       panelOpen = false
   }
-  function toggle() { panelOpen ? close() : open() }
+  function open() { panelController.show() }
+  function close() { panelController.hide() }
+  function show() { panelController.show() }
+  function hide() { panelController.hide() }
+  function toggle() { panelController.toggle() }
+
+  OmarchyUi.PanelController {
+    id: panelController
+    open: floatingPopup.panelOpen
+    transitionAction: value => floatingPopup.setOpen(value)
+  }
 
   screen: shellRoot.laptopScreen
   visible: panelOpen

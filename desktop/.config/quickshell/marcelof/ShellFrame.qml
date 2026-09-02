@@ -1,10 +1,11 @@
 import QtQuick
+import qs.Commons as OmarchyCommons
+import qs.Ui as OmarchyUi
 
-Rectangle {
+OmarchyUi.BorderSurface {
   readonly property QtObject theme: ShellTheme {}
 
   radius: theme.radius
   color: theme.panel
-  border.color: theme.border
-  border.width: 1
+  borderSpec: OmarchyCommons.Border.flat(theme.border, theme.dividerHeight)
 }

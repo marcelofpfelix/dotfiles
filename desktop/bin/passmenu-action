@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  printf 'use: passmenu-action [--self-test|copy|type-pass|type-user|type-name user-key backend entry]\n' >&2
+  printf 'use: passmenu-action [--self-test|menu|copy|type-pass|type-user|type-name user-key backend entry]\n' >&2
 }
 
 fail() {
@@ -47,6 +47,13 @@ run_action() {
   esac
 }
 
+run_menu() {
+  local mode=${1:-copy} user_key=${2:-username} backend=${3:-gopass} entry
+  entry=$("$backend" ls --flat 2>/dev/null | omarchy-menu-select "Passwords") || return 0
+  [[ -n "$entry" ]] || return 0
+  run_action "$mode" "$user_key" "$backend" "$entry"
+}
+
 self_test() {
   local tmp fake_gopass fake_type log
   tmp=$(mktemp -d)
@@ -54,6 +61,7 @@ self_test() {
   log="$tmp/calls.log"
   fake_gopass="$tmp/gopass"
   fake_type="$tmp/ydotool"
+  fake_picker="$tmp/omarchy-menu-select"
 
   cat >"$fake_gopass" <<'SH'
 #!/usr/bin/env bash
@@ -70,8 +78,13 @@ printf 'ydotool %q %q ' "${1:-}" "${2:-}" >>"$PASSMENU_ACTION_TEST_LOG"
 cat >>"$PASSMENU_ACTION_TEST_LOG"
 printf '\n' >>"$PASSMENU_ACTION_TEST_LOG"
 SH
-  chmod +x "$fake_gopass" "$fake_type"
+  cat >"$fake_picker" <<'SH'
+#!/usr/bin/env bash
+printf 'example/site\n'
+SH
+  chmod +x "$fake_gopass" "$fake_type" "$fake_picker"
 
+  PATH="$tmp:$PATH" PASSMENU_ACTION_TEST_LOG="$log" WAYLAND_DISPLAY=test run_menu copy username gopass
   PATH="$tmp:$PATH" PASSMENU_ACTION_TEST_LOG="$log" WAYLAND_DISPLAY=test run_action copy username gopass example/site
   PATH="$tmp:$PATH" PASSMENU_ACTION_TEST_LOG="$log" WAYLAND_DISPLAY=test run_action type-pass username gopass example/site
   PATH="$tmp:$PATH" PASSMENU_ACTION_TEST_LOG="$log" WAYLAND_DISPLAY=test run_action type-user username gopass example/site
@@ -89,6 +102,11 @@ SH
 case "${1:-}" in
   --self-test)
     self_test
+    ;;
+  menu)
+    shift
+    [[ "$#" -le 3 ]] || { usage; exit 2; }
+    run_menu "$@"
     ;;
   "")
     usage

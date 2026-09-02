@@ -31,7 +31,7 @@ open_quickshell() {
 	local qs_bin="${QS_BIN:-$HOME/.nix-profile/bin/qs}"
 	local quickshell_bin="${QUICKSHELL_BIN:-$HOME/.nix-profile/bin/quickshell}"
 	local config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
-	local log_file="${QS_BAR_LOG:-/tmp/qs-bar.log}"
+	local log_file="${QBAR_LOG:-/tmp/qbar.log}"
 
 	"$qs_bin" ipc --path "$config_path" --any-display call passmenu open "$mode" "$user_key" "$backend" >>"$log_file" 2>&1 && return 0
 	"$quickshell_bin" --path "$config_path" --no-duplicate --daemonize >>"$log_file" 2>&1 || true

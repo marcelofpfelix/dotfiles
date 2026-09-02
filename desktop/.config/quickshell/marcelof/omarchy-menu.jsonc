@@ -1,0 +1,49 @@
+{
+  // Local command catalog for the copied Omarchy Quattro menu engine.
+  // IDs, hierarchy, aliases, search, and actions use the upstream JSONC schema.
+
+  "apps": {"icon":"󰀻","label":"Apps","aliases":["app","applications"],"description":"Application launcher","provider":"apps"},
+  "trigger": {"icon":"󱓞","label":"Trigger"},
+  "status": {"icon":"󰄬","label":"Status"},
+  "setup": {"icon":"","label":"Setup","aliases":["settings"]},
+  "system": {"icon":"","label":"System","aliases":["power-menu"]},
+
+  "trigger.web": {"icon":"󰇧","label":"Web search","aliases":["web","search"],"action":"$HOME/bin/qbar websearch"},
+  "trigger.clipboard": {"icon":"󰅇","label":"Clipboard","aliases":["clip"],"action":"$HOME/bin/qbar clipboard"},
+  "trigger.emojis": {"icon":"󰞅","label":"Emojis","aliases":["emoji"],"action":"$HOME/bin/qbar emojis"},
+  "trigger.passwords": {"icon":"󰌾","label":"Passwords","aliases":["pass"],"action":"$HOME/bin/qbar passmenu"},
+  "trigger.capture": {"icon":"󰍹","label":"Capture","aliases":["screenshot","record"],"action":"$HOME/bin/qbar screen"},
+  "trigger.text-extraction": {"icon":"󰥬","label":"Text extraction","aliases":["ocr","copy text"],"action":"$HOME/bin/screenshot-wayland ocr"},
+  "trigger.wallpaper": {"icon":"󰸉","label":"Wallpaper","aliases":["background"],"action":"$HOME/bin/qbar wallpaper"},
+
+  "status.bluetooth": {"icon":"\uDB80\uDCAF","label":"Bluetooth","action":"$HOME/bin/qbar bluetooth"},
+  "status.audio": {"icon":"󰕾","label":"Audio mixer","aliases":["volume"],"action":"$HOME/bin/qbar media"},
+  "status.battery": {"icon":"󰁹","label":"Battery and power","aliases":["power profile"],"action":"$HOME/bin/qbar battery"},
+  "status.display": {"icon":"󰒓","label":"Displays","action":"$HOME/bin/qbar display"},
+  "status.network": {"icon":"󰖩","label":"Network","aliases":["wifi"],"action":"$HOME/bin/qbar network"},
+  "status.wifi-qr": {"icon":"󰐲","label":"Share Wi-Fi","aliases":["qr"],"action":"$HOME/bin/qbar wifi-qr"},
+  "status.calendar": {"icon":"󰥔","label":"Time and calendar","aliases":["time","clock"],"action":"$HOME/bin/qbar calendar"},
+  "status.work": {"icon":"󰻞","label":"Work inbox","action":"$HOME/bin/qbar work-inbox"},
+  "status.notifications": {"icon":"󰂚","label":"Notifications","aliases":["notices"],"action":"$HOME/bin/qbar notifications"},
+  "status.tray": {"icon":"󱊖","label":"Tray","action":"$HOME/bin/qbar tray"},
+  "status.session": {"icon":"","label":"Session menu","aliases":["logout","reboot","shutdown"],"action":"$HOME/bin/qbar power"},
+
+  "setup.shell": {"icon":"󰒓","label":"Shell settings","action":"$HOME/bin/qbar settings"},
+  "setup.keybindings": {"icon":"󰌌","label":"Keybindings","aliases":["keys","hotkeys"],"action":"$HOME/bin/qbar keybindings"},
+
+  "setup.plugin": {"icon":"󰐱","label":"Plugins","aliases":["plugin","plugins"]},
+  "setup.plugin.manage": {"icon":"󰐱","label":"Manage plugins","action":"$HOME/bin/omarchy-menu-plugin manage"},
+  "setup.plugin.enable": {"icon":"󰄬","label":"Enable plugin","action":"$HOME/bin/omarchy-menu-plugin enable"},
+  "setup.plugin.disable": {"icon":"󰅖","label":"Disable plugin","action":"$HOME/bin/omarchy-menu-plugin disable"},
+
+
+  "system.lock": {"icon":"","label":"Lock","action":"$HOME/bin/qbar session-action lock"},
+  "system.suspend": {"icon":"󰒲","label":"Suspend","action":"$HOME/bin/qbar session-action suspend"},
+  "system.hibernate": {"icon":"󰤁","label":"Hibernate","when":"busctl --system call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager CanHibernate | grep -Eq 'yes|challenge'","action":"$HOME/bin/qbar session-action hibernate"},
+  "system.logout": {"icon":"󰍃","label":"Logout","action":"$HOME/bin/qbar session-action logout"},
+  "system.reboot": {"icon":"󰜉","label":"Reboot","action":"$HOME/bin/qbar session-action reboot"},
+  "system.shutdown": {"icon":"󰐥","label":"Shutdown","action":"$HOME/bin/qbar session-action poweroff"},
+  "system.exit": {"icon":"󰍃","label":"Exit Hyprland","action":"$HOME/bin/qbar session-action exit"},
+  "system.stay-awake": {"icon":"󰅶","label":"Stay awake","aliases":["inhibit"],"action":"$HOME/bin/qbar inhibit"},
+  "system.notifications": {"icon":"󰂛","label":"Do not disturb","aliases":["dnd"],"action":"$HOME/bin/qbar dnd"}
+}

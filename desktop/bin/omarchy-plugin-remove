@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+plugins_dir=${OMARCHY_PLUGINS_DIR:-$HOME/.config/omarchy/plugins}
+assume_yes=0
+
+usage() { printf 'use: omarchy-plugin-remove [--yes] <id>\n' >&2; }
+fail() { printf 'omarchy-plugin-remove: %s\n' "$*" >&2; exit 1; }
+
+while (( $# > 0 )); do
+  case "$1" in
+    --yes|-y) assume_yes=1 ;;
+    -h|--help) usage; exit 0 ;;
+    -*) fail "unknown option: $1" ;;
+    *) [[ -z ${id:-} ]] || fail "unexpected argument: $1"; id=$1 ;;
+  esac
+  shift
+done
+
+[[ ${id:-} =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ && $id != *..* ]] || fail "invalid plugin id"
+target=$plugins_dir/$id
+[[ -d $target && ! -L $target ]] || fail "plugin '$id' is not installed"
+
+if (( ! assume_yes )); then
+  [[ -t 0 && -t 1 ]] || fail "refusing to continue without confirmation; pass --yes"
+  printf "Archive plugin '%s'? [y/N] " "$id" >&2
+  read -r answer
+  [[ $answer =~ ^[Yy]([Ee][Ss])?$ ]] || fail "aborted"
+fi
+
+omarchy-shell shell setPluginEnabled "$id" false >/dev/null 2>&1 || true
+backup=$plugins_dir/.${id}.bak.$(date -u +%Y%m%d%H%M%S)
+mv -- "$target" "$backup"
+omarchy-shell shell rescanPlugins >/dev/null
+printf 'Archived %s at %s\n' "$id" "$backup"

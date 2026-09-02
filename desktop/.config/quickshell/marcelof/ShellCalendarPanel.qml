@@ -12,6 +12,7 @@ ShellPopup {
   required property var shellConfig
   required property var clock
   required property var agendaRefresh
+  required property var reminderRefresh
   rightOffset: 72
 
   function calendarDayAt(index) {
@@ -171,6 +172,37 @@ ShellPopup {
         wrapMode: Text.Wrap
         text: calendarPanel.shellRoot.agendaPanelText.length > 0 ? calendarPanel.shellRoot.agendaPanelText : "Agenda
   loading..."
+      }
+
+      Rectangle { Layout.fillWidth: true; height: 1; color: theme.surfaceHigh }
+
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: theme.spacingLg
+        ShellText { Layout.fillWidth: true; role: "heading"; text: "Reminders" }
+        ShellActionButton { icon: "󰑓"; label: ""; minWidth: 40; tooltip: "Refresh reminders"; tooltipState: calendarPanel.shellRoot; onTriggered: calendarPanel.reminderRefresh.running = true }
+        ShellActionButton {
+          icon: "󰃢"
+          label: ""
+          minWidth: 40
+          tooltip: "Clear reminders"
+          tooltipState: calendarPanel.shellRoot
+          onTriggered: {
+            calendarPanel.shellRoot.reminderPanelText = "No reminders"
+            Quickshell.execDetached(calendarPanel.shellConfig.reminderClearAll())
+          }
+        }
+      }
+
+      Text {
+        Layout.fillWidth: true
+        color: theme.textSoft
+        font.family: theme.fontFamily
+        font.pixelSize: theme.fontMd
+        maximumLineCount: 3
+        elide: Text.ElideRight
+        wrapMode: Text.Wrap
+        text: calendarPanel.shellRoot.reminderPanelText.length > 0 ? calendarPanel.shellRoot.reminderPanelText : "No reminders"
       }
 
       Rectangle { Layout.fillWidth: true; height: 1; color: theme.surfaceHigh }

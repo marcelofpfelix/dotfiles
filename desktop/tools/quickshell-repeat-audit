@@ -11,6 +11,26 @@ abort "missing qml dir: #{qml_dir}" unless Dir.exist?(qml_dir)
 
 ALLOWLIST = {
   "QML string literals" => Set[
+    '"apps"',
+    '"bar"',
+    '"calendar"',
+    '"clipboard"',
+    '"controls"',
+    '"dashboard"',
+    '"file://"',
+    '"function"',
+    '"gopass"',
+    '"keys"',
+    '"launcher"',
+    '"media"',
+    '"menu"',
+    '"network"',
+    '"notifications"',
+    '"passmenu"',
+    '"power"',
+    '"screen"',
+    '"session"',
+    '"settings"',
     '"Lisbon"',
     '"Notification"',
     '"Palmela, Portugal"',
@@ -28,6 +48,7 @@ ALLOWLIST = {
   ],
   "Hyprland Lua string literals" => Set[
     '" + SHIFT"',
+    '"controls"',
   ],
 }.freeze
 

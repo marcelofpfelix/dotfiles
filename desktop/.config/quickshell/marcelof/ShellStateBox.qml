@@ -1,7 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
+import qs.Commons as OmarchyCommons
+import qs.Ui as OmarchyUi
 
-Rectangle {
+OmarchyUi.BorderSurface {
   id: stateBox
 
   readonly property QtObject theme: ShellTheme {}
@@ -14,8 +16,7 @@ Rectangle {
   implicitHeight: minHeight
   radius: theme.radius
   color: theme.surface
-  border.color: theme.surfaceHigh
-  border.width: 1
+  borderSpec: OmarchyCommons.Border.flat(theme.surfaceHigh, theme.dividerHeight)
 
   ShellText {
     anchors.centerIn: parent

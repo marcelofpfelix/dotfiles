@@ -2,14 +2,19 @@
 
 # Gopass clipboard copy helper.
 # Receives the entry name as $1 and the secret on stdin.
-# Clipboard history is intentionally left alone while debugging Wayland paste.
+# Mark this copy so the shell clipboard watcher does not persist the secret.
 
 BACKEND="${CLIP_BACKEND:-wl}"
 [ "$BACKEND" = gpaste ] && BACKEND=wl
 
 case "$BACKEND" in
     wl)
-        wl-copy --type text/plain
+        SENSITIVE_FLAG="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gopass-clipboard-sensitive"
+        : > "$SENSITIVE_FLAG"
+        if ! wl-copy --type text/plain; then
+            rm -f "$SENSITIVE_FLAG"
+            exit 1
+        fi
         ;;
     gpaste)
         echo "gopass-clip-copy: gpaste backend disabled because it breaks Wayland clipboard ownership" >&2

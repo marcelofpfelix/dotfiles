@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+plugins_dir="${OMARCHY_PLUGINS_DIR:-$HOME/.config/omarchy/plugins}"
+assume_yes=0
+enable_after=0
+
+usage() {
+  printf "use: omarchy-plugin-add [--yes] [--enable] <git-url|plugin-dir>\n" >&2
+}
+
+fail() {
+  printf "omarchy-plugin-add: %s\n" "$*" >&2
+  exit 1
+}
+
+interactive() { [[ -t 0 && -t 1 ]]; }
+
+confirm() {
+  (( assume_yes )) && return 0
+  interactive || fail "refusing to continue without confirmation; pass --yes"
+  printf "%s [y/N] " "$1" >&2
+  read -r answer
+  [[ $answer == y || $answer == Y || $answer == yes || $answer == YES ]]
+}
+
+copy_source() {
+  local source=$1 stage=$2
+  if [ -d "$source" ]; then
+    cp -a "$source/." "$stage/"
+  else
+    git clone --depth=1 -- "$source" "$stage"
+  fi
+}
+
+self_test() {
+  local tmp plugin out
+  tmp=$(mktemp -d)
+  plugin="$tmp/plugin"
+  mkdir -p "$plugin"
+  printf "import QtQuick\nItem {}\n" >"$plugin/Menu.qml"
+  printf "%s\n" "{\"schemaVersion\":1,\"id\":\"local.add-test\",\"name\":\"Add Test\",\"version\":\"1.0.0\",\"kinds\":[\"menu\"],\"entryPoints\":{\"menu\":\"Menu.qml\"}}" >"$plugin/manifest.json"
+  out=$(HOME="$tmp/home" OMARCHY_PLUGINS_DIR="$tmp/home/.config/omarchy/plugins" "$0" --yes "$plugin" 2>/dev/null)
+  grep -Fq "Added local.add-test" <<<"$out"
+  [ -f "$tmp/home/.config/omarchy/plugins/local.add-test/manifest.json" ]
+  rm -rf "$tmp"
+  printf "omarchy-plugin-add self-test: ok\n"
+}
+
+source_arg=""
+while (( $# > 0 )); do
+  case "$1" in
+    --yes|-y) assume_yes=1; shift ;;
+    --enable) enable_after=1; shift ;;
+    self-test|--self-test) self_test; exit 0 ;;
+    -h|--help) usage; exit 0 ;;
+    -*) fail "unknown option: $1" ;;
+    *) [ -z "$source_arg" ] || fail "unexpected argument: $1"; source_arg=$1; shift ;;
+  esac
+done
+
+[ -n "$source_arg" ] || { usage; exit 2; }
+
+printf "Plugins are unsandboxed QML. This command will %s the reviewed plugin.\n" \
+  "$([[ $enable_after -eq 1 ]] && printf 'stage and enable' || printf 'stage without enabling')" >&2
+confirm "Stage this plugin source?"
+
+mkdir -p "$plugins_dir"
+stage="$plugins_dir/.add.tmp.$$"
+rm -rf "$stage"
+mkdir -p "$stage"
+trap 'rm -rf "$stage"' EXIT
+
+copy_source "$source_arg" "$stage"
+omarchy-plugin-validate "$stage"
+id=$(jq -r ".id" "$stage/manifest.json")
+target="$plugins_dir/$id"
+
+[ ! -e "$target" ] && [ ! -L "$target" ] || fail "plugin '$id' is already staged at $target"
+mv "$stage" "$target"
+trap - EXIT
+
+printf "Added %s into %s\n" "$id" "$target"
+if (( enable_after )); then
+  omarchy-shell shell rescanPlugins >/dev/null
+  found=0
+  for _ in {1..20}; do
+    plugins=$(omarchy-plugin-list --json 2>/dev/null || true)
+    if jq -e --arg id "$id" 'any(.[]; .id == $id)' <<<"$plugins" >/dev/null 2>&1; then
+      found=1
+      break
+    fi
+    sleep 0.1
+  done
+  (( found )) || fail "plugin '$id' was staged but the shell did not discover it"
+  omarchy-plugin-enable "$id"
+fi

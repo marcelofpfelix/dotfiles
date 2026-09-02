@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "local.overlay-smoke",
+  "name": "Overlay Smoke",
+  "version": "1.0.0",
+  "kinds": ["overlay"],
+  "entryPoints": { "overlay": "Overlay.qml" }
+}

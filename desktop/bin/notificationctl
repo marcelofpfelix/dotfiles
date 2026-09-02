@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+history_file="${NOTIFICATIONCTL_HISTORY:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/marcelof/notifications.jsonl}"
+
+usage() {
+  printf 'use: notificationctl [list|open ID|clear ID|clear APP|clear all|tui|self-test]\n' >&2
+}
+
+need_jq() {
+  command -v jq >/dev/null 2>&1 || {
+    printf 'notificationctl: missing jq\n' >&2
+    exit 1
+  }
+}
+
+ensure_file() {
+  mkdir -p "$(dirname "$history_file")"
+  touch "$history_file"
+}
+
+list_rows() {
+  need_jq
+  [ -s "$history_file" ] || return 0
+  jq -R -r -s '
+    split("\n")
+    | map(select(length > 0) | fromjson?)
+    | to_entries[]
+    | [
+        (.key + 1),
+        (.value.time // ""),
+        (.value.app // "Notification"),
+        (.value.summary // .value.text // ""),
+        (.value.body // "")
+      ]
+    | @tsv
+  ' "$history_file"
+}
+
+row_json() {
+  need_jq
+  local id=$1
+  [[ "$id" =~ ^[0-9]+$ ]] || return 1
+  jq -Rrs --argjson id "$id" '
+    split("\n")
+    | map(select(length > 0) | fromjson?)
+    | .[$id - 1] // empty
+  ' "$history_file"
+}
+
+open_row() {
+  local id=$1 row desktop app
+  row=$(row_json "$id") || {
+    printf 'notificationctl: invalid id: %s\n' "$id" >&2
+    exit 2
+  }
+  [ -n "$row" ] || {
+    printf 'notificationctl: no notification: %s\n' "$id" >&2
+    exit 1
+  }
+  desktop=$(jq -r '.desktopEntry // ""' <<<"$row")
+  app=$(jq -r '.app // ""' <<<"$row")
+  notification-focus-app "$desktop" "$app"
+}
+
+clear_rows() {
+  need_jq
+  ensure_file
+  local target=${1:-}
+  local tmp
+  [ -n "$target" ] || { usage; exit 2; }
+  tmp="$history_file.$$"
+  case "$target" in
+    all)
+      : >"$history_file"
+      ;;
+    ''|*[!0-9]*)
+      jq -R -r -s --arg app "$target" '
+        split("\n")
+        | map(select(length > 0) | fromjson?)
+        | map(select((.app // "") != $app))
+        | .[]
+        | @json
+      ' "$history_file" >"$tmp"
+      mv "$tmp" "$history_file"
+      ;;
+    *)
+      jq -R -r -s --argjson id "$target" '
+        split("\n")
+        | map(select(length > 0))
+        | del(.[$id - 1])
+        | .[]
+      ' "$history_file" >"$tmp"
+      mv "$tmp" "$history_file"
+      ;;
+  esac
+}
+
+tui() {
+  if ! command -v fzf >/dev/null 2>&1; then
+    list_rows
+    return 0
+  fi
+  local picked id
+  picked=$(list_rows | fzf --delimiter=$'\t' --with-nth=2.. --prompt='notifications> ') || return 1
+  id=${picked%%$'\t'*}
+  [ -n "$id" ] && open_row "$id"
+}
+
+self_test() {
+  local tmp fake_focus log
+  tmp=$(mktemp -d)
+  trap "rm -rf '$tmp'" EXIT
+  log="$tmp/focus.log"
+  history_file="$tmp/notifications.jsonl"
+  fake_focus="$tmp/notification-focus-app"
+  cat >"$history_file" <<'JSONL'
+{"app":"Slack","summary":"Review","body":"Check PR","desktopEntry":"slack","time":"10:00","timestamp":2}
+{"app":"Chrome","summary":"Meet","body":"Call","desktopEntry":"google-chrome","time":"09:00","timestamp":1}
+JSONL
+  cat >"$fake_focus" <<'SH'
+#!/usr/bin/env bash
+printf '%s\t%s\n' "${1:-}" "${2:-}" >>"$NOTIFICATIONCTL_TEST_LOG"
+SH
+  chmod +x "$fake_focus"
+
+  NOTIFICATIONCTL_TEST_LOG="$log" PATH="$tmp:$PATH" list_rows | grep -q $'1\t10:00\tSlack\tReview\tCheck PR'
+  NOTIFICATIONCTL_TEST_LOG="$log" PATH="$tmp:$PATH" open_row 2
+  grep -q $'google-chrome\tChrome' "$log"
+  clear_rows 1
+  list_rows | grep -q Chrome
+  ! list_rows | grep -q Slack
+  clear_rows all
+  [ ! -s "$history_file" ]
+  printf 'notificationctl self-test: ok\n'
+}
+
+case "${1:-list}" in
+  list) list_rows ;;
+  open) shift; [ "$#" -eq 1 ] || { usage; exit 2; }; open_row "$1" ;;
+  clear) shift; [ "$#" -eq 1 ] || { usage; exit 2; }; clear_rows "$1" ;;
+  tui) tui ;;
+  self-test|--self-test) self_test ;;
+  *) usage; exit 2 ;;
+esac

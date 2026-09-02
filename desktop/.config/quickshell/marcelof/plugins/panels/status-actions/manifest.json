@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "marcelof.status-actions",
+  "name": "Local status actions",
+  "version": "1.0.0",
+  "author": "Marcelo Felix",
+  "description": "Clock, notifications, privacy, and audioctl bar actions",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": {
+    "displayName": "Local status action",
+    "category": "Status",
+    "allowMultiple": true,
+    "schema": [{
+      "key": "kind",
+      "type": "select",
+      "label": "Action",
+      "options": [
+        { "value": "clock", "label": "Clock" },
+        { "value": "notifications", "label": "Notifications" },
+        { "value": "privacy", "label": "Privacy" },
+        { "value": "audioctl", "label": "Audioctl" }
+      ]
+    }]
+  }
+}

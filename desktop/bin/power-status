@@ -23,6 +23,34 @@ battery_status() {
     '
 }
 
+battery_shell() {
+    local path info native sysfs
+    path=$(battery_path || true)
+    [ -n "$path" ] || return 0
+    info=$(upower -i "$path" 2>/dev/null)
+    printf '%s\n' "$info" | awk '
+        /^[[:space:]]*percentage:/ { print "percentage\t" int($2) "%" }
+        /^[[:space:]]*capacity:/ { print "health\t" int($2) "%" }
+        /^[[:space:]]*energy-full:/ { printf "size\t%dWh\n", $2 }
+        /^[[:space:]]*energy-rate:/ { printf "rate\t%.1fW\n", $2 }
+        /^[[:space:]]*time to (empty|full):/ { print "time\t" $4 " " $5 }
+    '
+    native=$(printf '%s\n' "$info" | awk '/^[[:space:]]*native-path:/ { print $2; exit }')
+    sysfs="/sys/class/power_supply/$native"
+    [ -r "$sysfs/cycle_count" ] && printf 'cycles\t%s\n' "$(<"$sysfs/cycle_count")"
+    [ -r "$sysfs/charge_control_end_threshold" ] && printf 'threshold\t%s%%\n' "$(<"$sysfs/charge_control_end_threshold")"
+}
+
+profiles() {
+    powerprofilesctl list 2>/dev/null | awk '
+        /^[[:space:]]*[* ]?[[:space:]]*[[:alnum:]-]+:$/ {
+            active = ($1 == "*") ? 1 : 0
+            gsub(/^[*[:space:]]+|:$/, "")
+            print $0 "\t" active
+        }
+    '
+}
+
 case "${1:-status}" in
     status)
         battery=$(battery_status || true)
@@ -39,8 +67,14 @@ case "${1:-status}" in
             *) printf 'use: power-status set-profile [performance|balanced|power-saver]\n' >&2; exit 2 ;;
         esac
         ;;
+    shell)
+        battery_shell
+        ;;
+    profiles)
+        profiles
+        ;;
     *)
-        printf 'use: power-status [status|set-profile]\n' >&2
+        printf 'use: power-status [status|shell|profiles|set-profile]\n' >&2
         exit 2
         ;;
 esac

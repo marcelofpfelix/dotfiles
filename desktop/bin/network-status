@@ -9,7 +9,7 @@ primary_connection() {
     nmcli -t -f DEVICE,TYPE,STATE,CONNECTION dev status 2>/dev/null | awk -F: '
         $3 ~ /^connected/ && ($2 == "wifi" || $2 == "ethernet") {
             type = $2 == "wifi" ? "Wi-Fi" : "Ethernet"
-            name = ($4 != "" && $4 !~ "^ERR_") ? $4 : "connected"
+            name = $4 != "" ? $4 : "connected"
             print type ": " name
             found = 1
             exit
@@ -39,8 +39,51 @@ wifi_icon() {
     fi
 }
 
+wifi_channel() {
+    nmcli -t -f ACTIVE,CHAN dev wifi 2>/dev/null | awk -F: '$1 == "yes" { print $2; found = 1; exit } END { if (!found) print "" }'
+}
+
+wifi_band() {
+    local channel=${1:-}
+    [ -n "$channel" ] || return 0
+    if [ "$channel" -le 14 ] 2>/dev/null; then
+        printf '2.4GHz ch%s\n' "$channel"
+    elif [ "$channel" -ge 36 ] 2>/dev/null; then
+        printf '5/6GHz ch%s\n' "$channel"
+    else
+        printf 'ch%s\n' "$channel"
+    fi
+}
+
 local_ip() {
     ip -4 route get 1.1.1.1 2>/dev/null | awk '{ for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit } }'
+}
+
+dns_summary() {
+    if command -v resolvectl >/dev/null 2>&1; then
+        resolvectl dns 2>/dev/null | awk -F: 'NF > 1 { gsub(/^ +| +$/, "", $2); if ($2 != "") { print $2; exit } }'
+    else
+        awk '/^nameserver / { print $2 }' /etc/resolv.conf 2>/dev/null | paste -sd' ' -
+    fi
+}
+
+primary_device() {
+    nmcli -t -f DEVICE,TYPE,STATE dev status 2>/dev/null | awk -F: '$3 ~ /^connected/ && ($2 == "wifi" || $2 == "ethernet") { print $1; exit }'
+}
+
+parse_wifi_details() {
+    awk '
+        function value(line) { sub(/^[^:]*:[[:space:]]*/, "", line); return line }
+        $1 == "IN-USE:" { active = value($0) == "*"; next }
+        active && $1 == "SSID:" { print "ssid\t" value($0); next }
+        active && $1 == "SIGNAL:" { print "signal_percent\t" value($0); next }
+        active && $1 == "FREQ:" { print "freq\t" value($0); next }
+        active && $1 == "RATE:" { print "bitrate\t" value($0); exit }
+    '
+}
+
+wifi_details() {
+    nmcli --colors no -m multiline -f IN-USE,SSID,SIGNAL,FREQ,RATE dev wifi list ifname "$1" --rescan no 2>/dev/null | parse_wifi_details
 }
 
 public_ip() {
@@ -48,6 +91,35 @@ public_ip() {
     curl -fsS --max-time 2 https://api.ipify.org 2>/dev/null || true
 }
 
+
+verbose_status() {
+    local route_json iface gateway source prefix
+
+    route_json=$(ip -j route get 1.1.1.1 2>/dev/null) || return 0
+    iface=$(jq -r '.[0].dev // ""' <<<"$route_json")
+    gateway=$(jq -r '.[0].gateway // ""' <<<"$route_json")
+    source=$(jq -r '.[0].prefsrc // ""' <<<"$route_json")
+    [ -n "$iface" ] || return 0
+
+    prefix=$(ip -j addr show "$iface" 2>/dev/null | jq -r '.[0].addr_info[]? | select(.family == "inet") | .prefixlen // ""' | head -n 1)
+    printf 'iface\t%s\nip\t%s\nprefix\t%s\ngateway\t%s\n' "$iface" "$source" "$prefix" "$gateway"
+    [ ! -r "/sys/class/net/$iface/statistics/rx_bytes" ] || printf 'rx_bytes\t%s\n' "$(<"/sys/class/net/$iface/statistics/rx_bytes")"
+    [ ! -r "/sys/class/net/$iface/statistics/tx_bytes" ] || printf 'tx_bytes\t%s\n' "$(<"/sys/class/net/$iface/statistics/tx_bytes")"
+
+    if [ -d "/sys/class/net/$iface/wireless" ]; then
+        printf 'type\twifi\n'
+        wifi_details "$iface"
+    else
+        printf 'type\tethernet\n'
+        [ ! -r "/sys/class/net/$iface/speed" ] || printf 'speed\t%s\n' "$(<"/sys/class/net/$iface/speed")"
+        [ ! -r "/sys/class/net/$iface/duplex" ] || printf 'duplex\t%s\n' "$(<"/sys/class/net/$iface/duplex")"
+    fi
+
+    if command -v ping >/dev/null 2>&1; then
+        [ -z "$gateway" ] || printf 'router_ping_ms\t%s\n' "$(LC_ALL=C ping -n -c 1 -W 1 "$gateway" 2>/dev/null | awk -F'time[=<]' '/time[=<]/ { split($2, p, " "); print p[1]; exit }')"
+        printf 'internet_ping_ms\t%s\n' "$(LC_ALL=C ping -n -c 1 -W 1 1.1.1.1 2>/dev/null | awk -F'time[=<]' '/time[=<]/ { split($2, p, " "); print p[1]; exit }')"
+    fi
+}
 
 devices() {
     nmcli -t -f DEVICE,TYPE,STATE,CONNECTION dev status 2>/dev/null | awk -F: "
@@ -66,7 +138,7 @@ devices() {
             return type
         }
         function clean(value) {
-            return (value == \"\" || value ~ /^ERR_/) ? \"\" : value
+            return value == \"\" ? \"\" : value
         }
         {
             connection = clean(\$4)
@@ -76,6 +148,29 @@ devices() {
         }
     " || ip -brief addr
 }
+
+self_test() {
+    local details
+
+    [ "$(wifi_icon 80)" = "󰤨" ]
+    [ "$(wifi_icon 40)" = "󰤢" ]
+    [ "$(wifi_icon 10)" = "󰤯" ]
+    [ "$(wifi_band 6)" = "2.4GHz ch6" ]
+    [ "$(wifi_band 36)" = "5/6GHz ch36" ]
+    [ -z "$(NETWORK_STATUS_PUBLIC_IP=0 public_ip)" ]
+    details=$(parse_wifi_details <<'EOF'
+IN-USE: *
+SSID: work:lab
+SIGNAL: 68
+FREQ: 5180 MHz
+RATE: 270 Mbit/s
+EOF
+)
+    grep -qx $'ssid\twork:lab' <<<"$details"
+    grep -qx $'bitrate\t270 Mbit/s' <<<"$details"
+    printf 'network-status self-test: ok\n'
+}
+
 case "${1:-status}" in
     bar)
         signal=$(wifi_signal)
@@ -94,20 +189,35 @@ case "${1:-status}" in
             printf '%s • Wi-Fi %s\n' "$(primary_connection)" "$(wifi_state)"
         fi
         ;;
+    details-local)
+        NETWORK_STATUS_PUBLIC_IP=0 exec "$0" details
+        ;;
     details)
         signal=$(wifi_signal)
+        channel=$(wifi_channel)
+        band=$(wifi_band "$channel")
         printf '%s\n' "$(primary_connection)"
         printf 'Wi-Fi: %s' "$(wifi_state)"
         [ -n "$signal" ] && printf ' • %s %s%%' "$(wifi_icon "$signal")" "$signal"
+        [ -n "$band" ] && printf ' • %s' "$band"
         printf '\n'
         ip_addr=$(local_ip)
         if [ -n "$ip_addr" ]; then
             printf 'Local IP: %s\n' "$ip_addr"
         fi
+        dns=$(dns_summary || true)
+        if [ -n "$dns" ]; then
+            printf 'DNS: %s\n' "$dns"
+        fi
         pub_ip=$(public_ip)
         if [ -n "$pub_ip" ]; then
             printf 'Public IP: %s\n' "$pub_ip"
         fi
+        printf '\nDevices:\n'
+        devices
+        ;;
+    verbose)
+        verbose_status
         ;;
     devices)
         devices
@@ -119,8 +229,17 @@ case "${1:-status}" in
             nmcli radio wifi on
         fi
         ;;
+    reconnect)
+        device=$(primary_device)
+        [ -n "$device" ] || exit 0
+        nmcli dev disconnect "$device" >/dev/null 2>&1 || true
+        nmcli dev connect "$device"
+        ;;
+    self-test)
+        self_test
+        ;;
     *)
-        printf 'use: network-status [bar|status|details|devices|wifi-toggle]\n' >&2
+        printf 'use: network-status [bar|status|details|details-local|devices|verbose|wifi-toggle|reconnect|self-test]\n' >&2
         exit 2
         ;;
 esac

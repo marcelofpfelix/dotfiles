@@ -66,31 +66,31 @@ kill_pid_group() {
 }
 
 pause_audio() {
-    helper_running || [ -n "$(helper_stream_rows || true)" ] || return 1
+    local paused=0
+    helper_running || return 1
     save_current
-    stop_music_processes
-    stop_noise_processes
+    if noise_running; then stop_noise_processes; paused=1; fi
+    if music_running; then stop_music_processes; paused=1; fi
+    [ "$paused" -eq 1 ] || return 1
     touch "$paused_state"
     notify "Audio paused"
 }
 
 resume_audio() {
     rm -f "$paused_state"
-    restore_audio
+    restore_audio || return 1
     notify "Audio resumed"
 }
 
 cleanup_stale_helpers() {
-    local signal=${1:-TERM}
+    local signal=${1:-TERM} pid
     [ "${AUDIOCTL_SKIP_STALE_CLEANUP:-0}" = "1" ] && return 0
-    if [ "$signal" != KILL ]; then
-        pkill -CONT -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
-        pkill -CONT -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
-        pkill -CONT -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
-    fi
-    pkill "-$signal" -f 'anoisesrc=color=brown:amplitude=' 2>/dev/null || true
-    pkill "-$signal" -f 'pw-cat .*media.name=Brown-noise' 2>/dev/null || true
-    pkill "-$signal" -f 'pw-cat .*application.name=audioctl' 2>/dev/null || true
+    ps -eo pid=,comm=,args= | awk '$2 == "ffmpeg" && index($0, "anoisesrc=color=brown:amplitude=") { print $1 }
+        $2 == "pw-cat" && index($0, "media.name=Brown-noise") { print $1 }' | while read -r pid; do
+        [ -n "$pid" ] || continue
+        [ "$signal" = KILL ] || kill -CONT "$pid" 2>/dev/null || true
+        kill "-$signal" "$pid" 2>/dev/null || true
+    done
 }
 
 cleanup_stale_music() {
@@ -98,9 +98,7 @@ cleanup_stale_music() {
     target=""
     [ -s "$desired_music" ] && target=$(cat "$desired_music")
     [ -n "$target" ] || [ "$signal" = KILL ] || return 0
-    ps -eo pid=,args= | awk -v target="$target" '
-/mpv --no-video --force-window=no --loop-file=inf/ && (target == "" || index($0, target) > 0) { print $1 }
-' | while read -r pid; do
+    ps -eo pid=,comm=,args= | awk -v target="$target" '$2 == "mpv" && (target == "" || index($0, target) > 0) { print $1 }' | while read -r pid; do
         [ -n "$pid" ] || continue
         [ "$signal" = KILL ] || kill -CONT "$pid" 2>/dev/null || true
         kill "-$signal" "$pid" 2>/dev/null || true
@@ -323,8 +321,10 @@ PACTL_AUDIOCTL_SELF_TEST
 
     PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" pause
     sleep 0.2
-    ! pid_running "$self_test_noise_pid" || { printf 'noise was not stopped on pause\n' >&2; rc=1; }
-    ! pid_running "$self_test_music_pid" || { printf 'music was not stopped on pause\n' >&2; rc=1; }
+    ! pid_running "$self_test_noise_pid" || { printf 'noise process group was not stopped on pause\n' >&2; rc=1; }
+    [ ! -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise PID file survived pause\n' >&2; rc=1; }
+    ! pid_running "$self_test_music_pid" || { printf 'music process group was not stopped on pause\n' >&2; rc=1; }
+    [ ! -s "$self_test_tmp/audioctl/music.pid" ] || { printf 'music PID file survived pause\n' >&2; rc=1; }
     pid_running "$self_test_child_other" || { printf 'unmanaged process was stopped\n' >&2; rc=1; }
     [ -e "$self_test_tmp/audioctl/paused" ] || { printf 'paused marker was not written\n' >&2; rc=1; }
     [ -s "$self_test_tmp/audioctl/desired-noise" ] || { printf 'desired noise was not preserved\n' >&2; rc=1; }
@@ -332,8 +332,12 @@ PACTL_AUDIOCTL_SELF_TEST
 
     PATH="$self_test_fakebin:$PATH" XDG_STATE_HOME="$self_test_tmp" AUDIOCTL_NOTIFY=0 AUDIOCTL_SKIP_STALE_CLEANUP=1 "$0" resume
     sleep 0.2
-    [ -s "$self_test_tmp/audioctl/brown-noise.pid" ] || { printf 'noise was not restored\n' >&2; rc=1; }
-    [ -s "$self_test_tmp/audioctl/music.pid" ] || { printf 'music was not restored\n' >&2; rc=1; }
+    self_test_resumed_noise_pid=$(cat "$self_test_tmp/audioctl/brown-noise.pid")
+    [ "$self_test_resumed_noise_pid" != "$self_test_noise_pid" ] || { printf 'noise PID was reused on resume\n' >&2; rc=1; }
+    pid_running "$self_test_resumed_noise_pid" || { printf 'noise was not restarted on resume\n' >&2; rc=1; }
+    self_test_resumed_music_pid=$(cat "$self_test_tmp/audioctl/music.pid")
+    [ "$self_test_resumed_music_pid" != "$self_test_music_pid" ] || { printf 'music PID was reused on resume\n' >&2; rc=1; }
+    pid_running "$self_test_resumed_music_pid" || { printf 'music was not restarted on resume\n' >&2; rc=1; }
 
     self_test_noise_pid=$(cat "$self_test_tmp/audioctl/brown-noise.pid")
     self_test_music_pid=$(cat "$self_test_tmp/audioctl/music.pid")

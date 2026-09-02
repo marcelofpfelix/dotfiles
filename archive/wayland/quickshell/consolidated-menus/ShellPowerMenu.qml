@@ -1,0 +1,95 @@
+import Quickshell
+import Quickshell.Io
+import QtQuick
+import QtQuick.Layouts
+
+ShellPopup {
+  id: powerMenu
+
+  readonly property QtObject theme: ShellTheme {}
+  required property var shellRoot
+  required property var shellConfig
+  implicitWidth: 460
+
+  readonly property var sessionActionRows: shellConfig.sessionActionRows
+  readonly property var exitSessionAction: shellConfig.exitSessionAction
+  readonly property var logoutSessionAction: shellConfig.logoutSessionAction
+  property bool hibernateAvailable: false
+
+  function triggerSessionAction(action) {
+    powerMenu.shellRoot.requestSessionAction(action.action)
+  }
+
+  IpcHandler {
+    target: "session"
+    function confirmExit() { powerMenu.shellRoot.togglePowerMenu() }
+    function power() { powerMenu.shellRoot.togglePowerMenu() }
+    function request(action: string): string { return powerMenu.shellRoot.requestSessionAction(action) ? "ok" : "unknown" }
+    function confirmReboot() { powerMenu.shellRoot.openSessionConfirm("Reboot", "󰜉", powerMenu.shellConfig.reboot()) }
+    function hide() { powerMenu.hide() }
+  }
+
+  onPanelOpenChanged: if (panelOpen) hibernateCapability.running = true
+
+  Process {
+    id: hibernateCapability
+    command: powerMenu.shellConfig.hibernateCapability()
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: powerMenu.hibernateAvailable = /\"(yes|challenge)\"/.test(text)
+    }
+  }
+
+  ShellPanel {
+    anchors.fill: parent
+    margin: 16
+
+      ShellText { Layout.fillWidth: true; role: "title"; text: "Session" }
+      Text { Layout.fillWidth: true; color: theme.textSoft; wrapMode: Text.Wrap; font.family: theme.fontFamily; font.pixelSize: theme.fontMd; text: powerMenu.shellRoot.powerStatusText.length > 0 ? powerMenu.shellRoot.powerStatusText : "Power status --" }
+      ShellText { Layout.fillWidth: true; role: "section"; text: "Choose a session action" }
+
+      Repeater {
+        model: powerMenu.sessionActionRows
+
+        RowLayout {
+          required property var modelData
+
+          Layout.fillWidth: true
+          spacing: theme.spacingLg
+
+          Repeater {
+            model: parent.modelData
+
+            ShellActionButton {
+              required property var modelData
+
+              Layout.fillWidth: true
+              visible: modelData.action !== powerMenu.shellConfig.hibernateAction || powerMenu.hibernateAvailable
+              icon: modelData.icon
+              label: modelData.label
+              tooltip: modelData.tooltip
+              tooltipState: powerMenu.shellRoot
+              onTriggered: powerMenu.triggerSessionAction(modelData)
+            }
+          }
+        }
+      }
+
+      Text { Layout.fillWidth: true; visible: powerMenu.shellRoot.sessionConfirmLabel.length > 0; color: theme.warning; font.family: theme.fontFamily; font.pixelSize: theme.fontMd; text: "Confirm " + powerMenu.shellRoot.sessionConfirmLabel + "?" }
+
+      RowLayout {
+        Layout.fillWidth: true
+        visible: powerMenu.shellRoot.sessionConfirmLabel.length > 0
+        spacing: theme.spacingLg
+        ShellActionButton { Layout.fillWidth: true; icon: "󰅖"; label: "Cancel"; tooltip: "Cancel pending session action"; tooltipState: powerMenu.shellRoot; onTriggered: powerMenu.shellRoot.clearSessionConfirm() }
+        ShellActionButton { Layout.fillWidth: true; active: true; icon: powerMenu.shellRoot.sessionConfirmIcon; label: "Confirm"; tooltip: "Run " + powerMenu.shellRoot.sessionConfirmLabel; tooltipState: powerMenu.shellRoot; onTriggered: powerMenu.shellRoot.runSessionConfirm() }
+      }
+
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: theme.spacingLg
+        ShellActionButton { Layout.fillWidth: true; icon: powerMenu.logoutSessionAction.icon; label: powerMenu.logoutSessionAction.label; tooltip: powerMenu.logoutSessionAction.tooltip; tooltipState: powerMenu.shellRoot; onTriggered: powerMenu.triggerSessionAction(powerMenu.logoutSessionAction) }
+        ShellActionButton { Layout.fillWidth: true; icon: powerMenu.exitSessionAction.icon; label: powerMenu.exitSessionAction.label; tooltip: powerMenu.exitSessionAction.tooltip; tooltipState: powerMenu.shellRoot; onTriggered: powerMenu.triggerSessionAction(powerMenu.exitSessionAction) }
+      }
+  }
+}

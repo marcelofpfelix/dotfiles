@@ -44,7 +44,7 @@ fix_hint() {
   fi
 
   case "$1" in
-    hypr-session|hypr-keys|hypr-term|xdph|qs-bar|qs-menu-smoke|desktop-reload|desktop-notification-smoke|desktop-inhibit|desktop-accept|desktop-startup-report|audioctl|check-audio-streams|cliphist-menu|passmenu-action|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland|desktop-privacy-status|desktop-osd|external-brightness|media-now-playing|notification-focus-app|work-inbox-status|pomodoroctl|calendar-agenda-status|calendar-sync-status)
+    hypr-session|hypr-keys|hypr-term|xdph|qbar|omarchy-shell|omarchy-plugin-review|omarchy-plugin-add|qs-menu-smoke|desktop-reload|desktop-notification-smoke|desktop-inhibit|desktop-accept|desktop-startup-report|audioctl|check-audio-streams|cliphist-menu|passmenu-action|screenshot-wayland|wallpaper-wayland|screen-record-wayland|monitor|chrome-wayland|brave-wayland|desktop-package-audit|check-wayland-no-x11|board|script-picker|walker-websearch|slack-wayland|discord-wayland|obsidian-wayland|1password-wayland|desktop-privacy-status|desktop-osd|external-brightness|media-now-playing|notification-focus-app|notificationctl|reminderctl|work-inbox-status|pomodoroctl|calendar-agenda-status|calendar-sync-status)
       printf 'fix  %-22s home -y
 ' "$1"
       ;;
@@ -135,7 +135,7 @@ current_profile() {
 }
 
 check_wayland_wrapper_common() {
-  local wrapper=$1 path=$2 flag var
+  local wrapper=$1 path=$2 require_gpu=${3:-true} flag var
 
   for var in __EGL_VENDOR_LIBRARY_FILENAMES LD_LIBRARY_PATH LIBGL_DRIVERS_PATH LIBVA_DRIVERS_PATH GBM_BACKENDS_PATH VDPAU_DRIVER_PATH VK_ICD_FILENAMES VK_LAYER_PATH __GLX_VENDOR_LIBRARY_NAME QT_QUICK_BACKEND; do
     if grep -Fq -- "unset $var" "$path" 2>/dev/null; then
@@ -145,7 +145,7 @@ check_wayland_wrapper_common() {
     fi
   done
 
-  for flag in '--ozone-platform=wayland' 'WebRTCPipeWireCapturer'; do
+  for flag in '--ozone-platform=wayland'; do
     if grep -Fq -- "$flag" "$path" 2>/dev/null; then
       ok "$wrapper" "$flag"
     else
@@ -153,10 +153,21 @@ check_wayland_wrapper_common() {
     fi
   done
 
-  if grep -Eq -- '--use-gl=egl|--use-angle=opengl|--use-gl=angle|--in-process-gpu|--disable-gpu' "$path" 2>/dev/null; then
-    fail "$wrapper" "contains GL flags known to break WebGL here"
+  if [ "$require_gpu" = true ]; then
+    if grep -Fq -- 'WebRTCPipeWireCapturer' "$path" 2>/dev/null; then
+      ok "$wrapper" WebRTCPipeWireCapturer
+    else
+      fail "$wrapper" "missing WebRTCPipeWireCapturer"
+    fi
+    if grep -Eq -- '--use-gl=egl|--use-angle=opengl|--use-gl=angle|--in-process-gpu|--disable-gpu' "$path" 2>/dev/null; then
+      fail "$wrapper" "contains GL flags known to break WebGL here"
+    else
+      ok "$wrapper" "no broken GL override flags"
+    fi
+  elif grep -Fq -- '--disable-gpu' "$path" 2>/dev/null; then
+    ok "$wrapper" "GPU disabled for compatibility"
   else
-    ok "$wrapper" "no broken GL override flags"
+    fail "$wrapper" "missing --disable-gpu compatibility flag"
   fi
 }
 
@@ -188,7 +199,7 @@ check_browser_wrapper() {
 }
 
 check_electron_wrapper() {
-  local name=$1 wrapper=$2 app=$3 path app_path
+  local name=$1 wrapper=$2 app=$3 require_gpu=${4:-true} path app_path
   path=$(command -v "$wrapper" 2>/dev/null || true)
   if [ -z "$path" ]; then
     fail "$wrapper" missing
@@ -203,7 +214,7 @@ check_electron_wrapper() {
     warn "$name-bin" "missing $app"
   fi
 
-  check_wayland_wrapper_common "$wrapper" "$path"
+  check_wayland_wrapper_common "$wrapper" "$path" "$require_gpu"
 }
 
 check_user_service_active() {
@@ -328,7 +339,7 @@ check_qs_menu_smoke_latest() {
 }
 
 check_board_status() {
-  local config="${BOARD_CONFIG:-$HOME/.config/board/board.toml}"
+  local config="${BOARD_CONFIG:-$HOME/.config/board/board.toml}" watch_count
   if [ -r "$config" ]; then
     ok board-config "$config"
   else
@@ -336,16 +347,38 @@ check_board_status() {
     return
   fi
 
-  if board --config "$config" render quickshell quickshell-bar >/dev/null 2>&1; then
+  if board --config "$config" render --format quickshell --surface quickshell-bar >/dev/null 2>&1; then
     ok board-render quickshell-bar
   else
-    fail board-render "quickshell-bar failed" "board --config $config render quickshell quickshell-bar"
+    fail board-render "quickshell-bar failed" "board --config $config render --format quickshell --surface quickshell-bar"
   fi
 
-  if pgrep -fx "$HOME/bin/board --config $config run" >/dev/null 2>&1; then
+  if pgrep -fx "$HOME/bin/board run" >/dev/null 2>&1; then
     ok board-run scheduler
   else
-    fail board-run stopped "$HOME/bin/board --config $config run"
+    fail board-run stopped "$HOME/bin/board run"
+  fi
+
+  watch_count=$(pgrep -fc "^board --config $config render --watch --format quickshell --surface quickshell-bar$")
+  if [ "$watch_count" -eq 1 ]; then
+    ok board-watch "one plugin-owned stream"
+  else
+    fail board-watch "$watch_count streams"
+  fi
+
+  if [ -r "$HOME/.config/omarchy/plugins/marcelof.board-status/manifest.json" ] \
+      && [ -r "$HOME/.config/omarchy/plugins/marcelof.board-dashboard/manifest.json" ] \
+      && ! grep -Fq 'ShellPersonalDashboardPanel' "$HOME/.config/quickshell/marcelof/shell.qml"; then
+    ok board-plugins "status and dashboard own shell surfaces"
+  else
+    fail board-plugins "missing plugin or embedded dashboard remains" "home -y && qbar restart"
+  fi
+
+  if grep -Fq 'anchors.centerIn: parent' "$HOME/.config/omarchy/plugins/marcelof.board-status/BarWidget.qml" \
+      && grep -Fq 'textFormat: Text.RichText' "$HOME/.config/omarchy/plugins/marcelof.board-status/BarWidget.qml"; then
+    ok board-widget "centered rich text"
+  else
+    fail board-widget "alignment or rich text regressed"
   fi
 }
 
@@ -387,8 +420,70 @@ check_notification_smoke_status() {
   fi
 }
 
+check_shell_layout_contract() {
+  local root="$HOME/.config/quickshell/marcelof"
+  local menu missing=()
+
+  if grep -Fq 'localPluginWatcher' "$root/services/PluginRegistry.qml" \
+      && grep -Fq 'BarWidgetRegistry { id: barWidgetRegistry }' "$root/shell.qml"; then
+    ok plugin-foundation "full registry and shared widget registry"
+  else
+    fail plugin-foundation "reduced registry remains"
+  fi
+
+  if grep -Fq 'visible: status !== Loader.Ready || (item && item.visible)' "$root/ShellBar.qml" \
+      && grep -Fq 'spacing: barTheme.spacingSm' "$root/ShellBar.qml"; then
+    ok bar-plugin-spacing "hidden widgets collapse in compact group"
+  else
+    fail bar-plugin-spacing "dynamic widgets can reserve empty spacing"
+  fi
+
+  if grep -Fq 'barVisible: batteryPresent && !batteryFull' "$root/plugins/panels/power/Panel.qml" \
+      && grep -Fq 'visible: barVisible' "$root/plugins/panels/power/Panel.qml"; then
+    ok battery-full-hidden "fully charged battery collapses"
+  else
+    fail battery-full-hidden "full battery remains in bar"
+  fi
+
+  if grep -Fq 'root.signalStrength + "%"' "$root/plugins/panels/network/Panel.qml" \
+      && grep -Fq 'row.net.signal + "%"' "$root/plugins/panels/network/Panel.qml"; then
+    ok wifi-signal-percent "connected and scanned networks"
+  else
+    fail wifi-signal-percent "numeric signal strength hidden"
+  fi
+
+  if grep -Eq '^  "learn("|\.)' "$root/omarchy-menu.jsonc"; then
+    fail root-menu-learn "Learn category remains"
+  else
+    ok root-menu-learn absent
+  fi
+
+  if grep -Fq 'omarchy-menu-select" Keybindings' "$HOME/bin/qbar"; then
+    ok keybindings-menu "Omarchy selector"
+  else
+    fail keybindings-menu "custom panel route remains"
+  fi
+
+  while read -r menu; do
+    case "$menu" in
+      root-menu|power-confirm) continue ;;
+      launcher) grep -Fq '"provider":"apps"' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
+      controls) grep -Fq '"status":' "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
+      media-controls) jq -e '.menu.id == "trigger.media"' "$HOME/.config/omarchy/plugins/marcelof.media-controls/manifest.json" >/dev/null || missing+=("$menu") ;;
+      network-tools) jq -e '.menu.id == "status.network-tools"' "$HOME/.config/omarchy/plugins/marcelof.network-tools/manifest.json" >/dev/null || missing+=("$menu") ;;
+      personal-dashboard) jq -e '.menu.id == "status.dashboard"' "$HOME/.config/omarchy/plugins/marcelof.board-dashboard/manifest.json" >/dev/null || missing+=("$menu") ;;
+      *) grep -Fq "\$HOME/bin/qbar $menu" "$root/omarchy-menu.jsonc" || missing+=("$menu") ;;
+    esac
+  done < <(qbar list-menus)
+  if ((${#missing[@]} == 0)); then
+    ok root-menu-coverage "all public menus reachable"
+  else
+    fail root-menu-coverage "missing: ${missing[*]}"
+  fi
+}
+
 section "required commands"
-for cmd in hypr-session hypr-keys hypr-term qs-bar qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
+for cmd in hypr-session hypr-keys hypr-term qbar omarchy-shell omarchy-menu-select omarchy-menu-plugin omarchy-plugin-validate omarchy-plugin-review omarchy-plugin-list omarchy-plugin-add omarchy-plugin-enable omarchy-plugin-disable omarchy-plugin-remove qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app notificationctl reminderctl work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
   check_cmd "$cmd" yes
 done
 check_cmd walker yes
@@ -412,9 +507,10 @@ section "profile"
 current_profile
 
 section "quickshell"
-run_required qs-bar qs-bar status
+run_required qbar qbar status
 check_board_status
 check_qs_menu_smoke_latest
+check_shell_layout_contract
 
 section "audio"
 check_audio_status
@@ -467,6 +563,12 @@ run_required calendar-agenda-status-self-test calendar-agenda-status self-test
 run_required calendar-sync-status-self-test calendar-sync-status self-test
 run_required calendar-sync-status calendar-sync-status status
 
+section "omarchy compatibility"
+run_required omarchy-shell-self-test omarchy-shell self-test
+run_required omarchy-menu-plugin-self-test omarchy-menu-plugin self-test
+run_required omarchy-plugin-review-self-test omarchy-plugin-review self-test
+run_required omarchy-plugin-add-self-test omarchy-plugin-add self-test
+
 section "screen share"
 check_screen_share
 
@@ -476,6 +578,6 @@ check_browser_wrapper brave brave-wayland brave-browser-stable
 check_electron_wrapper slack slack-wayland slack
 check_electron_wrapper discord discord-wayland discord
 check_electron_wrapper obsidian obsidian-wayland obsidian
-check_electron_wrapper 1password 1password-wayland 1password
+check_electron_wrapper 1password 1password-wayland 1password false
 
 exit "$status"

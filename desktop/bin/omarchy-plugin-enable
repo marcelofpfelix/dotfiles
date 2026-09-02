@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+[[ ${1:-} == -h || ${1:-} == --help ]] && {
+  printf 'use: omarchy-plugin-enable <id>\n'
+  exit 0
+}
+id=${1:-}
+[[ -n $id ]] || { printf 'omarchy-plugin-enable: plugin id is required\n' >&2; exit 1; }
+[[ $# -eq 1 ]] || { printf 'omarchy-plugin-enable: unexpected arguments\n' >&2; exit 1; }
+
+result=$(omarchy-shell shell enablePlugin "$id" '{}')
+[[ $result == ok ]] || { printf "omarchy-plugin-enable: %s\n" "$result" >&2; exit 1; }
+sleep 0.5
+qbar restart
+printf 'Enabled %s\n' "$id"

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "${1:-}" in
+  -h|--help|"")
+    printf 'use: omarchy-plugin-review <plugin-dir>\n' >&2
+    [[ -n ${1:-} ]] && exit 0 || exit 2
+    ;;
+  self-test|--self-test)
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    mkdir -p "$tmp/good" "$tmp/bad"
+    printf 'import QtQuick\nItem {}\n' >"$tmp/good/Overlay.qml"
+    cp "$tmp/good/Overlay.qml" "$tmp/bad/Overlay.qml"
+    printf '%s\n' '{"schemaVersion":1,"id":"local.review-test","name":"Review Test","version":"1.0.0","kinds":["overlay"],"entryPoints":{"overlay":"Overlay.qml"}}' >"$tmp/good/manifest.json"
+    printf '%s\n' '{"schemaVersion":1,"id":"local.bad","name":"Bad","version":"1.0.0","kinds":["overlay"],"entryPoints":{"overlay":"../Overlay.qml"}}' >"$tmp/bad/manifest.json"
+    "$0" "$tmp/good" >/dev/null
+    ! "$0" "$tmp/bad" >/dev/null 2>&1
+    printf 'omarchy-plugin-review self-test: ok\n'
+    exit 0
+    ;;
+esac
+
+dir=$1
+[[ -d $dir ]] || dir=$(dirname -- "$dir")
+omarchy-plugin-validate "$dir"
+
+jq -r '
+  "ok   \(.id) \(.version) \(.name)",
+  "kinds \(.kinds | join(","))",
+  "entryPoints \(.entryPoints | to_entries | map(.key + "=" + .value) | join(","))"
+' "$dir/manifest.json"
+printf 'note plugins are unsandboxed QML; review code before enabling\n'

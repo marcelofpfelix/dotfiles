@@ -9,16 +9,17 @@ local function bin(name)
 end
 
 local terminal = bin("hypr-term")
-local launcher = bin("qs-bar") .. " launcher"
-local quickshell_cmd = "env QT_QUICK_BACKEND=software " .. home .. "/.nix-profile/bin/quickshell --path " .. home .. "/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize"
-local board_run_cmd = "pgrep -fx " .. string.format("%q", home .. "/bin/board --config " .. home .. "/.config/board/board.toml run") .. " >/dev/null 2>&1 || " .. home .. "/bin/board --config " .. home .. "/.config/board/board.toml run"
+local launcher = bin("qbar") .. " launcher"
+local root_menu = bin("qbar") .. " shell toggle omarchy.menu '{}'"
+local quickshell_cmd = common.quickshell_cmd(home)
+local board_run_cmd = common.board_run_cmd(home)
 
 local function sh(cmd)
   return hl.dsp.exec_cmd(cmd)
 end
 
 local function qs(action)
-  return sh(bin("qs-bar") .. " " .. action)
+  return sh(bin("qbar") .. " " .. action)
 end
 
 local function osd(action)
@@ -41,16 +42,6 @@ local function note(message)
   return sh("notify-send 'Hyprland omarchy profile' " .. string.format("%q", message))
 end
 
-
-local function universal_clipboard_shortcut(default_mods, default_key, terminal_mods, terminal_key)
-  return function()
-    if common.active_window_is_terminal() then
-      common.send_shortcut_once(terminal_mods, terminal_key)()
-    else
-      common.send_shortcut_once(default_mods, default_key)()
-    end
-  end
-end
 
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
@@ -132,7 +123,6 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("dex --autostart --environment Hyprland")
   hl.exec_cmd("gnome-keyring-daemon --start --components=secrets")
   hl.exec_cmd("command -v chrome-wayland-fix-apps >/dev/null 2>&1 && chrome-wayland-fix-apps")
-  hl.exec_cmd("command -v cliphist >/dev/null 2>&1 && command -v wl-paste >/dev/null 2>&1 && cliphist-menu watch")
 end)
 
 -- open terminal
@@ -141,11 +131,11 @@ hl.bind(mod .. " + U", sh(terminal .. " popup-tmux"))
 -- open tmux launcher
 hl.bind(mod .. " + ALT + RETURN", sh("tmx"))
 hl.bind(mod .. " + SHIFT + RETURN", sh("xdg-open about:blank"))
--- open app launcher
-hl.bind(mod .. " + SPACE", sh(launcher))
+-- open root menu
+hl.bind(mod .. " + SPACE", sh(root_menu))
 hl.bind(mod .. " + D", sh(launcher))
-hl.bind(mod .. " + C", universal_clipboard_shortcut("CTRL", "C", "CTRL", "Insert"))
-hl.bind(mod .. " + V", universal_clipboard_shortcut("CTRL", "V", "SHIFT", "Insert"))
+hl.bind(mod .. " + C", common.universal_clipboard_shortcut("CTRL", "C", "CTRL", "Insert"))
+hl.bind(mod .. " + V", common.universal_clipboard_shortcut("CTRL", "V", "SHIFT", "Insert"))
 hl.bind(mod .. " + X", common.send_shortcut_once("CTRL", "X"))
 -- open clipboard history
 hl.bind(mod .. " + SHIFT + Q", hl.dsp.window.close())
@@ -225,8 +215,18 @@ bind_app(mod .. " + SHIFT + D", terminal .. " lazydocker")
 bind_app(mod .. " + SHIFT + O", "obsidian")
 bind_app(mod .. " + SHIFT + W", "typora --enable-wayland-ime")
 hl.bind("XF86Display", sh("monitor"), { locked = true, repeating = true })
-hl.bind(mod .. " + CTRL + D", sh("monitor"))
 hl.bind(mod .. " + CTRL + A", qs("controls"))
+hl.bind(mod .. " + CTRL + B", qs("bluetooth"))
+hl.bind(mod .. " + CTRL + E", qs("emojis"))
+hl.bind(mod .. " + CTRL + C", qs("screen"))
+hl.bind(mod .. " + CTRL + D", sh("monitor"))
+hl.bind(mod .. " + CTRL + SPACE", qs("wallpaper"))
+hl.bind(mod .. " + CTRL + SHIFT + SPACE", qs("settings"))
+hl.bind(mod .. " + SHIFT + ALT + comma", qs("notifications"))
+hl.bind(mod .. " + CTRL + comma", qs("dnd"))
+hl.bind(mod .. " + CTRL + ALT + T", sh(bin("qbar") .. " notice time"))
+hl.bind(mod .. " + CTRL + ALT + B", sh(bin("qbar") .. " notice battery"))
+hl.bind(mod .. " + CTRL + ALT + W", sh(bin("qbar") .. " notice weather"))
 hl.bind(mod .. " + CTRL + V", function() end)
 hl.bind(mod .. " + CTRL + W", function() end)
 hl.bind(mod .. " + CTRL + P", qs("power"))
@@ -253,4 +253,5 @@ hl.bind("ALT + XF86MonBrightnessDown", osd("brightness-fine-down"), { locked = t
 hl.bind("SHIFT + XF86MonBrightnessUp", osd("brightness-max"), { locked = true, repeating = true })
 hl.bind("SHIFT + XF86MonBrightnessDown", osd("brightness-min"), { locked = true, repeating = true })
 hl.bind("PRINT", screenshot("edit"))
+hl.bind(mod .. " + CTRL + PRINT", screenshot("ocr"))
 hl.bind(mod .. " + PRINT", sh("command -v hyprpicker >/dev/null 2>&1 && hyprpicker -a || notify-send 'Hyprland omarchy profile' 'hyprpicker is not installed'"))

@@ -3,7 +3,6 @@ import Quickshell.Hyprland
 import Quickshell.Bluetooth
 import Quickshell.Io
 import Quickshell.Services.Pipewire
-import Quickshell.Services.Notifications
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
 import Quickshell.Wayland
@@ -11,317 +10,149 @@ import Quickshell.Widgets
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import qs.Commons
+import "plugins/menu" as OmarchyMenu
+import "plugins/bar" as OmarchyBar
+import "plugins/emojis" as EmojiPlugin
+import "plugins/image-picker" as ImagePickerPlugin
+import "plugins/panels/wifiqr" as WifiQrPlugin
+import "services" as OmarchyServices
 
 ShellRoot {
   id: root
 
+  readonly property var pluginHost: pluginHostObject
+  property var dynamicPluginEntries: []
+  property var dynamicBarWidgetEntries: []
+  property var pluginMenuItems: []
+  property string openDynamicPluginId: ""
+  property string pendingDynamicPluginId: ""
+  property string pendingDynamicPluginPayload: ""
+  property var dynamicPluginLoaders: ({})
   property string launcherSmokeHiddenId: ""
+  readonly property var appLibrary: appLibraryService
+  readonly property var notificationService: pluginServiceHost.serviceFor("omarchy.notifications")
+  readonly property var backgroundService: pluginServiceHost.serviceFor("omarchy.background")
+  readonly property var barConfig: pluginConfig.barConfig
+  function firstPartyServiceFor(id) { return pluginServiceHost.serviceFor(id) }
+  function summon(id, payloadJson) { return root.openShellMenu(id, payloadJson || "{}") }
+  function hide(id) { return root.hideShellMenu(id) }
+  function toggle(id, payloadJson) { return root.toggleShellMenu(id, payloadJson || "{}") }
+  readonly property alias bar: dynamicBar
   function menuSize(id) { return shellConfig.menuSize(id, shellSettings.denseUi) }
   function menuWidthFor(id) { return root.menuSize(id).width }
   function menuHeightFor(id) { return root.menuSize(id).height }
   function menuCompactHeightFor(id) { return root.menuSize(id).compactHeight }
 
+
   function toggleLauncher() {
-    launcher.panelOpen = !launcher.panelOpen
-    if (launcher.panelOpen) {
-      launcher.searchText = ""
-      menuDataService.refreshLauncherMru()
-      root.rebuildLauncher()
-      launcher.focusSearch()
+    if (rootMenu.opened && rootMenu.activeMenu === "apps") rootMenu.close()
+    else {
+      root.closeTransientPanels()
+      appLibraryService.refreshMru()
+      rootMenu.open('{"menu":"apps"}')
     }
   }
 
   function hideLauncher() {
-    launcher.panelOpen = false
+    if (rootMenu.opened && rootMenu.activeMenu === "apps") rootMenu.close()
   }
 
-  function shellQuote(value) {
-    return shellConfig.shellQuote(value)
-  }
 
-  function webSearchSiteUrl(site) {
-    for (let i = 0; i < root.webSearchSites.length; i++) {
-      if (root.webSearchSites[i].key === site)
-        return root.webSearchSites[i].url
+  function showOsd(icon, message, value, maxValue, progressText, duration) {
+    const payload = JSON.stringify({
+      icon: icon || "",
+      message: message || "",
+      value: value === undefined ? "" : value,
+      max: maxValue === undefined ? 100 : maxValue,
+      progressText: progressText || "",
+      duration: duration === undefined ? 1200 : duration
+    })
+    const loader = root.dynamicPluginLoaders["omarchy.osd"]
+    if (loader && loader.item) {
+      loader.item.open(payload)
+      return true
     }
-    return root.webSearchSites[0].url
+    return root.summonDynamicPlugin("omarchy.osd", payload)
   }
 
-  function openUrlCommand(url) {
-    return shellConfig.openUrl(url)
+  function showVolumeOsd() {
+    const audio = root.defaultSinkAudio()
+    if (!audio) return root.showOsd("volume-muted", "Audio unavailable")
+    return root.showOsd(audio.muted ? "volume-muted" : "volume", "", Math.round(audio.volume * 100))
   }
-
-  function openWebSearch(site) {
-    webSearchPanel.openSearch(site)
-  }
-
-  function toggleWebSearch(site) {
-    webSearchPanel.toggleSearch(site)
-  }
-
-  function showVolumeOsd() { overlays.showVolume(root.defaultSinkAudio()) }
 
   function showBrightnessOsd() {
+    root.brightnessOsdPending = true
     systemStatusService.refreshBrightness()
-    overlays.showBrightnessSoon()
   }
 
   function showKbdOsd() {
+    root.kbdOsdPending = true
     systemStatusService.refreshKbdBrightness()
-    overlays.showKbdSoon()
   }
 
   function showMicOsd() {
-    systemStatusService.refreshPrivacy()
-    overlays.show("󰍬", "Microphone toggled")
+    const source = Pipewire.defaultAudioSource
+    const audio = source && source.audio ? source.audio : null
+    return root.showOsd(audio && audio.muted ? "microphone-muted" : "microphone", audio && audio.muted ? "Microphone muted" : "Microphone live")
   }
 
-  function runWebSearch() {
-    webSearchPanel.runSearch()
+  function finishBrightnessOsd() {
+    if (!root.brightnessOsdPending) return
+    root.brightnessOsdPending = false
+    root.showOsd("brightness", "", root.brightnessValue)
   }
+
+  function finishKbdOsd() {
+    if (!root.kbdOsdPending) return
+    root.kbdOsdPending = false
+    const value = Number(root.kbdBrightnessText.replace("%", ""))
+    if (isFinite(value)) root.showOsd("keyboard", "", value)
+    else root.showOsd("keyboard", root.kbdBrightnessText || "Keyboard brightness")
+  }
+
 
   function toggleKeybindings() {
-    root.toggleTransientPanel("keybindingsOpen", function() { menuDataService.refreshKeybindings() })
-  }
-
-  function clipboardScore(entry, query) {
-    const q = query.trim().toLowerCase()
-    const text = String(entry || "").toLowerCase()
-    if (q.length === 0)
-      return 0
-    const terms = q.split(/\s+/)
-    for (let i = 0; i < terms.length; i++) {
-      const term = terms[i]
-      if (term.length > 0 && text.indexOf(term) < 0)
-        return -1
-    }
-    const idx = text.indexOf(q)
-    if (idx === 0) return 10000 - text.length
-    if (idx > 0) return 8000 - idx * 10 - text.length
-    return 5000 - text.length
-  }
-
-  function rebuildClipboardModel() {
-    const query = clipboardPanel.searchText
-    const rows = []
-    for (let i = 0; i < root.clipboardEntries.length; i++) {
-      const entry = String(root.clipboardEntries[i] || "")
-      if (entry.length === 0)
-        continue
-      const score = root.clipboardScore(entry, query)
-      if (score < 0)
-        continue
-      rows.push({ entry: entry, score: score, key: entry.toLowerCase() })
-    }
-    rows.sort((a, b) => {
-      if (query.trim().length > 0 && a.score !== b.score)
-        return b.score - a.score
-      return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)
-    })
-    clipboardModel.clear()
-    const count = Math.min(rows.length, 250)
-    for (let i = 0; i < count; i++)
-      clipboardModel.append({ text: rows[i].entry, preview: rows[i].entry.replace(/^\d+\s+/, "") })
-    if (clipboardPanel) {
-      clipboardPanel.currentIndex = clipboardModel.count > 0 ? 0 : -1
-      Qt.callLater(() => clipboardPanel.positionCurrent())
-    }
-  }
-
-  function updateClipboardEntries(output) {
-    const lines = String(output || "").split(/\n+/)
-    const entries = []
-    for (let i = 0; i < lines.length; i++) {
-      const entry = lines[i].trim()
-      if (entry.length > 0 && !root.looksSecretClipboardEntry(entry))
-        entries.push(entry)
-    }
-    root.clipboardEntries = entries
-    root.rebuildClipboardModel()
-  }
-
-  function looksSecretClipboardEntry(entry) {
-    const text = String(entry || "")
-    const body = text.replace(/^\d+\s+/, "")
-    if (/^(password|passwd|secret|token|api[_-]?key|authorization|bearer)[:=]/i.test(body))
-      return true
-    if (/^(otpauth:\/\/|-----BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----)/i.test(body))
-      return true
-    if (/^[A-Za-z0-9+\/=]{32,}$/.test(body) && /[A-Z]/.test(body) && /[a-z]/.test(body) && /[0-9]/.test(body))
-      return true
-    return false
-  }
-
-  function rebuildPassModel() {
-    const query = passMenuPanel.searchText
-    const rows = []
-    for (let i = 0; i < root.passEntries.length; i++) {
-      const entry = String(root.passEntries[i] || "")
-      if (entry.length === 0)
-        continue
-      const score = root.clipboardScore(entry, query)
-      if (score < 0)
-        continue
-      rows.push({ entry: entry, score: score, key: entry.toLowerCase() })
-    }
-    rows.sort((a, b) => {
-      if (query.trim().length > 0 && a.score !== b.score)
-        return b.score - a.score
-      return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)
-    })
-    passModel.clear()
-    const count = Math.min(rows.length, 250)
-    for (let i = 0; i < count; i++)
-      passModel.append({ path: rows[i].entry })
-    if (passMenuPanel) {
-      passMenuPanel.currentIndex = passModel.count > 0 ? 0 : -1
-      Qt.callLater(() => passMenuPanel.positionCurrent())
-    }
-  }
-
-  function updatePassEntries(output) {
-    const lines = String(output || "").split(/\n+/)
-    const entries = []
-    for (let i = 0; i < lines.length; i++) {
-      const entry = lines[i].trim()
-      if (entry.length > 0)
-        entries.push(entry)
-    }
-    root.passEntries = entries
-    root.rebuildPassModel()
-  }
-
-  function updateKeybindingRows(output) {
-    keybindingModel.clear()
-    const lines = String(output || "").split(/\n+/)
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (line.length === 0)
-        continue
-      const parts = line.split(/\t+/)
-      if (parts.length < 2)
-        continue
-      keybindingModel.append({ shortcut: parts[0], action: parts.slice(1).join(" ") })
-    }
-  }
-
-  function openClipboard() {
     root.closeTransientPanels()
-    root.clipboardOpen = true
-    clipboardPanel.searchText = ""
-    root.clipboardEntries = []
-    clipboardModel.clear()
-    menuDataService.refreshClipboard()
-    clipboardPanel.focusSearch()
+    Quickshell.execDetached(shellConfig.qs("keybindings"))
   }
 
-  function passModeLabel() {
-    if (root.passMode === "type-pass") return "Type password"
-    if (root.passMode === "type-user") return "Type username"
-    if (root.passMode === "type-name") return "Type entry name"
-    return "Copy password"
-  }
-
-  function openPassmenu(mode, userKey, backend) {
-    root.closeTransientPanels()
-    root.passMode = String(mode || shellConfig.actions.copy)
-    root.passUserKey = String(userKey || "username")
-    root.passBackend = String(backend || "gopass")
-    root.passMenuOpen = true
-    passMenuPanel.searchText = ""
-    root.passEntries = []
-    passModel.clear()
-    menuDataService.refreshPassEntries()
-    passMenuPanel.focusSearch()
-  }
-
-  function runPassEntry() {
-    if (!root.passMenuOpen || passMenuPanel.currentIndex < 0 || passMenuPanel.currentIndex >= passModel.count)
-      return
-    const entry = passModel.get(passMenuPanel.currentIndex).path
-    root.passMenuOpen = false
-    Quickshell.execDetached(shellConfig.passAction(root.passMode, root.passUserKey, root.passBackend, entry))
-  }
-
-  function toggleClipboard() {
-    if (root.clipboardOpen) {
-      root.clipboardOpen = false
-      return
-    }
-    root.openClipboard()
-  }
-
-  function pasteClipboardEntry() {
-    if (!root.clipboardOpen || clipboardPanel.currentIndex < 0 || clipboardPanel.currentIndex >= clipboardModel.count)
-      return
-    const entry = clipboardModel.get(clipboardPanel.currentIndex).text
-    root.clipboardOpen = false
-    Quickshell.execDetached(shellConfig.cliphistDecode(entry))
-  }
-
-  property var clipboardEntries: []
-  property var passEntries: []
-  property bool clipboardOpen: false
-  property bool passMenuOpen: false
-  property string passMode: shellConfig.actions.copy
-  property string passUserKey: "username"
-  property string passBackend: "gopass"
-  property bool keybindingsOpen: false
-  property bool networkPanelOpen: false
+  readonly property bool rootMenuOpen: rootMenu.opened
   property bool powerMenuOpen: false
-  property bool webSearchOpen: false
-  property string webSearchSite: shellConfig.defaultWebSearchSite
-  readonly property var webSearchSites: shellConfig.webSearchSites
 
-  function updateLauncherMru(output) { launcherService.updateMru(output) }
-  function rebuildLauncher() { launcherService.rebuild() }
-  function launchCurrentApp() { launcherService.launchCurrent() }
-  function launchAppAtIndex(index) { launcherService.launchAtIndex(index) }
-  function toggleLauncherFavoriteById(id) { launcherService.toggleFavoriteById(id) }
-  function hideLauncherById(id) { launcherService.hideById(id) }
+  function rebuildLauncher() { appLibraryService.appsChanged() }
+  function toggleLauncherFavoriteById(id) { appLibraryService.toggleFavoriteById(id) }
+  function hideLauncherById(id) { appLibraryService.hideById(id) }
 
   readonly property var laptopScreen: Quickshell.screens.find(screen => screen.name === "eDP-1") || Quickshell.screens[0]
 
-  property bool barHidden: false
+  property alias barHidden: dynamicBar.barHidden
   property bool trayExpanded: false
   property bool trayManageOpen: false
   property string sessionConfirmLabel: ""
   property string sessionConfirmIcon: ""
   property var sessionConfirmCommand: []
-  property bool controlPanelOpen: false
-  property bool mediaPanelOpen: false
   property bool screenPanelOpen: false
-  property bool wallpaperPanelOpen: false
   property bool calendarOpen: false
   property bool workInboxOpen: false
   property bool personalDashboardOpen: false
   property bool settingsOpen: false
-  property bool notificationCenterOpen: false
-  property bool notificationToastOpen: false
-  property int selectedNotificationIndex: -1
-  property var notificationObjects: []
-  property bool notificationHistoryLoaded: false
-  property string notificationToastApp: ""
-  property string notificationToastAppIcon: ""
-  property string notificationToastImage: ""
-  property string notificationToastSummary: ""
-  property string notificationToastBody: ""
-  property int notificationToastSerial: 0
   property string brightnessText: "--"
   property real brightnessValue: 0
+  property bool brightnessOsdPending: false
   property string kbdBrightnessText: ""
+  property bool kbdOsdPending: false
   property string networkStatusText: ""
   property string powerStatusText: ""
   property string fanStatusText: "Fan --"
   property string privacyStatusText: ""
-  property string mediaNowText: ""
   property string weatherPanelText: ""
-  property string externalBrightnessText: ""
-  property real externalBrightnessValue: 0
   property string inhibitStatusText: "inactive"
-  property string lisbonClockText: "--"
+  readonly property string lisbonClockText: Qt.formatDateTime(clock.date, "ddd-dd HH:mm:ss")
   property string timePanelText: ""
   property string agendaPanelText: ""
+  property string reminderPanelText: ""
   property string pomodoroModeText: shellConfig.states.idle
   property string pomodoroLabelText: ""
   property int pomodoroRemainingSeconds: 0
@@ -351,7 +182,6 @@ ShellRoot {
   property string audioStatusText: ""
   property string recordingStatusText: ""
   property string portalStatusText: ""
-  property string wallpaperSource: shellConfig.defaultWallpaperUrl
   property string tooltipText: ""
   readonly property string stateDir: shellConfig.stateDir
   property real tooltipX: 0
@@ -468,201 +298,335 @@ ShellRoot {
     return true
   }
 
+  function dynamicPluginKnown(id) {
+    return !!pluginRegistry.installedPlugins[String(id || "")]
+  }
+
+  function samePluginEntries(left, right) {
+    if (left.length !== right.length) return false
+    for (var i = 0; i < left.length; i++)
+      if (left[i].id !== right[i].id || left[i].sourceUrl !== right[i].sourceUrl
+          || left[i].manifest.version !== right[i].manifest.version) return false
+    return true
+  }
+
+  function refreshDynamicPluginEntries() {
+    var overlays = []
+    var widgets = []
+    var menus = []
+    for (var id in pluginRegistry.installedPlugins) {
+      var manifest = pluginRegistry.installedPlugins[id]
+      if (!pluginRegistry.isEnabled(id)) continue
+      const panelKind = pluginRegistry.panelEntryKind(id)
+      if (panelKind !== "")
+        overlays.push({ id: id, manifest: manifest, sourceUrl: pluginRegistry.entryPointUrl(manifest, panelKind), keepLoaded: manifest.keepLoaded === true })
+      if (pluginRegistry.supportsKind(id, pluginRegistry.barWidgetKind))
+        widgets.push({ id: id, manifest: manifest, sourceUrl: pluginRegistry.entryPointUrl(manifest, "barWidget") })
+      if (manifest.menu && typeof manifest.menu === "object" && !Array.isArray(manifest.menu)) {
+        var menu = ({})
+        for (var key in manifest.menu) menu[key] = manifest.menu[key]
+        menu.id = String(menu.id || id)
+        if (!menu.action) menu.action = "omarchy-shell shell toggle " + id
+        menus.push(menu)
+      }
+    }
+    overlays.sort(function(left, right) { return left.id.localeCompare(right.id) })
+    widgets.sort(function(left, right) { return left.id.localeCompare(right.id) })
+    menus.sort(function(left, right) { return left.id.localeCompare(right.id) })
+    if (!root.samePluginEntries(dynamicPluginEntries, overlays)) dynamicPluginEntries = overlays
+    if (!root.samePluginEntries(dynamicBarWidgetEntries, widgets)) dynamicBarWidgetEntries = widgets
+    if (JSON.stringify(pluginMenuItems) !== JSON.stringify(menus)) pluginMenuItems = menus
+  }
+
+  function registerDynamicPluginLoader(id, loader) {
+    var next = ({})
+    for (var key in dynamicPluginLoaders) next[key] = dynamicPluginLoaders[key]
+    next[id] = loader
+    dynamicPluginLoaders = next
+    root.deliverDynamicPluginPayloads(id)
+  }
+
+  function unregisterDynamicPluginLoader(id) {
+    var next = ({})
+    for (var key in dynamicPluginLoaders) if (key !== id) next[key] = dynamicPluginLoaders[key]
+    dynamicPluginLoaders = next
+  }
+
+  function callDynamicPlugin(id, method, arg) {
+    const resolved = pluginRegistry.resolveEnabledId(id)
+    const loader = dynamicPluginLoaders[resolved]
+    if (!loader || !loader.item || typeof loader.item[method] !== "function") return "unknown"
+    try {
+      const result = loader.item[method](arg)
+      return result === undefined || result === null ? "ok" : String(result)
+    } catch (error) {
+      console.warn("plugin " + resolved + " " + method + "() threw:", error)
+      return "error"
+    }
+  }
+
+  function deliverDynamicPluginPayloads(id) {
+    var loader = dynamicPluginLoaders[id]
+    if (pendingDynamicPluginId !== id || !loader || !loader.item) return
+    if (typeof loader.item.open === "function") loader.item.open(pendingDynamicPluginPayload)
+    pendingDynamicPluginId = ""
+    pendingDynamicPluginPayload = ""
+  }
+
+  function dynamicPluginOpen(id) {
+    var loader = dynamicPluginLoaders[id]
+    if (loader && loader.item && loader.item.opened !== undefined)
+      return loader.item.opened === true
+    return openDynamicPluginId === id
+  }
+
+  function summonDynamicPlugin(id, payloadJson) {
+    if (!pluginRegistry.isEnabled(id)) return false
+    root.closeTransientPanels()
+    openDynamicPluginId = id
+    pendingDynamicPluginId = id
+    pendingDynamicPluginPayload = payloadJson || ""
+    root.deliverDynamicPluginPayloads(id)
+    return true
+  }
+
+  function hideDynamicPlugin(id) {
+    var loader = dynamicPluginLoaders[id]
+    if (loader && loader.item && typeof loader.item.close === "function") loader.item.close()
+    if (openDynamicPluginId === id) openDynamicPluginId = ""
+    if (pendingDynamicPluginId === id) {
+      pendingDynamicPluginId = ""
+      pendingDynamicPluginPayload = ""
+    }
+    return true
+  }
+
+  function setDynamicPluginEnabled(id, enabled) {
+    if (!root.dynamicPluginKnown(id)) return "unknown"
+    if (!pluginRegistry.supports(id)) return "unsupported"
+    if (!pluginRegistry.setEnabled(id, enabled, {}))
+      return pluginRegistry.lastEnableError || "failed"
+    return "ok"
+  }
+
   function closeTransientPanels() {
+    if (root.notificationService) {
+      root.notificationService.clearPopups()
+      root.notificationService.closeHistoryPanel()
+    }
     root.hideLauncher()
-    root.clipboardOpen = false
-    root.passMenuOpen = false
-    root.trayManageOpen = false
-    root.controlPanelOpen = false
-    root.mediaPanelOpen = false
-    root.screenPanelOpen = false
-    root.wallpaperPanelOpen = false
-    root.calendarOpen = false
-    root.workInboxOpen = false
-    root.personalDashboardOpen = false
-    root.settingsOpen = false
-    root.notificationCenterOpen = false
-    root.keybindingsOpen = false
-    root.webSearchOpen = false
-    root.networkPanelOpen = false
+    wifiQrOverlay.close()
+    imagePicker.close()
+    if (openDynamicPluginId) root.hideDynamicPlugin(openDynamicPluginId)
+    if (bar.activePopout) bar.activePopout.close()
+    for (let menu in shellConfig.menuRegistry) {
+      const entry = shellConfig.menuRegistry[menu]
+      if (entry.hide && typeof root[entry.hide] === "function")
+        root[entry.hide]()
+      else if (entry.openProperty)
+        root[entry.openProperty] = false
+    }
     root.clearSessionConfirm()
-    root.powerMenuOpen = false
+  }
+
+  function runShellCallback(name) {
+    if (typeof name === "function") {
+      name()
+      return
+    }
+    const callback = String(name || "")
+    if (callback.length > 0 && typeof root[callback] === "function")
+      root[callback]()
   }
 
   function toggleTransientPanel(openProperty, onOpen) {
     const next = !root[openProperty]
     root.closeTransientPanels()
     root[openProperty] = next
-    if (next && onOpen)
-      onOpen()
+    if (next)
+      root.runShellCallback(onOpen)
   }
 
   function shellMenuId(id) {
-    return String(id || "").replace(/^omarchy[.-]/, "").replace(/_/g, "-")
+    const raw = String(id || "").replace(/^omarchy[.-]/, "").replace(/_/g, "-")
+    return shellConfig.menuAliases[raw] || raw
+  }
+
+  function shellMenuEntry(id) {
+    return shellConfig.menuRegistry[root.shellMenuId(id)] || null
   }
 
   function shellMenuOpen(id) {
-    const menu = root.shellMenuId(id)
-    switch (menu) {
-    case "bar": return !root.barHidden
-    case "launcher":
-    case "apps": return launcher.panelOpen
-    case "clipboard":
-    case "clip": return root.clipboardOpen
-    case "passmenu":
-    case "passwords": return root.passMenuOpen
-    case "websearch":
-    case "web": return root.webSearchOpen
-    case "keybindings":
-    case "keys": return root.keybindingsOpen
-    case "tray":
-    case "tray-manage": return root.trayManageOpen
-    case "controls": return root.controlPanelOpen
-    case "media":
-    case "audio": return root.mediaPanelOpen
-    case "screen": return root.screenPanelOpen
-    case "wallpaper":
-    case "wall": return root.wallpaperPanelOpen
-    case "calendar":
-    case "time": return root.calendarOpen
-    case "work-inbox":
-    case "workInbox":
-    case "work": return root.workInboxOpen
-    case "personal-dashboard":
-    case "personalDashboard":
-    case "dashboard":
-    case "personal": return root.personalDashboardOpen
-    case "settings": return root.settingsOpen
-    case "notifications": return root.notificationCenterOpen
-    case "network":
-    case "net": return root.networkPanelOpen
-    case "power":
-    case "session": return root.powerMenuOpen
-    default: return false
-    }
+    const raw = String(id || "")
+    if (pluginRegistry.supportsPanel(raw)) return root.dynamicPluginOpen(raw)
+    const menu = root.shellMenuId(raw)
+    if (menu === "bar") return !root.barHidden
+    if (menu === "launcher") return rootMenu.opened && rootMenu.activeMenu === "apps"
+    if (menu === shellConfig.menuIds.rootMenu) return rootMenu.opened
+    if (menu === shellConfig.menuIds.controls) return rootMenu.opened && rootMenu.activeMenu === "status"
+    if (menu === shellConfig.menuIds.power) return root.powerMenuOpen || (rootMenu.opened && rootMenu.activeMenu === "system")
+    if (menu === shellConfig.menuIds.passmenu) return rootMenu.opened && rootMenu.dmenuActive && rootMenu.dmenuPrompt === "Passwords"
+    if (menu === shellConfig.menuIds.websearch) return rootMenu.opened && rootMenu.dmenuActive && (rootMenu.dmenuPrompt === "Search site" || rootMenu.dmenuPrompt === "Search")
+    if (menu === shellConfig.menuIds.emojis) return emojiOverlay.opened
+    if (menu === shellConfig.menuIds.wifiQr) return wifiQrOverlay.opened
+    const entry = root.shellMenuEntry(menu)
+    return !!(entry && entry.openProperty && root[entry.openProperty])
   }
 
   function hideShellMenu(id) {
-    const menu = root.shellMenuId(id)
-    switch (menu) {
-    case "all":
-    case "panels": root.closeTransientPanels(); return true
-    case "bar": root.barHidden = true; return true
-    case "launcher":
-    case "apps": root.hideLauncher(); return true
-    case "clipboard":
-    case "clip": root.clipboardOpen = false; return true
-    case "passmenu":
-    case "passwords": root.passMenuOpen = false; return true
-    case "websearch":
-    case "web": root.webSearchOpen = false; return true
-    case "keybindings":
-    case "keys": root.keybindingsOpen = false; return true
-    case "tray":
-    case "tray-manage": root.trayManageOpen = false; return true
-    case "controls": root.controlPanelOpen = false; return true
-    case "media":
-    case "audio": root.mediaPanelOpen = false; return true
-    case "screen": root.screenPanelOpen = false; return true
-    case "wallpaper":
-    case "wall": root.wallpaperPanelOpen = false; return true
-    case "calendar":
-    case "time": root.calendarOpen = false; return true
-    case "work-inbox":
-    case "workInbox":
-    case "work": root.workInboxOpen = false; return true
-    case "personal-dashboard":
-    case "personalDashboard":
-    case "dashboard":
-    case "personal": root.personalDashboardOpen = false; return true
-    case "settings": root.settingsOpen = false; return true
-    case "notifications": root.notificationCenterOpen = false; return true
-    case "network":
-    case "net": root.networkPanelOpen = false; return true
-    case "power":
-    case "session": root.hidePowerMenu(); return true
-    default: return false
+    const raw = String(id || "")
+    if (pluginRegistry.supportsPanel(raw)) return root.hideDynamicPlugin(raw)
+    const menu = root.shellMenuId(raw)
+    if (menu === "all" || menu === "panels") {
+      root.closeTransientPanels()
+      return true
     }
+    if (menu === "bar") {
+      root.barHidden = true
+      return true
+    }
+    if (menu === "launcher") {
+      root.hideLauncher()
+      return true
+    }
+    if (menu === shellConfig.menuIds.wifiQr) {
+      wifiQrOverlay.close()
+      return true
+    }
+    const entry = root.shellMenuEntry(menu)
+    if (!entry) return false
+    if (entry.hide && typeof root[entry.hide] === "function")
+      root[entry.hide]()
+    else if (entry.openProperty)
+      root[entry.openProperty] = false
+    return true
   }
 
   function toggleShellMenu(id, payloadJson) {
-    const menu = root.shellMenuId(id)
-    switch (menu) {
-    case "bar": root.barHidden = !root.barHidden; return true
-    case "launcher":
-    case "apps": root.toggleLauncher(); return true
-    case "clipboard":
-    case "clip": root.toggleClipboard(); return true
-    case "passmenu":
-    case "passwords":
-      if (root.passMenuOpen)
-        root.passMenuOpen = false
-      else
-        root.openPassmenu(shellConfig.actions.copy, "username", "gopass")
+    const raw = String(id || "")
+    if (pluginRegistry.supportsPanel(raw))
+      return root.dynamicPluginOpen(raw) ? root.hideDynamicPlugin(raw) : root.summonDynamicPlugin(raw, payloadJson)
+    const menu = root.shellMenuId(raw)
+    if (menu === "bar") {
+      root.barHidden = !root.barHidden
       return true
-    case "websearch":
-    case "web": root.toggleWebSearch(shellConfig.defaultWebSearchSite); return true
-    case "keybindings":
-    case "keys": root.toggleKeybindings(); return true
-    case "tray":
-    case "tray-manage": root.toggleTrayManage(); return true
-    case "controls": root.toggleControlPanel(); return true
-    case "media":
-    case "audio": root.toggleMediaPanel(); return true
-    case "screen": root.toggleScreenPanel(); return true
-    case "wallpaper":
-    case "wall": root.toggleWallpaperPanel(); return true
-    case "calendar":
-    case "time": root.toggleCalendar(); return true
-    case "work-inbox":
-    case "workInbox":
-    case "work": root.toggleWorkInbox(); return true
-    case "personal-dashboard":
-    case "personalDashboard":
-    case "dashboard":
-    case "personal": root.togglePersonalDashboard(); return true
-    case "settings": root.toggleSettings(); return true
-    case "notifications": root.toggleNotifications(); return true
-    case "network":
-    case "net": root.toggleNetworkPanel(); return true
-    case "power":
-    case "session": root.togglePowerMenu(); return true
-    case "dnd": root.toggleDnd(); return true
-    case "inhibit":
-    case "stay-awake": root.toggleIdleInhibit(); return true
-    default: return false
     }
+    if (menu === "launcher") {
+      root.toggleLauncher()
+      return true
+    }
+    if (menu === shellConfig.menuIds.wifiQr) {
+      wifiQrOverlay.opened ? wifiQrOverlay.close() : wifiQrOverlay.open(payloadJson || "{}")
+      return true
+    }
+    const action = shellConfig.actionRegistry[menu]
+    if (action && typeof root[action] === "function") {
+      root[action]()
+      return true
+    }
+    const entry = root.shellMenuEntry(menu)
+    if (!entry) return false
+    if (entry.toggle && typeof root[entry.toggle] === "function") {
+      root[entry.toggle](payloadJson)
+      return true
+    }
+    if (entry.openProperty) {
+      root.toggleTransientPanel(entry.openProperty, entry.refresh || "")
+      return true
+    }
+    return false
   }
 
   function openShellMenu(id, payloadJson) {
-    const menu = root.shellMenuId(id)
+    const raw = String(id || "")
+    if (pluginRegistry.supportsPanel(raw))
+      return root.dynamicPluginOpen(raw) ? true : root.summonDynamicPlugin(raw, payloadJson)
+    const menu = root.shellMenuId(raw)
     if (menu === "bar") {
       root.barHidden = false
       return true
     }
-    if (root.shellMenuOpen(menu)) {
-      if (menu === "launcher" || menu === "apps")
-        launcher.focusSearch()
-      return true
-    }
+    if (root.shellMenuOpen(menu)) return true
     return root.toggleShellMenu(menu, payloadJson)
   }
 
-  function togglePowerMenu() { root.toggleTransientPanel("powerMenuOpen") }
+  function runMenuAction(action) {
+    switch (String(action || "")) {
+    case "apps":
+      root.closeTransientPanels()
+      root.toggleLauncher()
+      break
+    case "web": root.openWebSearchMenu(); break
+    case "keys": root.toggleKeybindings(); break
+    case "clipboard": root.toggleShellMenu(shellConfig.pluginIds.clipboard, "{}"); break
+    case "wallpaper": root.toggleWallpaperPanel(); break
+    case "screen": root.toggleScreenPanel(); break
+    case "media": root.toggleMediaPanel(); break
+    case "network": root.toggleNetworkPanel(); break
+    case "calendar": root.toggleCalendar(); break
+    case "work": root.toggleWorkInbox(); break
+    case "dashboard": root.togglePersonalDashboard(); break
+    case "notifications": root.toggleNotifications(); break
+    case "settings": root.toggleSettings(); break
+    case "tray": root.toggleTrayManage(); break
+    case "power": root.togglePowerMenu(); break
+    }
+  }
+
+  function hideRootMenu() { rootMenu.close() }
+
+  function hideEmojis() { emojiOverlay.close() }
+
+  function toggleEmojis(payloadJson) {
+    if (emojiOverlay.opened) {
+      emojiOverlay.close()
+      return
+    }
+    root.closeTransientPanels()
+    emojiOverlay.open(payloadJson || "{}")
+  }
+
+  function toggleRootMenu(payloadJson) {
+    if (rootMenu.opened) {
+      rootMenu.close()
+      return
+    }
+    root.closeTransientPanels()
+    rootMenu.open(payloadJson || "{}")
+  }
+
+  function openPassmenuMenu() {
+    if (root.shellMenuOpen(shellConfig.menuIds.passmenu)) { root.hideRootMenu(); return }
+    root.closeTransientPanels()
+    Quickshell.execDetached(shellConfig.passMenu(shellConfig.actions.copy, shellConfig.defaultPassUserKey, "gopass"))
+  }
+
+  function showWebSearchMenu() {
+    if (root.shellMenuOpen(shellConfig.menuIds.websearch)) return
+    root.closeTransientPanels()
+    Quickshell.execDetached(shellConfig.webSearchMenu())
+  }
+
+  function openWebSearchMenu() {
+    if (root.shellMenuOpen(shellConfig.menuIds.websearch)) { root.hideRootMenu(); return }
+    root.showWebSearchMenu()
+  }
+
+  function refreshNetwork() { systemStatusService.refreshNetwork() }
+  function refreshPower() { systemStatusService.refreshPower() }
+  function refreshCalendar() { calendarService.refreshAll() }
+  function refreshWorkInbox() { dashboardService.refreshWorkInbox() }
+  function refreshPersonalDashboard() { dashboardService.refreshPersonalDashboard() }
+
+  function togglePowerMenu() { root.toggleRootMenu("{\"menu\":\"system\"}") }
 
   function toggleTrayManage() { root.toggleTransientPanel("trayManageOpen") }
 
-  function toggleControlPanel() {
-    root.toggleTransientPanel("controlPanelOpen", function() { systemStatusService.refreshControls() })
-  }
+  function toggleControlPanel() { root.toggleRootMenu("{\"menu\":\"status\"}") }
 
-  function toggleNetworkPanel() {
-    root.toggleTransientPanel("networkPanelOpen", function() { systemStatusService.refreshNetwork() })
-  }
+  function toggleNetworkPanel() { bar.toggleNetworkPanel() }
 
-  function toggleMediaPanel() {
-    root.toggleTransientPanel("mediaPanelOpen", function() { root.refreshAudioState() })
-  }
+  function toggleMediaPanel() { bar.toggleMediaPanel() }
 
   function refreshScreenState() {
     screenService.refresh()
@@ -677,28 +641,25 @@ ShellRoot {
     screenService.runRecord(action)
   }
 
-  function updateWallpaperRows(output) {
-    wallpaperModel.clear()
-    const rows = output.trim().length > 0 ? output.trim().split("\n") : []
-    for (let i = 0; i < rows.length; i++) {
-      const parts = rows[i].split("\t")
-      if (parts.length >= 2)
-        wallpaperModel.append({ name: parts[0], path: parts[1], active: parts[2] === "*" })
-    }
-  }
-
-  function refreshWallpapers() {
-    wallpaperService.refreshAll()
-  }
-
   function toggleWallpaperPanel() {
-    root.toggleTransientPanel("wallpaperPanelOpen", function() { root.refreshWallpapers() })
+    if (imagePicker.opened) {
+      imagePicker.close()
+      return
+    }
+    root.closeTransientPanels()
+    imagePicker.open(JSON.stringify({
+      imageDirs: shellConfig.home + "/.local/share/backgrounds\n" + shellConfig.home + "/Pictures/Wallpapers\n" + shellConfig.home + "/Pictures/wallpapers",
+      selectedImage: root.backgroundService ? root.backgroundService.currentBackground : shellSettings.wallpaperPath,
+      showLabels: true,
+      filterable: true
+    }))
   }
 
   function setWallpaper(path) {
-    root.wallpaperSource = shellConfig.fileUrl(path)
+    if (String(path || "").length === 0) return
+    shellSettings.wallpaperPath = path
+    if (root.backgroundService) root.backgroundService.setBackground(path, false)
     Quickshell.execDetached(shellConfig.wallpaper("set", path))
-    wallpaperService.refreshListSoon()
   }
 
   function toggleCalendar() {
@@ -710,7 +671,18 @@ ShellRoot {
   }
 
   function togglePersonalDashboard() {
+    const id = shellConfig.pluginIds.boardDashboard
+    if (pluginRegistry.isEnabled(id)) {
+      if (root.dynamicPluginOpen(id)) root.hideDynamicPlugin(id)
+      else root.summonDynamicPlugin(id, "{}")
+      return
+    }
     root.toggleTransientPanel("personalDashboardOpen", function() { dashboardService.refreshPersonalDashboard() })
+  }
+
+  function hidePersonalDashboard() {
+    root.personalDashboardOpen = false
+    root.hideDynamicPlugin(shellConfig.pluginIds.boardDashboard)
   }
 
   function setPersonalDashboardSurface(surface) {
@@ -729,334 +701,19 @@ ShellRoot {
 
   function toggleSettings() { root.toggleTransientPanel("settingsOpen") }
 
+  function mutateShellConfig(mutator) { pluginConfig.mutate(mutator) }
+  function updateEntryInline(moduleName, settings) {
+    return pluginConfig.updateEntryInline(moduleName, settings)
+  }
+
+
   function toggleDnd() {
-    shellSettings.doNotDisturb = !shellSettings.doNotDisturb
-    if (shellSettings.doNotDisturb)
-      root.notificationToastOpen = false
+    if (!root.notificationService) return
+    root.notificationService.setDoNotDisturb(!root.notificationService.doNotDisturb)
   }
 
-  function toggleNotifications() { root.toggleTransientPanel("notificationCenterOpen") }
-
-  function clearNotifications() {
-    for (let i = 0; i < root.notificationObjects.length; i++) {
-      const notification = root.notificationObjects[i]
-      if (notification && notification.dismiss)
-        notification.dismiss()
-    }
-    root.notificationObjects = []
-    notificationHistory.clear()
-    notificationInboxModel.clear()
-    root.selectedNotificationIndex = -1
-    root.scheduleNotificationHistorySave()
-  }
-
-  function notificationAppAt(index) {
-    if (index < 0 || index >= notificationHistory.count)
-      return ""
-    return String(notificationHistory.get(index).app || "")
-  }
-
-  function clearNotificationsForApp(app) {
-    const target = String(app || "")
-    if (target.length === 0)
-      return
-    for (let i = notificationHistory.count - 1; i >= 0; i--) {
-      if (String(notificationHistory.get(i).app || "") === target)
-        root.dismissNotification(i)
-    }
-  }
-
-  function rebuildNotificationInbox() {
-    const apps = []
-    const counts = ({})
-    const appIcons = ({})
-    for (let i = 0; i < notificationHistory.count; i++) {
-      const row = notificationHistory.get(i)
-      const app = String(row.app || "Notification")
-      if (!counts[app]) {
-        counts[app] = 0
-        apps.push(app)
-      }
-      counts[app] += 1
-      if (!appIcons[app])
-        appIcons[app] = String(row.appIcon || "")
-    }
-
-    notificationInboxModel.clear()
-    // ponytail: O(apps * notifications), capped at 50; index by app only if history grows.
-    for (let appIndex = 0; appIndex < apps.length; appIndex++) {
-      const app = apps[appIndex]
-      notificationInboxModel.append({ kind: "group", app: app, appIcon: appIcons[app] || "", image: "", count: counts[app], sourceIndex: -1, summary: "", body: "", text: "", actionsText: "", desktopEntry: "", time: "", sticky: false, liveActions: false, urgency: 1, timestamp: 0 })
-      for (let i = 0; i < notificationHistory.count; i++) {
-        const row = notificationHistory.get(i)
-        if (String(row.app || "Notification") !== app)
-          continue
-        notificationInboxModel.append({ kind: "notification", app: row.app, appIcon: row.appIcon || "", image: row.image || "", count: counts[app], sourceIndex: i, summary: row.summary, body: row.body, text: row.text, actionsText: row.actionsText, desktopEntry: row.desktopEntry || "", time: row.time, sticky: !!row.sticky, liveActions: !!row.liveActions, urgency: Number(row.urgency || 1), timestamp: Number(row.timestamp || 0) })
-      }
-    }
-  }
-
-  function cleanNotificationText(value) {
-    return String(value || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim()
-  }
-
-  function notificationActionsFrom(notification) {
-    if (!notification || !notification.actions)
-      return []
-    if (notification.actions.map)
-      return notification.actions.map(action => action)
-
-    const actions = []
-    for (let i = 0; i < notification.actions.length; i++)
-      actions.push(notification.actions[i])
-    return actions
-  }
-
-  function notificationActionLabelsFrom(notification) {
-    const actions = root.notificationActionsFrom(notification)
-    const labels = []
-    for (let i = 0; i < actions.length; i++) {
-      const text = root.cleanNotificationText(actions[i].text || actions[i].identifier)
-      if (text.length > 0)
-        labels.push(text)
-    }
-    return labels
-  }
-
-  function notificationPreview(summary, body, app) {
-    if (summary.length > 0 && body.length > 0)
-      return summary + " - " + body
-    return summary.length > 0 ? summary : (body.length > 0 ? body : app)
-  }
-
-  function notificationImageSource(value) {
-    const source = String(value || "")
-    if (source.length === 0)
-      return ""
-    if (source.indexOf("file://") === 0 || source.indexOf("image://") === 0)
-      return source
-    if (source.charAt(0) === "/")
-      return "file://" + source
-    return Quickshell.iconPath(source, true)
-  }
-
-  function notificationMatchesAny(text, values) {
-    const haystack = String(text || "").toLowerCase()
-    for (let i = 0; i < values.length; i++) {
-      const needle = String(values[i] || "").toLowerCase()
-      if (needle.length > 0 && haystack.indexOf(needle) !== -1)
-        return true
-    }
-    return false
-  }
-
-  function shouldToastNotification(notification, app, summary, body, actionLabels) {
-    const policy = shellConfig.notificationToastPolicy
-    const urgency = Number(notification && notification.urgency || 0)
-    if (urgency >= Number(policy.criticalUrgency || 2))
-      return true
-    if (root.notificationMatchesAny(app + "\n" + String(notification.desktopEntry || "") + "\n" + String(notification.appIcon || ""), policy.importantApps || []))
-      return true
-    if (root.notificationMatchesAny(actionLabels.join("\n"), policy.importantActions || []))
-      return true
-    return root.notificationMatchesAny(summary + "\n" + body, policy.importantPatterns || [])
-  }
-
-  function isNotificationSticky(notification, app, summary, body, actionLabels) {
-    if (!notification)
-      return false
-
-    const expireTimeout = Number(notification.expireTimeout)
-    if (notification.resident || (!isNaN(expireTimeout) && expireTimeout === 0))
-      return true
-
-    return root.shouldToastNotification(notification, app, summary, body, actionLabels)
-  }
-
-  function notificationActionCompletes(label) {
-    return root.notificationMatchesAny(label, shellConfig.notificationToastPolicy.completeActions || [])
-  }
-
-  function notificationPersistable(row) {
-    const text = String((row && row.app) || "") + "\n" + String((row && row.desktopEntry) || "")
-    return !root.notificationMatchesAny(text, ["gopass", "passmenu", "password", "secret", "1password"])
-  }
-
-  function safeNotificationReference(value) {
-    const ref = root.cleanNotificationText(value)
-    if (ref.indexOf("data:") === 0 || ref.indexOf("http://") === 0 || ref.indexOf("https://") === 0)
-      return ""
-    return ref
-  }
-
-  function persistedNotificationRow(row) {
-    const app = root.cleanNotificationText(row && row.app || "Notification")
-    const summary = root.cleanNotificationText(row && row.summary || "")
-    const body = root.cleanNotificationText(row && row.body || "")
-    return {
-      app: app,
-      appIcon: root.safeNotificationReference(row && row.appIcon || ""),
-      image: root.safeNotificationReference(row && row.image || ""),
-      summary: summary,
-      body: body,
-      text: root.notificationPreview(summary, body, app),
-      actionsText: root.cleanNotificationText(row && row.actionsText || ""),
-      sticky: !!(row && row.sticky),
-      liveActions: false,
-      urgency: Number(row && row.urgency || 1),
-      desktopEntry: root.cleanNotificationText(row && row.desktopEntry || ""),
-      time: root.cleanNotificationText(row && row.time || ""),
-      timestamp: Number(row && row.timestamp || Date.now())
-    }
-  }
-
-  function loadNotificationHistory(raw) {
-    if (root.notificationHistoryLoaded)
-      return
-
-    const lines = String(raw || "").trim().split(/\n+/)
-    const rows = []
-    for (let i = 0; i < lines.length; i++) {
-      try {
-        const row = root.persistedNotificationRow(JSON.parse(lines[i]))
-        if (root.notificationPersistable(row))
-          rows.push(row)
-      } catch (e) {
-      }
-    }
-    rows.sort((a, b) => Number(b.timestamp || 0) - Number(a.timestamp || 0))
-    for (let j = 0; j < Math.min(50, rows.length); j++) {
-      notificationHistory.append(rows[j])
-      root.notificationObjects.push(null)
-    }
-    if (notificationHistory.count > 0)
-      root.selectedNotificationIndex = 0
-    root.notificationHistoryLoaded = true
-    root.rebuildNotificationInbox()
-  }
-
-  function scheduleNotificationHistorySave() {
-    if (root.notificationHistoryLoaded)
-      notificationHistorySaveTimer.restart()
-  }
-
-  function saveNotificationHistory() {
-    const lines = []
-    for (let i = 0; i < Math.min(50, notificationHistory.count); i++) {
-      const row = root.persistedNotificationRow(notificationHistory.get(i))
-      if (root.notificationPersistable(row))
-        lines.push(JSON.stringify(row))
-    }
-    notificationHistoryFile.setText(lines.join("\n") + (lines.length > 0 ? "\n" : ""))
-  }
-
-  function rememberNotification(notification) {
-    if (!notification)
-      return
-
-    const app = root.cleanNotificationText(notification.appName || "Notification")
-    const summary = root.cleanNotificationText(notification.summary)
-    const body = root.cleanNotificationText(notification.body)
-    const actionLabels = root.notificationActionLabelsFrom(notification)
-    const sticky = root.isNotificationSticky(notification, app, summary, body, actionLabels)
-    const now = new Date()
-
-    notificationHistory.insert(0, {
-      app: app,
-      appIcon: root.cleanNotificationText(notification.appIcon),
-      image: root.cleanNotificationText(notification.image),
-      summary: summary,
-      body: body,
-      text: root.notificationPreview(summary, body, app),
-      actionsText: actionLabels.join(" | "),
-      sticky: sticky,
-      liveActions: actionLabels.length > 0,
-      urgency: Number(notification.urgency || 1),
-      desktopEntry: root.cleanNotificationText(notification.desktopEntry),
-      time: Qt.formatDateTime(now, "HH:mm"),
-      timestamp: now.getTime()
-    })
-    root.notificationObjects = [notification].concat(root.notificationObjects)
-    root.selectedNotificationIndex = 0
-    root.notificationToastApp = app
-    root.notificationToastAppIcon = root.cleanNotificationText(notification.appIcon)
-    root.notificationToastImage = root.cleanNotificationText(notification.image)
-    root.notificationToastSummary = summary.length > 0 ? summary : app
-    root.notificationToastBody = body
-    root.notificationToastSerial += 1
-    if (!shellSettings.doNotDisturb && root.shouldToastNotification(notification, app, summary, body, actionLabels)) {
-      root.notificationToastOpen = false
-      Qt.callLater(() => {
-        root.notificationToastOpen = true
-        overlays.restartToastTimer()
-      })
-    }
-    while (notificationHistory.count > 50) {
-      notificationHistory.remove(notificationHistory.count - 1)
-      root.notificationObjects.pop()
-    }
-    root.rebuildNotificationInbox()
-    root.scheduleNotificationHistorySave()
-  }
-
-  function dismissNotification(index) {
-    if (index < 0 || index >= notificationHistory.count)
-      return
-    const notification = root.notificationObjects[index]
-    if (notification && notification.dismiss)
-      notification.dismiss()
-    const next = root.notificationObjects.slice()
-    next.splice(index, 1)
-    root.notificationObjects = next
-    notificationHistory.remove(index)
-    root.rebuildNotificationInbox()
-    if (notificationHistory.count === 0)
-      root.selectedNotificationIndex = -1
-    else if (root.selectedNotificationIndex === index)
-      root.selectedNotificationIndex = -1
-    else if (root.selectedNotificationIndex > index)
-      root.selectedNotificationIndex -= 1
-    else if (root.selectedNotificationIndex >= notificationHistory.count)
-      root.selectedNotificationIndex = notificationHistory.count - 1
-    root.scheduleNotificationHistorySave()
-  }
-
-
-  function notificationActionLabels(index) {
-    return root.notificationActionLabelsFrom(root.notificationObjects[index])
-  }
-
-  function focusNotificationApp(index) {
-    if (index < 0 || index >= notificationHistory.count)
-      return
-    const row = notificationHistory.get(index)
-    Quickshell.execDetached(shellConfig.notificationFocus(row.desktopEntry, row.app))
-  }
-
-  function invokeNotificationAction(index, actionIndex) {
-    const notification = root.notificationObjects[index]
-    const actions = root.notificationActionsFrom(notification)
-    if (actionIndex < 0 || actionIndex >= actions.length)
-      return
-
-    const row = index >= 0 && index < notificationHistory.count ? notificationHistory.get(index) : null
-    const actionLabel = String(actions[actionIndex].text || actions[actionIndex].identifier || "")
-    actions[actionIndex].invoke()
-    if (!row || !row.sticky || root.notificationActionCompletes(actionLabel))
-      root.dismissNotification(index)
-  }
-  function updateAudioStreams(output) {
-    audioStreams.clear()
-    const lines = String(output || "").trim().split(/\n+/)
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (line.length === 0)
-        continue
-      const parts = line.split("|")
-      if (parts.length < 5)
-        continue
-      audioStreams.append({ id: parts[0], app: parts[1], media: parts[2], volume: parts[3], muted: parts[4] })
-    }
+  function toggleNotifications() {
+    if (root.notificationService) root.notificationService.toggleHistoryPanel()
   }
 
   function updateAudioStatus(output) {
@@ -1185,52 +842,12 @@ ShellRoot {
     calendarService.refreshPomodoroSoon()
   }
 
-  function refreshAudioMixer() {
-    audioService.refreshMixer()
-  }
-
-  function refreshAudioState() {
-    audioService.refreshState()
-  }
-
   function scheduleAudioRefresh() {
     audioService.refreshSoon()
   }
 
-  function audioNoiseRunning() {
-    return root.audioStatusText.indexOf("brown-noise: running") >= 0
-  }
-
-  function audioMusicRunning() {
-    return root.audioStatusText.indexOf("music: running") >= 0
-  }
-
-  function audioPlaybackActive() {
-    return root.audioDisplayText.length > 0 && root.audioDisplayText.indexOf("(paused)") < 0
-  }
-
   function runAudioctl(action) {
     Quickshell.execDetached(shellConfig.audio(action))
-    root.scheduleAudioRefresh()
-  }
-
-  function runPlayerctl(action) {
-    Quickshell.execDetached(shellConfig.playerctl(action))
-    root.scheduleAudioRefresh()
-  }
-
-  function runSinkInputAction(id, action) {
-    const command = shellConfig.sinkInputAction(id, action)
-    if (command.length === 0)
-      return
-    Quickshell.execDetached(command)
-    root.scheduleAudioRefresh()
-  }
-
-  function setSinkInputVolume(id, value) {
-    if (!id)
-      return
-    Quickshell.execDetached(shellConfig.sinkInputVolume(id, value))
     root.scheduleAudioRefresh()
   }
 
@@ -1314,6 +931,142 @@ ShellRoot {
   ShellConfig { id: shellConfig }
   ShellTheme { id: shellTheme }
 
+  OmarchyServices.PluginRegistry {
+    id: pluginRegistry
+    firstPartyDir: shellConfig.home + "/.config/quickshell/marcelof/plugins"
+    shellConfigProvider: function() { return pluginConfig.config }
+    shellConfigMutator: function(mutate) { pluginConfig.mutate(mutate) }
+  }
+
+  OmarchyServices.BarWidgetRegistry { id: barWidgetRegistry }
+
+  OmarchyServices.ShellPluginConfig {
+    id: pluginConfig
+    path: shellConfig.home + "/.config/omarchy/shell.json"
+  }
+
+  OmarchyServices.PluginBarWidgetHost {
+    pluginRegistry: pluginRegistry
+    barWidgetRegistry: barWidgetRegistry
+  }
+
+
+  OmarchyServices.PluginServiceHost {
+    id: pluginServiceHost
+    pluginRegistry: pluginRegistry
+    barWidgetRegistry: barWidgetRegistry
+    shell: root
+  }
+
+  Connections {
+    target: root.notificationService
+    ignoreUnknownSignals: true
+    function onDoNotDisturbChanged() {
+      shellSettings.doNotDisturb = root.notificationService.doNotDisturb
+    }
+  }
+
+  onNotificationServiceChanged: {
+    if (root.notificationService)
+      shellSettings.doNotDisturb = root.notificationService.doNotDisturb
+  }
+
+  Connections {
+    target: pluginRegistry
+    function onPluginsChanged() { root.refreshDynamicPluginEntries() }
+  }
+
+  Connections {
+    target: shellSettings
+    function onEnabledPluginIdsChanged() { root.refreshDynamicPluginEntries() }
+  }
+
+  QtObject {
+    id: pluginHostObject
+    readonly property var pluginMenuItems: root.pluginMenuItems
+    readonly property var appLibrary: root.appLibrary
+    function hide(pluginId) {
+      if (String(pluginId) === shellConfig.pluginIds.wifiQr) { wifiQrOverlay.close(); return true }
+      return root.hideShellMenu(pluginId)
+    }
+    function summon(pluginId, payloadJson) {
+      if (String(pluginId) === shellConfig.pluginIds.wifiQr) { wifiQrOverlay.open(payloadJson || "{}"); return true }
+      return root.openShellMenu(pluginId, payloadJson || "{}")
+    }
+    function toggle(pluginId, payloadJson) { return root.toggleShellMenu(pluginId, payloadJson || "{}") }
+  }
+
+  Instantiator {
+    model: root.dynamicPluginEntries
+
+    delegate: QtObject {
+      id: dynamicPluginEntry
+      required property var modelData
+      readonly property string pluginId: modelData.id
+      readonly property var manifest: modelData.manifest
+      readonly property string sourceUrl: modelData.sourceUrl
+
+      property Loader pluginLoader: Loader {
+        source: dynamicPluginEntry.sourceUrl
+        active: source !== "" && (dynamicPluginEntry.modelData.keepLoaded
+          || root.openDynamicPluginId === dynamicPluginEntry.pluginId)
+        asynchronous: true
+        onLoaded: {
+          if (!item) return
+          if ("pluginPath" in item) item.pluginPath = dynamicPluginEntry.manifest.__sourceDir
+          if ("targetScreen" in item) item.targetScreen = root.laptopScreen
+          if ("shell" in item) item.shell = pluginHostObject
+          if ("manifest" in item) item.manifest = dynamicPluginEntry.manifest
+          if ("pluginRegistry" in item) item.pluginRegistry = pluginRegistry
+          if ("barWidgetRegistry" in item) item.barWidgetRegistry = barWidgetRegistry
+          if ("service" in item) item.service = pluginServiceHost.serviceFor(dynamicPluginEntry.pluginId)
+          root.registerDynamicPluginLoader(dynamicPluginEntry.pluginId, this)
+        }
+        onStatusChanged: {
+          if (status === Loader.Error) {
+            console.warn("overlay plugin " + dynamicPluginEntry.pluginId + " failed to load: " + errorString())
+            root.hideDynamicPlugin(dynamicPluginEntry.pluginId)
+          }
+        }
+        Component.onDestruction: root.unregisterDynamicPluginLoader(dynamicPluginEntry.pluginId)
+      }
+    }
+  }
+
+  EmojiPlugin.Emojis {
+    id: emojiOverlay
+    pluginPath: shellConfig.home + "/.config/quickshell/marcelof/plugins/emojis"
+    targetScreen: root.laptopScreen
+    shell: pluginHostObject
+    manifest: ({ id: "omarchy.emojis" })
+  }
+
+  WifiQrPlugin.Panel {
+    id: wifiQrOverlay
+    targetScreen: root.laptopScreen
+    shell: pluginHostObject
+    manifest: ({ id: shellConfig.pluginIds.wifiQr })
+  }
+
+  ImagePickerPlugin.ImagePicker {
+    id: imagePicker
+    targetScreen: root.laptopScreen
+    pluginPath: shellConfig.home + "/.config/quickshell/marcelof/plugins/image-picker"
+    applyAction: function(path) { root.setWallpaper(path) }
+    openCurrentAction: function() { Quickshell.execDetached(shellConfig.wallpaper("open-current")) }
+    openFolderAction: function() { Quickshell.execDetached(shellConfig.wallpaper("open-dir")) }
+  }
+
+  // Local settings own the palette; copied Omarchy components consume it here.
+  Binding { target: Color; property: "foreground"; value: shellTheme.text }
+  Binding { target: Color; property: "background"; value: shellTheme.panel }
+  Binding { target: Color; property: "accent"; value: shellSettings.primaryColor }
+  Binding { target: Color; property: "urgent"; value: shellTheme.error }
+  Binding { target: Color; property: "warning"; value: shellTheme.warning }
+  Binding { target: Color; property: "muted"; value: shellTheme.textMuted }
+  Binding { target: Style; property: "fontFamily"; value: shellTheme.fontFamily }
+  Binding { target: Style; property: "fontBaseSize"; value: shellTheme.fontMd }
+
   Component.onCompleted: Quickshell.execDetached(shellConfig.ensureStateDir())
 
   FileView {
@@ -1328,34 +1081,6 @@ ShellRoot {
   }
 
 
-  FileView {
-    id: notificationHistoryFile
-    path: root.stateDir + "/notifications.jsonl"
-    watchChanges: false
-    atomicWrites: true
-    printErrors: false
-    onLoaded: root.loadNotificationHistory(text())
-    onLoadFailed: root.loadNotificationHistory("")
-  }
-
-  Timer {
-    id: notificationHistorySaveTimer
-    interval: 200
-    repeat: false
-    onTriggered: root.saveNotificationHistory()
-  }
-  ListModel { id: notificationHistory }
-  ListModel { id: notificationInboxModel }
-  ListModel { id: audioStreams }
-  ListModel { id: wallpaperModel }
-
-
-  NotificationServer {
-    id: notifications
-    keepOnReload: false
-    actionsSupported: true
-    onNotification: function(notification) { root.rememberNotification(notification) }
-  }
 
   PwObjectTracker {
     objects: Pipewire.defaultAudioSink ? [Pipewire.defaultAudioSink] : []
@@ -1416,19 +1141,7 @@ ShellRoot {
     root.brightnessValue = Math.max(0, Math.min(100, Math.round(value)))
     root.brightnessText = root.brightnessValue + "%"
     root.runBrightness(String(root.brightnessValue))
-    overlays.show("󰃠", "Brightness " + root.brightnessText)
-  }
-
-  function setExternalBrightness(value) {
-    root.externalBrightnessValue = Math.max(0, Math.min(100, Math.round(value)))
-    Quickshell.execDetached(shellConfig.setExternalBrightness(root.externalBrightnessValue))
-    systemStatusService.refreshExternalBrightnessSoon()
-    overlays.show("󰍹", "External brightness " + root.externalBrightnessValue + "%")
-  }
-
-  function runExternalBrightness(action) {
-    Quickshell.execDetached(shellConfig.externalBrightness(action))
-    systemStatusService.refreshExternalBrightnessSoon()
+    root.showOsd("brightness", "", root.brightnessValue)
   }
 
   function runKbdBrightness(action) {
@@ -1443,6 +1156,16 @@ ShellRoot {
 
   function suspendSession() {
     Quickshell.execDetached(shellConfig.suspend())
+  }
+
+  function requestSessionAction(action) {
+    const item = shellConfig.sessionAction(action)
+    if (!item) return false
+    if (action === "hide") root.hidePowerMenu()
+    else if (action === "lock") root.lockSession()
+    else if (action === "suspend") root.suspendSession()
+    else root.openSessionConfirm(item.label, item.icon, shellConfig.sessionCommand(action))
+    return true
   }
 
   function setSessionConfirm(label, icon, command) {
@@ -1468,6 +1191,11 @@ ShellRoot {
     root.powerMenuOpen = false
   }
 
+  function hidePowerSurfaces() {
+    root.hideRootMenu()
+    root.hidePowerMenu()
+  }
+
   function runSessionConfirm() {
     if (root.sessionConfirmCommand.length === 0)
       return
@@ -1475,8 +1203,6 @@ ShellRoot {
     root.hidePowerMenu()
     Quickshell.execDetached(command)
   }
-
-  component IconButton: ShellIconButton { tooltipState: root }
 
   component ActionButton: ShellActionButton { tooltipState: root }
 
@@ -1487,9 +1213,54 @@ ShellRoot {
 
     function ping(): string { return "ok" }
     function listMenus(): string { return JSON.stringify(shellConfig.menuIds) }
+    function listPlugins(): string {
+      const plugins = []
+      for (let pluginId in pluginRegistry.installedPlugins) {
+        const manifest = pluginRegistry.installedPlugins[pluginId]
+        const supported = pluginRegistry.supports(pluginId)
+        plugins.push({
+          id: pluginId,
+          name: manifest.name,
+          version: manifest.version,
+          kinds: manifest.kinds,
+          enabled: pluginRegistry.isEnabled(pluginId),
+          active: root.dynamicPluginOpen(pluginId),
+          canDisable: supported,
+          canEnable: supported,
+          firstParty: manifest.__isFirstParty === true,
+          clonedFrom: "",
+          menu: manifest.menu || null
+        })
+      }
+      plugins.sort((left, right) => left.name.localeCompare(right.name))
+      return JSON.stringify(plugins)
+    }
+    function rescanPlugins(): string { pluginRegistry.rescan(); return "ok" }
+    function setPluginEnabled(id: string, value: string): string {
+      const normalized = String(value || "").toLowerCase()
+      return root.setDynamicPluginEnabled(id, normalized === "true" || normalized === "1" || normalized === "on" || normalized === "yes")
+    }
+    function enablePlugin(id: string, placementJson: string): string { return root.setDynamicPluginEnabled(id, true) }
+    function disablePlugin(id: string): string { return root.setDynamicPluginEnabled(id, false) }
+    function listShellConfig(): string {
+      return JSON.stringify({ menus: shellConfig.menuIds, aliases: shellConfig.menuAliases })
+    }
+    function dndState(): string {
+      return root.notificationService && root.notificationService.doNotDisturb ? "on" : "off"
+    }
+    function isDnd(): string { return dndState() }
+    function toggleDnd(): string { root.toggleDnd(); return dndState() }
+    function setDnd(value: string): string {
+      if (!root.notificationService) return "unavailable"
+      const v = String(value || "").toLowerCase()
+      root.notificationService.setDoNotDisturb(v === "true" || v === "1" || v === "on" || v === "yes")
+      return dndState()
+    }
     function toggle(id: string, payloadJson: string): string { return root.toggleShellMenu(id, payloadJson) ? "ok" : "unknown" }
     function hide(id: string): string { return root.hideShellMenu(id) ? "ok" : "unknown" }
     function summon(id: string, payloadJson: string): string { return root.openShellMenu(id, payloadJson) ? "ok" : "unknown" }
+    function call(id: string, method: string, arg: string): string { return root.callDynamicPlugin(id, method, arg) }
+    function state(id: string): string { return root.shellMenuOpen(id) ? "open" : "closed" }
     function closePanels() { root.closeTransientPanels() }
   }
 
@@ -1502,7 +1273,7 @@ ShellRoot {
     function hide() { root.barHidden = true }
     function trayManage() { root.toggleTrayManage() }
     function controls() { root.toggleControlPanel() }
-    function controlsVisible(): string { return root.controlPanelOpen ? shellConfig.states.visible : shellConfig.states.hidden }
+    function controlsVisible(): string { return rootMenu.opened && rootMenu.activeMenu === "status" ? shellConfig.states.visible : shellConfig.states.hidden }
     function media() { root.toggleMediaPanel() }
     function screen() { root.toggleScreenPanel() }
     function wallpaper() { root.toggleWallpaperPanel() }
@@ -1519,18 +1290,15 @@ ShellRoot {
     function osdKbd() { root.showKbdOsd() }
     function osdMic() { root.showMicOsd() }
     function keybindings() { root.toggleKeybindings() }
-    function clipboard() { root.toggleClipboard() }
-    function clipboardVisible(): string { return root.clipboardOpen ? shellConfig.states.visible : shellConfig.states.hidden }
-    function clipboardUpdate() { menuDataService.refreshClipboard() }
     function closePanels() { root.closeTransientPanels() }
   }
 
   IpcHandler {
     target: "websearch"
 
-    function open() { root.openWebSearch(shellConfig.defaultWebSearchSite) }
-    function toggle() { root.toggleWebSearch(shellConfig.defaultWebSearchSite) }
-    function hide() { root.closeTransientPanels() }
+    function open() { root.showWebSearchMenu() }
+    function toggle() { root.openWebSearchMenu() }
+    function hide() { root.hideRootMenu() }
   }
 
   IpcHandler {
@@ -1539,83 +1307,51 @@ ShellRoot {
     function lock() { root.lockSession() }
   }
 
-  PanelWindow {
-    id: wallpaper
-    screen: root.laptopScreen
-
-    anchors {
-      top: true
-      bottom: true
-      left: true
-      right: true
-    }
-
-    WlrLayershell.layer: WlrLayer.Background
-    color: shellTheme.panel
-
-    Image {
-      anchors.fill: parent
-      source: root.wallpaperSource
-      fillMode: Image.PreserveAspectCrop
-      asynchronous: true
-    }
+  OmarchyBar.Bar {
+    id: dynamicBar
+    omarchyPath: shellConfig.home + "/.config/quickshell/marcelof"
+    barWidgetRegistry: barWidgetRegistry
+    barConfig: root.barConfig
+    shell: root
+    manifest: pluginRegistry.installedPlugins["omarchy.bar"] || ({ id: "omarchy.bar" })
   }
 
-  ShellBar {
-    id: bar
-    barRoot: root
-    barTheme: shellTheme
-    barSettings: shellSettings
-    barConfig: shellConfig
-    notificationHistoryModel: notificationHistory
-  }
-
-    ShellWallpaperPanel {
-      anchorWindow: bar
-      shellRoot: root
-      shellConfig: shellConfig
-      wallpapersModel: wallpaperModel
-      panelOpen: root.wallpaperPanelOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.wallpaper)
-      compactHeight: root.menuCompactHeightFor(shellConfig.menuIds.wallpaper)
-    }
 
     ShellScreenPanel {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellConfig: shellConfig
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.screen, "{}") : root.hideShellMenu(shellConfig.menuIds.screen)
       panelOpen: root.screenPanelOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.screen)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.screen)
     }
 
-    ShellMediaPanel {
-      anchorWindow: bar
-      shellRoot: root
-      shellConfig: shellConfig
-      audioStreamsModel: audioStreams
-      panelOpen: root.mediaPanelOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.media)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.media)
-    }
 
-    ShellControlPanel {
-      anchorWindow: bar
-      shellRoot: root
-      shellSettings: shellSettings
-      shellConfig: shellConfig
-      privacyRefresh: systemStatusService.privacyHandle
-      panelOpen: root.controlPanelOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.controls)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.controls)
+
+    OmarchyMenu.Menu {
+      id: rootMenu
+      shell: root
+      menuWidth: root.menuWidthFor(shellConfig.menuIds.rootMenu)
+      rootRowHeight: 70
+      defaultMenuPath: shellConfig.home + "/.config/quickshell/marcelof/omarchy-menu.jsonc"
+      fontFamily: shellTheme.fontFamily
+      background: shellTheme.panel
+      foreground: shellTheme.text
+      border: shellTheme.border
+      scrim: Qt.rgba(shellTheme.panel.r, shellTheme.panel.g, shellTheme.panel.b, 0.58)
+      selectedBackground: shellTheme.surfaceHigh
+      selectedText: shellSettings.primaryColor
+      selectedBorder: shellSettings.primaryColor
     }
 
     ShellSettingsPanel {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellSettings: shellSettings
       shellConfig: shellConfig
       weatherRefresh: calendarService.weatherRefresh
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.settings, "{}") : root.hideShellMenu(shellConfig.menuIds.settings)
       panelOpen: root.settingsOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.settings)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.settings)
@@ -1623,12 +1359,14 @@ ShellRoot {
 
 
     ShellCalendarPanel {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellSettings: shellSettings
       shellConfig: shellConfig
       clock: clock
       agendaRefresh: calendarService.agendaRefresh
+      reminderRefresh: calendarService.reminderRefresh
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.calendar, "{}") : root.hideShellMenu(shellConfig.menuIds.calendar)
       panelOpen: root.calendarOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.calendar)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.calendar)
@@ -1636,50 +1374,26 @@ ShellRoot {
 
 
     ShellWorkInboxPanel {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellSettings: shellSettings
       shellConfig: shellConfig
       refresh: dashboardService.workInboxHandle
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.workInbox, "{}") : root.hideShellMenu(shellConfig.menuIds.workInbox)
       panelOpen: root.workInboxOpen
       panelWidth: root.menuWidthFor(shellConfig.menuIds.workInbox)
       panelHeight: root.menuHeightFor(shellConfig.menuIds.workInbox)
     }
 
-    ShellPersonalDashboardPanel {
-      anchorWindow: bar
+
+    ShellTrayManagePanel {
+      anchorWindow: bar.primaryWindow
       shellRoot: root
-      shellConfig: shellConfig
-      refresh: dashboardService.personalDashboardHandle
-      panelOpen: root.personalDashboardOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.personalDashboard)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.personalDashboard)
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.tray, "{}") : root.hideShellMenu(shellConfig.menuIds.tray)
+      panelOpen: root.trayManageOpen
+      panelWidth: root.menuWidthFor(shellConfig.menuIds.tray)
+      panelHeight: Math.min(root.menuHeightFor(shellConfig.menuIds.tray), 84 + Math.max(1, root.allTrayItems.length) * (shellTheme.launcherRowHeight + shellTheme.spacingMd))
     }
-
-    ShellNotificationCenter {
-      anchorWindow: bar
-      shellRoot: root
-      shellSettings: shellSettings
-      historyModel: notificationHistory
-      inboxModel: notificationInboxModel
-      panelOpen: root.notificationCenterOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.notifications)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.notifications)
-    }
-
-    ShellOverlays {
-      id: overlays
-      anchorWindow: bar
-      shellRoot: root
-      shellSettings: shellSettings
-    }
-
-
-  ShellWallpaperService {
-    id: wallpaperService
-    shellRoot: root
-    shellConfig: shellConfig
-  }
 
   ShellScreenService {
     id: screenService
@@ -1695,90 +1409,54 @@ ShellRoot {
 
 
 
-  ListModel { id: launcherModel }
-  ListModel { id: clipboardModel }
-  ListModel { id: passModel }
-  ListModel { id: keybindingModel }
 
-  ShellMenuDataService {
-    id: menuDataService
+
+
+  OmarchyServices.AppLibrary {
+    id: appLibraryService
     shellRoot: root
-    shellConfig: shellConfig
-  }
-
-
-  ShellLauncherPanel {
-    id: launcher
-    shellRoot: root
-    launcherModel: launcherModel
-    closeAction: function() { root.hideShellMenu(shellConfig.menuIds.launcher) }
-    panelHeight: root.menuHeightFor(shellConfig.menuIds.launcher)
-  }
-
-  ShellLauncherService {
-    id: launcherService
-    shellRoot: root
-    shellConfig: shellConfig
     shellSettings: shellSettings
-    launcherPanel: launcher
-    launcherModel: launcherModel
+    shellConfig: shellConfig
   }
 
-  ShellClipboardPanel {
-    id: clipboardPanel
-    shellRoot: root
-    clipboardModel: clipboardModel
-    closeAction: function() { root.hideShellMenu(shellConfig.menuIds.clipboard) }
-    panelOpen: root.clipboardOpen
-    refreshRunning: menuDataService.clipboardRunning
-    panelWidth: root.menuWidthFor(shellConfig.menuIds.clipboard)
-    panelHeight: root.menuHeightFor(shellConfig.menuIds.clipboard)
+  IpcHandler {
+    target: "launcher"
+
+    function toggle() { root.toggleLauncher() }
+    function open() { if (!root.shellMenuOpen("launcher")) root.toggleLauncher() }
+    function show() { open() }
+    function hide() { root.hideLauncher() }
+    function state(): string { return root.shellMenuOpen("launcher") ? "open" : "closed" }
+    function visibleById(entryId: string): string {
+      var entry = appLibraryService.entryById(entryId)
+      return entry && !appLibraryService.isHiddenEntry(entry) ? "visible" : "hidden"
+    }
+    function launchableById(entryId: string): string {
+      var entry = appLibraryService.entryById(entryId)
+      if (!entry) return "missing"
+      return (entry.command && entry.command.length > 0) || typeof entry.execute === "function"
+        ? "launchable" : "not-launchable"
+    }
+    function hiddenRoundTrip(entryId: string): string {
+      var previous = root.launcherSmokeHiddenId
+      var before = visibleById(entryId)
+      root.launcherSmokeHiddenId = entryId
+      var hidden = visibleById(entryId)
+      root.launcherSmokeHiddenId = previous
+      return before + "|" + hidden + "|" + visibleById(entryId)
+    }
   }
 
-  ShellPassMenuPanel {
-    id: passMenuPanel
-    shellRoot: root
-    passModel: passModel
-    closeAction: function() { root.hideShellMenu(shellConfig.menuIds.passmenu) }
-    panelOpen: root.passMenuOpen
-    refreshRunning: menuDataService.passRunning
-    panelWidth: root.menuWidthFor(shellConfig.menuIds.passmenu)
-    panelHeight: root.menuHeightFor(shellConfig.menuIds.passmenu)
-  }
 
 
-    ShellKeybindingsPanel {
-      anchorWindow: bar
-      keybindingsModel: keybindingModel
-      panelOpen: root.keybindingsOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.keybindings)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.keybindings)
-    }
 
-    ShellWebSearchPanel {
-      id: webSearchPanel
-      shellRoot: root
-      shellConfig: shellConfig
-      closeAction: function() { root.hideShellMenu(shellConfig.menuIds.websearch) }
-      panelOpen: root.webSearchOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.websearch)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.websearch)
-    }
 
-    ShellNetworkPanel {
-      anchorWindow: bar
-      shellRoot: root
-      shellConfig: shellConfig
-      statusRefresh: systemStatusService.networkHandle
-      panelOpen: root.networkPanelOpen
-      panelWidth: root.menuWidthFor(shellConfig.menuIds.network)
-      panelHeight: root.menuHeightFor(shellConfig.menuIds.network)
-    }
 
     ShellPowerMenu {
-      anchorWindow: bar
+      anchorWindow: bar.primaryWindow
       shellRoot: root
       shellConfig: shellConfig
+      visibilityAction: value => value ? root.openShellMenu(shellConfig.menuIds.power, "{}") : root.hideShellMenu(shellConfig.menuIds.power)
       panelOpen: root.powerMenuOpen
       panelHeight: root.menuHeightFor(shellConfig.menuIds.power)
     }

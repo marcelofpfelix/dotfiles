@@ -10,15 +10,16 @@ local function bin(name)
 end
 
 local terminal = bin("hypr-term")
-local launcher = bin("qs-bar") .. " launcher"
-local quickshell_cmd = "env QT_QUICK_BACKEND=software " .. home .. "/.nix-profile/bin/quickshell --path " .. home .. "/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize"
-local board_run_cmd = "pgrep -fx " .. string.format("%q", home .. "/bin/board --config " .. home .. "/.config/board/board.toml run") .. " >/dev/null 2>&1 || " .. home .. "/bin/board --config " .. home .. "/.config/board/board.toml run"
+local launcher = bin("qbar") .. " launcher"
+local root_menu = bin("qbar") .. " shell toggle omarchy.menu '{}'"
+local quickshell_cmd = common.quickshell_cmd(home)
+local board_run_cmd = common.board_run_cmd(home)
 local function sh(cmd)
   return hl.dsp.exec_cmd(cmd)
 end
 
 local function qs(action)
-  return sh(bin("qs-bar") .. " " .. action)
+  return sh(bin("qbar") .. " " .. action)
 end
 
 local function osd(action)
@@ -41,14 +42,6 @@ local function noop()
   return function() end
 end
 
-
-local function universal_paste()
-  if common.active_window_is_terminal() then
-    common.send_shortcut_once("SHIFT", "Insert")()
-  else
-    common.send_shortcut_once("CTRL", "V")()
-  end
-end
 
 common.apply_default_monitors()
 
@@ -115,7 +108,6 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("dex --autostart --environment Hyprland")
   hl.exec_cmd("gnome-keyring-daemon --start --components=secrets")
   hl.exec_cmd("command -v chrome-wayland-fix-apps >/dev/null 2>&1 && chrome-wayland-fix-apps")
-  hl.exec_cmd("command -v cliphist >/dev/null 2>&1 && command -v wl-paste >/dev/null 2>&1 && cliphist-menu watch")
 end)
 
 hl.bind(mod .. " + SHIFT + Q", hl.dsp.window.close())
@@ -127,12 +119,14 @@ common.bind_direction_keys(mod .. " + SHIFT", common.vim_directions, hl.dsp.wind
 common.bind_direction_keys(mod .. " + SHIFT", common.arrow_directions, hl.dsp.window.move)
 
 hl.bind(mod .. " + Z", hl.dsp.layout("splith"))
-hl.bind(mod .. " + V", universal_paste)
+hl.bind(mod .. " + C", common.universal_clipboard_shortcut("CTRL", "C", "CTRL", "Insert"))
+hl.bind(mod .. " + V", common.universal_clipboard_shortcut("CTRL", "V", "SHIFT", "Insert"))
+hl.bind(mod .. " + X", common.send_shortcut_once("CTRL", "X"))
 hl.bind(mod .. " + F", hl.dsp.window.fullscreen())
 hl.bind(mod .. " + E", hl.dsp.layout("togglesplit"))
 hl.bind(mod .. " + SHIFT + V", hl.dsp.layout("splitv"))
 hl.bind(mod .. " + SHIFT + SPACE", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mod .. " + SPACE", sh(launcher))
+hl.bind(mod .. " + SPACE", sh(root_menu))
 hl.bind(mod .. " + A", note("focus parent has no dwindle equivalent yet"))
 hl.bind(mod .. " + S", sh("hypr-scratch toggle"))
 hl.bind(mod .. " + ALT + S", sh("hypr-scratch move"))
@@ -165,6 +159,8 @@ hl.bind(mod .. " + SHIFT + E", qs("power"))
 hl.bind(mod .. " + ESCAPE", qs("power"))
 hl.bind(mod .. " + SLASH", qs(common.actions.keybindings))
 hl.bind(mod .. " + CTRL + A", qs("controls"))
+hl.bind(mod .. " + CTRL + B", qs("bluetooth"))
+hl.bind(mod .. " + CTRL + E", qs("emojis"))
 hl.bind(mod .. " + CTRL + V", noop())
 hl.bind(mod .. " + CTRL + W", noop())
 hl.bind(mod .. " + ALT + L", qs("lock"), { locked = true })
@@ -193,3 +189,4 @@ hl.bind("XF86KbdBrightnessDown", osd("kbd-down"))
 hl.bind("XF86MonBrightnessUp", osd("brightness-up"))
 hl.bind("XF86MonBrightnessDown", osd("brightness-down"))
 hl.bind("PRINT", screenshot("edit"))
+hl.bind(mod .. " + CTRL + PRINT", screenshot("ocr"))
