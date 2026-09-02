@@ -1,0 +1,12 @@
+exclude_paths:
+  - .ansible/
+  - .venv/
+  - deploy-container.yml
+  - home.yml
+  - server-config.yml
+  - group_vars/
+  - host_vars/
+  - templates/
+  - tasks/
+  - scripts/
+  - vars/work/

@@ -1,0 +1,37 @@
+---
+# Switch 1 - Debian + FRR (Layer 2/3 switch)
+conteiner_id: "{{ id.switch1_frr }}"
+
+# Network configuration
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+# Capabilities for network operations
+extra_args: "--cap-add NET_ADMIN --cap-add NET_RAW --cap-add SYS_ADMIN --restart=unless-stopped --privileged"
+
+# Image configuration
+container: frr
+tag: latest
+image: "frrouting/{{ container }}"
+container_registry: docker.io
+registryns: frrouting
+
+# Environment variables
+default:
+  CONTAINER: "{{ container }}"
+
+# Volume for FRR configuration persistence
+volumes: "-v {{ dir.vol }}{{ container }}-switch1/config:/etc/frr"
+
+# Enable copy template for custom FRR configs
+copy_template: true
+
+# ##############################################################################
+# FRRouting Switch Configuration
+# ##############################################################################
+# This container runs FRR in switch mode with vtysh CLI
+# Supports: VLANs, STP, OSPF, BGP, static routes
+#
+# Access CLI: docker exec -it switch1-frr vtysh
+# Default FRR ports: none exposed (internal use only)
+#
+# Configuration files will be in: /etc/docker/frr-switch1/config/

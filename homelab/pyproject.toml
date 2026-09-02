@@ -1,0 +1,20 @@
+[project]
+name = "homelab"
+version = "0.1.0"
+description = "homelab"
+requires-python = ">=3.13"
+dependencies = [
+    "aiohttp>=3.9.0",
+    "ansible>=11.0.0,<12.0.0",
+    "hashi-vault>=0.1.5",
+    "hvac>=2.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ansible-lint>=24.0.0",
+    "pre-commit>=4.0.0",
+]
+
+[tool.uv]
+exclude-newer = "30 days"

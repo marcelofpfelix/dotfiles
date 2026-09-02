@@ -1,0 +1,10 @@
+---
+# run config
+conteiner_id: "{{ id.debian }}"
+ports: "-p 8008:80/tcp -p 8009:443/tcp"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+extra_args: "--cap-add NET_ADMIN --restart=unless-stopped  --dns=127.0.0.1 --dns=1.1.1.1"
+
+# env vars
+default:
+  CONTAINER: "{{ container }}"

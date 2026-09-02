@@ -1,0 +1,14 @@
+---
+service_name: lagostim-constanca-hermes
+service_description: Lagostim Constanca Hermes Docker Compose service
+service_exec_start: /Users/marcelof/gwt/marcelofpfelix/lagostim/main/scripts/service-constanca-hermes.sh
+service_exec_stop: /Users/marcelof/gwt/marcelofpfelix/lagostim/main/scripts/stop-constanca-hermes.sh
+service_working_directory: /Users/marcelof/gwt/marcelofpfelix/lagostim/main
+service_environment:
+  LAGOSTIM_DOCKER_ROOT: /Users/marcelof/docker/lagostim
+  CONSTANCA_HERMES_API_SERVER_KEY_GOPASS_PATH: lagostim/constanca-hermes/api-server-key
+  CONSTANCA_HERMES_TELEGRAM_BOT_TOKEN_GOPASS_PATH: homelab/telegram/constanca
+  CONSTANCA_HERMES_GOGCLI_BUNDLE_GOPASS_PATH: lagostim/constanca-hermes/gogcli-bundle.tgz
+  CONSTANCA_HERMES_GOG_KEYRING_PASSWORD_GOPASS_PATH: lagostim/constanca-hermes/gog-keyring-password
+  LITELLM_API_KEY_GOPASS_PATH: ai/litellm
+  OPENAI_API_KEY_GOPASS_PATH: ai/openai

@@ -1,0 +1,8 @@
+---
+registryns: "prom"
+
+conteiner_id: "{{ id.node_exporter }}"
+
+volumes: "-v /:/host:ro,rslave"
+extra_args: "--pid=host"
+command: "--path.rootfs=/host"

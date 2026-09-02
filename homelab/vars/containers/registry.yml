@@ -1,0 +1,10 @@
+---
+conteiner_id: "{{ id.registry }}"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+ports: "-p 5000:5000"
+volumes: "-v /etc/docker/registry:/{{ registryns }}"
+labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=5000"
+extra_args: "--privileged=true --restart=always --memory=\"1024m\""
+
+default:
+  REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: "/{{ registryns }}"

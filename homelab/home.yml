@@ -1,0 +1,8 @@
+---
+- name: Updating {{ target | default('desktop') }}
+  hosts: "{{ target | default('desktop') }}"
+  pre_tasks:
+    - name: Load homelab secrets
+      ansible.builtin.include_tasks: tasks/load-secrets.yml
+  roles:
+    - role: marcelofpfelix.homelab.home

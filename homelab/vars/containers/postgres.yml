@@ -1,0 +1,13 @@
+---
+conteiner_id: "{{ id.postgres }}"
+ports: "-p 5432:5432"
+volumes: "-v /etc/docker/postgres:/var/lib/postgresql/data"
+labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=5432"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+default:
+  POSTGRES_USER: "{{ user }}"
+  POSTGRES_PASSWORD: "{{ password }}"
+  PRIVATE_IP: "{{ net.pfx }}.{{ conteiner_id }}"
+  SERVER_HOSTNAME: "{{ ansible_hostname }}"
+  SERVICE_5432_NAME: postgres

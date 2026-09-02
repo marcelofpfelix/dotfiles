@@ -1,0 +1,12 @@
+---
+service_name: lagostim-personal-hermes
+service_description: Lagostim personal Hermes Docker Compose service
+service_exec_start: /Users/marcelof/gwt/marcelofpfelix/lagostim/main/scripts/service-personal-hermes.sh
+service_exec_stop: /Users/marcelof/gwt/marcelofpfelix/lagostim/main/scripts/stop-personal-hermes.sh
+service_working_directory: /Users/marcelof/gwt/marcelofpfelix/lagostim/main
+service_environment:
+  LAGOSTIM_DOCKER_ROOT: /Users/marcelof/docker/lagostim
+  PERSONAL_HERMES_API_SERVER_KEY_GOPASS_PATH: lagostim/personal-hermes/api-server-key
+  PERSONAL_HERMES_TELEGRAM_BOT_TOKEN_GOPASS_PATH: homelab/telegram/eusebio
+  LITELLM_API_KEY_GOPASS_PATH: ai/litellm
+  OPENAI_API_KEY_GOPASS_PATH: ai/openai

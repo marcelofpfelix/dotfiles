@@ -1,0 +1,13 @@
+---
+image: "grafana-oss"
+registryns: "{{ container }}"
+
+conteiner_id: "{{ id.grafana }}"
+ports: "-p 3000:3000"
+volumes: "-v {{ dir.vol }}{{ container }}/:/etc/grafana/provisioning/" # -v {{ dir.vol }}grafana_data:/var/lib/grafana
+labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=3000"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+default:
+  GF_SECURITY_ADMIN_PASSWORD: "{{ default_password }}"
+  GF_USERS_ALLOW_SIGN_UP: "false"

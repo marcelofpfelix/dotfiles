@@ -1,0 +1,12 @@
+---
+container: example-service
+tag: latest
+container_registry: registry.example.com
+registryns: library
+
+conteiner_id: "{{ id.example_service }}"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"
+
+default:
+  SERVICE_ENV: development
+  SERVICE_HOST: "{{ net.pfx }}.{{ conteiner_id }}"

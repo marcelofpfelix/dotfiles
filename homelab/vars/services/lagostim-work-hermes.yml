@@ -1,0 +1,14 @@
+---
+service_name: lagostim-work-hermes
+service_description: Lagostim work Hermes Docker Compose service
+service_exec_start: /Users/marcelof/gwt/marcelofpfelix/lagostim/main/scripts/service-work-hermes.sh
+service_exec_stop: /Users/marcelof/gwt/marcelofpfelix/lagostim/main/scripts/stop-work-hermes.sh
+service_working_directory: /Users/marcelof/gwt/marcelofpfelix/lagostim/main
+service_environment:
+  LAGOSTIM_DOCKER_ROOT: /Users/marcelof/docker/lagostim
+  WORK_HERMES_API_SERVER_KEY_GOPASS_PATH: lagostim/work-hermes/api-server-key
+  WORK_HERMES_SLACK_APP_TOKEN_GOPASS_PATH: lagostim/work-hermes/slack-app-token
+  WORK_HERMES_SLACK_BOT_TOKEN_GOPASS_PATH: lagostim/work-hermes/slack-bot-token
+  WORK_HERMES_DISCORD_BOT_TOKEN_GOPASS_PATH: lagostim/work-hermes/discord-bot-token
+  LITELLM_API_KEY_GOPASS_PATH: ai/litellm
+  OPENAI_API_KEY_GOPASS_PATH: ai/openai

@@ -1,0 +1,14 @@
+---
+- name: Deploy {{ container }}
+  hosts: "{{ target | default('localhost') }}"
+  become: true
+  pre_tasks:
+    - name: Load homelab secrets
+      ansible.builtin.include_tasks: tasks/load-secrets.yml
+  tasks:
+    - name: Validations
+      ansible.builtin.fail:
+        msg: "container/group is not defined"
+      when: container is not defined and group is not defined
+  roles:
+    - role: marcelofpfelix.homelab.service

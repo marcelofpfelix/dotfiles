@@ -1,0 +1,8 @@
+---
+service_name: dummy-service
+service_description: Dummy service for launchd/dystemctl testing
+service_exec_start: /bin/sh -c 'while true; do date; sleep 60; done'
+service_exec_stop: ""
+service_restart: always
+service_environment:
+  DUMMY_SERVICE: "true"

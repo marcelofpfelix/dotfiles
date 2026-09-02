@@ -1,0 +1,10 @@
+---
+- name: Deploy dummy service on macOS
+  hosts: "{{ target | default('mac') }}"
+  become: "{{ deploy_become | default(false) }}"
+  vars_files:
+    - vars/services/dummy.yml
+  tasks:
+    - name: Include deploy service role
+      ansible.builtin.include_role:
+        name: "{{ deploy_service_role | default('marcelofpfelix.homelab.service') }}"

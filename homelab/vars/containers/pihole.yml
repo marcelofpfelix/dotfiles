@@ -1,0 +1,15 @@
+---
+
+conteiner_id: "{{ id.pihole }}"
+ports: "-p 53:53/tcp -p 53:53/udp -p 67:67/udp -p 8000:80/tcp -p 8001:443/tcp"
+volumes: "-v \"{{ dir.vol }}{{ container }}/:/etc/pihole/\" -v \"/etc/docker/etc-dnsmasq.d/:/etc/dnsmasq.d/\""
+labels: "-l traefik.http.services.{{ container }}.loadbalancer.server.port=80"
+extra_args: "--cap-add NET_ADMIN --restart=unless-stopped  --dns=127.0.0.1 --dns=1.1.1.1"
+resolved: false
+
+default:
+  VIRTUAL_HOST: "pi.hole"
+  PROXY_LOCATION: "pi.hole"
+  ServerIP: "127.0.0.1"
+  TZ: "Etc/UTC"
+  WEBPASSWORD: "{{ password }}"

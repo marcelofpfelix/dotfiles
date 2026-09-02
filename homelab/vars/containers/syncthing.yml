@@ -1,0 +1,26 @@
+---
+registryns: "{{ container }}"
+extra_args: "--restart=unless-stopped"
+volumes: "-v /data/syncthing:/var/syncthing"
+# volumes: "-v {{ dir.vol }}{{ container }}/traefik.yml:/etc/traefik/traefik.yml -v /var/run/docker.sock:/var/run/docker.sock"
+
+default:
+  PUID: 1000
+  PGID: 1000
+
+# ports: "-p 443:443 -p 80:80 -p 8080:8080"
+# volumes: "-v {{ dir.vol }}{{ container }}/traefik.yml:/etc/traefik/traefik.yml -v /var/run/docker.sock:/var/run/docker.sock"
+# network: "--net=host"
+# extra_args: "--restart=unless-stopped" #   --api.insecure=true --providers.docker
+
+#   syncthing:
+#     image: syncthing/syncthing
+#     container_name: syncthing
+#     hostname: my-syncthing
+#     environment:
+#       - PUID=1000
+#       - PGID=1000
+#     volumes:
+#       - /wherever/st-sync:/var/syncthing
+#     network_mode: host
+#     restart: unless-stopped

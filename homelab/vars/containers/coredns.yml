@@ -1,0 +1,9 @@
+---
+# image
+registryns: coredns
+
+# run config
+command: "-conf /root/corefile"
+ports: "-p 53:53/udp"
+volumes: "-v {{ dir.vol }}{{ container }}:/root/"
+network: "--net {{ net.name }} --ip {{ net.pfx }}.{{ conteiner_id }}"

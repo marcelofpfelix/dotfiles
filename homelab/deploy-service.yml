@@ -1,0 +1,20 @@
+- name: Deploy {{ deploy_service_name }}
+  hosts: "{{ target | default('mac') }}"
+  become: "{{ deploy_become | default(false) }}"
+  pre_tasks:
+    - name: Validate service selector
+      ansible.builtin.assert:
+        that:
+          - deploy_service_name is defined
+          - deploy_service_name is string
+          - deploy_service_name | length > 0
+        fail_msg: "Set deploy_service_name to a vars/services/<service>.yml name"
+
+    - name: Include service vars {{ deploy_service_name }}
+      ansible.builtin.include_vars:
+        file: "vars/services/{{ deploy_service_name }}.yml"
+
+  tasks:
+    - name: Include deploy service role
+      ansible.builtin.include_role:
+        name: "{{ deploy_service_role | default('marcelofpfelix.homelab.service') }}"
