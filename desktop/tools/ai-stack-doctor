@@ -37,9 +37,10 @@ section "core binaries"
 for cmd in codex claude opencode openclaw bd task-master serena uv uvx rtk rg fd ast-grep jq tmux gh git node npm docker ponytail-install; do
   check_cmd "$cmd" yes
 done
+check_cmd notesmd-cli yes yakitrak/yakitrak/notesmd-cli
 
 section "on-demand binaries"
-for cmd in babysitter fff-mcp fff sourcebot litellm langfuse helicone; do
+for cmd in babysitter fff-mcp fff sourcebot litellm langfuse helicone qmd; do
   check_cmd "$cmd" no
 done
 

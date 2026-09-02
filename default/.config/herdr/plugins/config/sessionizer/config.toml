@@ -1,0 +1,13 @@
+[projects]
+# ~/gwt points at the machine-local worktree storage on this Mac.
+roots = ["~/gwt/*/*", "~/git"]
+git_only = true
+depth = 1
+
+[ui]
+placement = "popup"
+width = "90%"
+height = "90%"
+
+# Keep the global picker non-destructive. Repositories can opt into a layout
+# with a checked-in .sessionizer/config.toml override.

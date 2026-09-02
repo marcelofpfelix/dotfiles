@@ -1,0 +1,7 @@
+collections:
+  brain:
+    path: /Volumes/NVMe/gwt/marcelofpfelix/agents/main/brain
+    pattern: "**/*.md"
+  library:
+    path: /Volumes/NVMe/Syncthing/default/library
+    pattern: "**/*.md"

@@ -78,7 +78,8 @@ fresh_for = "15s"
 [[check]]
 name = "mem"
 label = "Memory"
-kind = "native-mem"
+kind = "command"
+command = ["env", "BAR_COLOR_FORMAT=plain", "check-mem"]
 warning = 60
 critical = 85
 interval = "10s"

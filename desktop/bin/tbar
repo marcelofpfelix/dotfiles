@@ -2,62 +2,40 @@
 
 ################################################################################
 #                                 FILE INFO
-# tmux status bar module - runs scripts and displays output with catppuccin styling
+# Compatibility adapter for Board status surfaces.
 ################################################################################
 
 set -Eeuo pipefail
 
-  # change to local directory
-cd "$(dirname "$0")" || exit
-
-set -o pipefail
-
-# Default scripts to run (override by passing arguments)
-DEFAULT_SCRIPTS=(check-gpg check-docker vpn check-claw check-cpu check-mem)
-SCRIPTS=("${@:-${DEFAULT_SCRIPTS[@]}}")
-
-EXIT_CODE=0
-OUTPUTS=()
-
-for script in "${SCRIPTS[@]}"; do
-  if out=$($script 2>&1 | tr -d '\n'); then
-    code=0
-  else
-    code=$?
-  fi
-  (( code > EXIT_CODE )) && EXIT_CODE=$code
-  [[ -n "$out" ]] && OUTPUTS+=("$out")
-done
-
-OUTPUT="${OUTPUTS[*]}"
-
-# Catppuccin mocha colors
-MAUVE="#cba6f7"
-GREEN="#a6e3a1"
-RED="#f38ba8"
-YELLOW="#f9e2af"
-CRUST="#11111b"
-SURFACE="#313244"
-FG="#cdd6f4"
-
-# Separators
-LEFT_SEP=""
-RIGHT_SEP=""
-
-case $EXIT_CODE in
-  0)
-    COLOR=$GREEN
-    ICON=""
+FORMAT="${TBAR_FORMAT:-tmux}"
+case "${1:-}" in
+  --format)
+    [[ $# -ge 2 ]] || {
+      echo "tbar: --format requires tmux, herdr, or plain" >&2
+      exit 2
+    }
+    FORMAT="$2"
+    shift 2
     ;;
-  1)
-    COLOR=$YELLOW
-    ICON=""
-    ;;
-  *)
-    COLOR=$RED
-    ICON=""
+  --format=*)
+    FORMAT="${1#*=}"
+    shift
     ;;
 esac
 
-# Output full catppuccin-style module
-echo "#[fg=$COLOR]${LEFT_SEP}#[fg=$CRUST,bg=$COLOR]$ICON #[fg=$FG,bg=$SURFACE] $OUTPUT #[fg=$SURFACE]${RIGHT_SEP}"
+case "$FORMAT" in
+  tmux) BOARD_FORMAT=tmux ;;
+  herdr) BOARD_FORMAT=terminal ;;
+  plain) BOARD_FORMAT=plain ;;
+  *)
+    echo "tbar: unsupported format: $FORMAT" >&2
+    exit 2
+    ;;
+esac
+
+SURFACE="${TBAR_SURFACE:-tmux-top}"
+BOARD_ARGS=(render --format "$BOARD_FORMAT" --surface "$SURFACE")
+if [[ "$FORMAT" == "herdr" ]]; then
+  BOARD_ARGS+=(--color never)
+fi
+exec board "${BOARD_ARGS[@]}" "$@"

@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+action="dry-run"
+profile="work"
+scope="all"
+agents_root="${AGENTS_REPO_ROOT:-$HOME/gwt/marcelofpfelix/agents/main}"
+target_home="$HOME"
+
+usage() {
+  cat <<'EOF'
+Usage: agents-deploy [--apply|--check] [--instructions-only]
+                     [--profile work|personal|family]
+                     [--agents-root PATH] [--home PATH]
+
+Deploy public-safe links from the canonical Agents repository.
+Dry-run is the default. Existing unmanaged paths are never overwritten.
+
+Managed targets:
+  ~/.pi/agent/AGENTS.md
+  ~/.config/opencode/AGENTS.md
+  ~/.codex/AGENTS.md (legacy)
+  ~/.claude/CLAUDE.md (legacy)
+  ~/.agents/skills
+  ~/.agents/mcp.json
+
+Environment:
+  AGENTS_REPO_ROOT  Override the canonical Agents repository root.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --apply)
+      action="apply"
+      shift
+      ;;
+    --check)
+      action="check"
+      shift
+      ;;
+    --instructions-only)
+      scope="instructions"
+      shift
+      ;;
+    --profile)
+      profile="${2:?missing value for --profile}"
+      shift 2
+      ;;
+    --agents-root)
+      agents_root="${2:?missing value for --agents-root}"
+      shift 2
+      ;;
+    --home)
+      target_home="${2:?missing value for --home}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'unknown argument: %s\n' "$1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+case "$profile" in
+  work) instructions_rel="profiles/work/john/AGENTS.md" ;;
+  personal) instructions_rel="profiles/personal/eusebio/AGENTS.md" ;;
+  family) instructions_rel="profiles/family/constanca/AGENTS.md" ;;
+  *)
+    printf 'unsupported profile: %s\n' "$profile" >&2
+    exit 2
+    ;;
+esac
+
+if [[ ! -d "$agents_root" ]]; then
+  printf 'missing Agents repository: %s\n' "$agents_root" >&2
+  exit 1
+fi
+
+agents_root="$(cd "$agents_root" && pwd -P)"
+instructions="$agents_root/$instructions_rel"
+portable_skills="$agents_root/skills/portable"
+pi_mcp="$agents_root/adapters/pi/mcp.json"
+
+required_sources=("$instructions")
+if [[ "$scope" == "all" ]]; then
+  required_sources+=("$portable_skills" "$pi_mcp")
+fi
+
+for source_path in "${required_sources[@]}"; do
+  if [[ ! -e "$source_path" ]]; then
+    printf 'missing canonical source: %s\n' "$source_path" >&2
+    exit 1
+  fi
+done
+
+sources=(
+  "$instructions"
+  "$instructions"
+  "$instructions"
+  "$instructions"
+)
+targets=(
+  "$target_home/.pi/agent/AGENTS.md"
+  "$target_home/.config/opencode/AGENTS.md"
+  "$target_home/.codex/AGENTS.md"
+  "$target_home/.claude/CLAUDE.md"
+)
+if [[ "$scope" == "all" ]]; then
+  sources+=("$portable_skills" "$pi_mcp")
+  targets+=("$target_home/.agents/skills" "$target_home/.agents/mcp.json")
+fi
+
+link_matches() {
+  local source_path="$1" target_path="$2"
+  [[ -L "$target_path" ]] || return 1
+  [[ "$(realpath "$target_path" 2>/dev/null || true)" == "$(realpath "$source_path")" ]]
+}
+
+for index in "${!targets[@]}"; do
+  target_path="${targets[$index]}"
+  source_path="${sources[$index]}"
+  if [[ -e "$target_path" || -L "$target_path" ]]; then
+    if ! link_matches "$source_path" "$target_path"; then
+      printf 'refusing unmanaged target: %s\n' "$target_path" >&2
+      printf 'preserve or move it explicitly before deployment\n' >&2
+      exit 1
+    fi
+  fi
+done
+
+status=0
+for index in "${!targets[@]}"; do
+  target_path="${targets[$index]}"
+  source_path="${sources[$index]}"
+
+  if link_matches "$source_path" "$target_path"; then
+    printf 'ok %s -> %s\n' "$target_path" "$source_path"
+    continue
+  fi
+
+  case "$action" in
+    dry-run)
+      printf 'would link %s -> %s\n' "$target_path" "$source_path"
+      ;;
+    check)
+      printf 'missing %s -> %s\n' "$target_path" "$source_path" >&2
+      status=1
+      ;;
+    apply)
+      mkdir -p "$(dirname "$target_path")"
+      ln -s "$source_path" "$target_path"
+      printf 'linked %s -> %s\n' "$target_path" "$source_path"
+      ;;
+  esac
+done
+
+exit "$status"

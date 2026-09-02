@@ -51,13 +51,17 @@ export AGENT_TMUX_ENABLED="${AGENT_TMUX_ENABLED:-0}"
 
 # https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins
 export ZSH_PLUGINS="${GWT_REPOS_ROOT:-$HOME/gwt}"
-source $ZSH_PLUGINS/romkatv/zsh-defer/master/zsh-defer.plugin.zsh
+# Make zsh-defer available without installing its ZLE hooks during startup.
+# Use `zsh-defer source path/to/slow-plugin.zsh` only for deliberately deferred work.
+fpath+=("$ZSH_PLUGINS/romkatv/zsh-defer/master")
+autoload -Uz zsh-defer
 # fzf-tab needs to be loaded after compinit, but before plugins which will wrap widgets
 source $ZSH_PLUGINS/aloxaf/fzf-tab/master/fzf-tab.zsh
 source $ZSH_PLUGINS/zsh-users/zsh-autosuggestions/master/zsh-autosuggestions.zsh
 source $ZSH_PLUGINS/zsh-users/zsh-history-substring-search/master/zsh-history-substring-search.zsh
-source $ZSH_PLUGINS/zsh-users/zsh-syntax-highlighting/master/zsh-syntax-highlighting.zsh
-# Note that zsh-syntax-highlighting must be the last plugin sourced.
+# Replaces zsh-users/zsh-syntax-highlighting; restore that source line here to roll back.
+source $ZSH_PLUGINS/zdharma-continuum/fast-syntax-highlighting/master/fast-syntax-highlighting.plugin.zsh
+# The syntax highlighter must be the last plugin sourced.
 
 # fzf-tab config
 # disable sort when completing `git checkout`
@@ -116,8 +120,77 @@ alias ls='ls $LS_OPTIONS -1'
 alias lg='ll --git-ignore'
 alias groot='cd $(git rev-parse --show-toplevel)'
 
-alias o=openclaw
-alias ou='openclaw tui'
+
+# Run the Hermes CLI inside an existing Lagostim container. Keep the Colima
+# context explicit because the active Docker context may point at work-amd64.
+_hermes_container_cli() {
+    local container="$1"
+    local container_cwd=/workspace
+    local health
+    local -a docker_tty=(-i)
+    local -a hermes_cwd
+    shift
+
+    case "$container" in
+        personal-hermes|constanca-hermes|work-hermes) ;;
+        *)
+            print -u2 -- "unsupported Hermes container: $container"
+            return 2
+            ;;
+    esac
+
+    case "$PWD" in
+        /Volumes/NVMe/gwt|/data/gwt)
+            container_cwd=/Users/marcelof/gwt
+            ;;
+        /Volumes/NVMe/gwt/*)
+            container_cwd="/Users/marcelof/gwt/${PWD#/Volumes/NVMe/gwt/}"
+            ;;
+        /data/gwt/*)
+            container_cwd="/Users/marcelof/gwt/${PWD#/data/gwt/}"
+            ;;
+        /Users/marcelof/gwt|/Users/marcelof/gwt/*)
+            container_cwd="$PWD"
+            ;;
+        /Volumes/NVMe|/data)
+            container_cwd=/Volumes/NVMe
+            ;;
+        /Volumes/NVMe/*)
+            container_cwd="$PWD"
+            ;;
+        /data/*)
+            container_cwd="/Volumes/NVMe/${PWD#/data/}"
+            ;;
+    esac
+
+    health="$(docker --context colima inspect \
+        --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
+        "$container" 2>/dev/null)" || {
+        print -u2 -- "Hermes container is unavailable: $container"
+        return 1
+    }
+    if [[ "$health" != healthy ]]; then
+        print -u2 -- "Hermes container is not healthy: $container ($health)"
+        return 1
+    fi
+
+    [[ -t 0 && -t 1 ]] && docker_tty+=(-t)
+    if [[ " $* " == *" --in "* || " $* " == *" --in="* ]]; then
+        hermes_cwd=()
+    else
+        hermes_cwd=(--in "$container_cwd")
+    fi
+    HERDR_AGENT=hermes docker --context colima exec "${docker_tty[@]}" \
+        --workdir "$container_cwd" "$container" hermes "${hermes_cwd[@]}" "$@"
+}
+
+hp() { _hermes_container_cli personal-hermes "$@"; }
+hf() { _hermes_container_cli constanca-hermes "$@"; }
+hw() { _hermes_container_cli work-hermes "$@"; }
+
+alias hermes-personal=hp
+alias hermes-family=hf
+alias hermes-work=hw
 
 
 # ##############################################################################

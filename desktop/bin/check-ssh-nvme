@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Verify that macOS Remote Login sessions can read the external NVMe volume.
+# This catches a TCC/Full Disk Access denial before it breaks remote shells,
+# rsync, or agent worktrees under ~/gwt.
+
+host=${SSH_NVME_CHECK_HOST:-localhost}
+target=${SSH_NVME_CHECK_TARGET:-/Volumes/NVMe/gwt/marcelofpfelix/dotfiles/main/README.md}
+
+case "$target" in
+  /Volumes/NVMe/*) ;;
+  *)
+    printf 'ssh-nvme:invalid-target:%s\n' "$target" >&2
+    exit 2
+    ;;
+esac
+
+if output=$(/usr/bin/ssh -T -o BatchMode=yes -o ConnectTimeout=8 "$host" /bin/cat "$target" 2>&1 >/dev/null); then
+  printf 'ssh-nvme:ok:%s\n' "$host"
+  exit 0
+fi
+
+if [[ $output == *'Interrupted system call'* || $output == *'Operation not permitted'* ]]; then
+  printf 'ssh-nvme:blocked:%s\n' "$host" >&2
+  printf '%s\n' 'Enable “Allow full disk access for remote users” in System Settings > General > Sharing > Remote Login > Info.' >&2
+  exit 1
+fi
+
+printf 'ssh-nvme:error:%s:%s\n' "$host" "$output" >&2
+exit 2

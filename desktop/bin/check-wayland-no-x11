@@ -2,6 +2,7 @@
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+script_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 status=0
 
 scan_file() {
@@ -20,6 +21,7 @@ scan_file() {
 }
 
 while IFS= read -r -d '' file; do
+  [[ "$file" == "$script_path" ]] && continue
   scan_file "$file"
 done < <(
   find \

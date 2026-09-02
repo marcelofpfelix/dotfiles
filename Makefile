@@ -18,10 +18,16 @@ pre: ## run pre-commit
 	pre-commit run --all-files
 
 check-bin-executables: ## check executable bits for shebang files in bin dirs
-	default/bin/check-bin-executables
+	desktop/bin/check-bin-executables
+
+test-agents-deploy: ## test public-safe agent configuration deployment
+	sh test/agents_deploy_test.sh
+
+test-hermes-container-cli: ## test Docker Hermes shell wrappers
+	sh test/hermes_container_cli_test.sh
 
 fix-bin-executables: ## chmod +x shebang files in bin dirs
-	default/bin/check-bin-executables --fix
+	desktop/bin/check-bin-executables --fix
 
 act: ## run GitHub Actions locally with act
 	act -W .github/workflows/ci.yml

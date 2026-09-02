@@ -31,6 +31,8 @@ new_tab = "prefix+c"
 rename_tab = "prefix+comma"
 previous_tab = "prefix+p"
 next_tab = "prefix+n"
+move_tab_previous = "prefix+alt+left"
+move_tab_next = "prefix+alt+right"
 switch_tab = "prefix+1..9"
 close_tab = "prefix+ampersand"
 edit_scrollback = "prefix+e"
@@ -51,25 +53,14 @@ split_horizontal = "prefix+double_quote"
 close_pane = "prefix+x"
 zoom = "prefix+z"
 resize_mode = "prefix+shift+r"
+resize_pane_left = "prefix+shift+left"
+resize_pane_down = "prefix+shift+down"
+resize_pane_up = "prefix+shift+up"
+resize_pane_right = "prefix+shift+right"
 toggle_sidebar = "prefix+b"
 
-# Agent pane monitor, matching the tmux prefix bindings as closely as Herdr allows.
+# Agent panes.
 focus_agent = "prefix+alt+1..9"
-
-[[keys.command]]
-key = "prefix+shift+a"
-type = "pane"
-command = "agent-tmux status"
-
-[[keys.command]]
-key = "prefix+shift+e"
-type = "pane"
-command = "agent-tmux events"
-
-[[keys.command]]
-key = "prefix+alt+w"
-type = "pane"
-command = "agent-tmux watch"
 
 [[keys.command]]
 key = "ctrl+h"
@@ -95,15 +86,38 @@ type = "plugin_action"
 command = "vim-herdr-navigation.right"
 description = "navigate right (vim/herdr)"
 
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "sessionizer.open"
+description = "open project workspace"
+
+[[keys.command]]
+key = "prefix+up"
+type = "plugin_action"
+command = "sessionizer.worktree-open"
+description = "open worktree workspace"
+
 [ui]
 mouse_capture = true
 pane_borders = true
-pane_gaps = true
+pane_outer_borders = false
+pane_gaps = false
+pane_scrollbars = false
 show_agent_labels_on_pane_borders = true
 agent_panel_sort = "priority"
+status_indicators = "symbols"
 accent = "#cba6f7"
 confirm_close = true
 prompt_new_tab_name = false
+tab_bar_position = "top"
+tab_bar_right = [
+  { type = "command", command = "PATH=/opt/homebrew/bin:$HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin board render --format terminal --surface tmux-top --color never", interval_seconds = 30, timeout_seconds = 10 },
+  { type = "zoom" },
+  { type = "datetime", format = "%H:%M" },
+]
+tab_bar_right_separator = " · "
+window_title = "{hostname}: {workspace} · {tab}"
 
 [ui.toast]
 delivery = "terminal"

@@ -98,6 +98,9 @@ local_copy() {
     chmod 700 ~/.gnupg 2>/dev/null || true
     find ~/.gnupg -type f -name '*.conf' -exec chmod 600 {} + 2>/dev/null || true
     rsync -a --keep-dirlinks "${homework}/workdesk/" "$HOME/"
+    if [ -x "$HOME/bin/deploy-mux" ] && [ -f "$HOME/gwt/marcelofpfelix/rush/dev/Cargo.toml" ]; then
+        "$HOME/bin/deploy-mux"
+    fi
     rsync -a --keep-dirlinks "${workdir}/laptop/" "$HOME/"
     rsync -a --keep-dirlinks "${workdir}/tanker/" "$HOME/"
 

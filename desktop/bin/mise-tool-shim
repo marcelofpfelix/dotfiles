@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+tool=${0##*/}
+mise_bin=${MISE_BIN:-"$HOME/.local/bin/mise"}
+
+exec "$mise_bin" exec -- "$tool" "$@"

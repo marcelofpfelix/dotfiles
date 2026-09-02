@@ -1,0 +1,146 @@
+#!/bin/sh
+set -eu
+
+agents_root="${AGENTS_REPO_ROOT:-$HOME/gwt/marcelofpfelix/agents/main}"
+target_home="$HOME"
+lagostim_root="${LAGOSTIM_DOCKER_ROOT:-/Volumes/NVMe/docker/lagostim}"
+usage_report=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --agents-root) agents_root="${2:?missing path}"; shift 2 ;;
+    --home) target_home="${2:?missing path}"; shift 2 ;;
+    --lagostim-root) lagostim_root="${2:?missing path}"; shift 2 ;;
+    --usage-report) usage_report="${2:?missing PROFILE:PATH}"; shift 2 ;;
+    -h|--help)
+      printf 'Usage: check-agent-models [--agents-root PATH] [--home PATH] [--lagostim-root PATH] [--usage-report PROFILE:PATH]\n'
+      exit 0
+      ;;
+    *) printf 'unknown argument: %s\n' "$1" >&2; exit 2 ;;
+  esac
+done
+
+policy="$agents_root/shared/model-policy.json"
+errors=0
+
+fail() {
+  printf '%s\n' "$1" >&2
+  errors=$((errors + 1))
+}
+
+expect() {
+  label="$1"
+  actual="$2"
+  expected="$3"
+  [ "$actual" = "$expected" ] || fail "$label: expected $expected, got ${actual:-<missing>}"
+}
+
+yaml_model_value() {
+  field="$1"
+  awk -v field="$field" '
+    $0 == "model:" { active = 1; next }
+    active && /^[^ ]/ { exit }
+    active && $1 == field ":" { print $2; exit }
+  ' "$2"
+}
+
+yaml_fallback_value() {
+  field="$1"
+  awk -v field="$field" '
+    $0 == "fallback_providers:" { active = 1; next }
+    active && /^[^ ]/ { exit }
+    active && $1 == "-" && $2 == field ":" { print $3; exit }
+    active && $1 == field ":" { print $2; exit }
+  ' "$2"
+}
+
+if [ ! -r "$policy" ] || ! jq -e '.version == 1 and (.profiles | type == "object") and (.harnesses | type == "object")' "$policy" >/dev/null; then
+  printf 'invalid model policy: %s\n' "$policy" >&2
+  exit 1
+fi
+
+for mapping in personal:personal-hermes family:constanca-hermes work:work-hermes; do
+  profile="${mapping%%:*}"
+  directory="${mapping#*:}"
+  config="$lagostim_root/$directory/config.yaml"
+  if [ ! -r "$config" ]; then
+    fail "$directory config is missing"
+    continue
+  fi
+
+  primary_provider="$(jq -r --arg profile "$profile" '.profiles[$profile].hermes.primary.provider' "$policy")"
+  primary_model="$(jq -r --arg profile "$profile" '.profiles[$profile].hermes.primary.model' "$policy")"
+  fallback_provider="$(jq -r --arg profile "$profile" '.profiles[$profile].hermes.fallback.provider' "$policy")"
+  fallback_model="$(jq -r --arg profile "$profile" '.profiles[$profile].hermes.fallback.model' "$policy")"
+
+  if [ "$primary_provider:$primary_model" = "openai-codex:gpt-5.6" ]; then
+    fail "$profile policy uses unsupported bare gpt-5.6 Codex slug; use gpt-5.6-sol, gpt-5.6-terra, or gpt-5.6-luna"
+  fi
+
+  expect "$directory primary provider" "$(yaml_model_value provider "$config")" "$primary_provider"
+  expect "$directory primary model" "$(yaml_model_value default "$config")" "$primary_model"
+  expect "$directory fallback provider" "$(yaml_fallback_value provider "$config")" "$fallback_provider"
+  expect "$directory fallback model" "$(yaml_fallback_value model "$config")" "$fallback_model"
+
+  for env_file in "$lagostim_root/$directory/.env" "$lagostim_root/$directory/runtime/compose.env"; do
+    if [ -f "$env_file" ] && grep -q '^OPENAI_API_KEY=' "$env_file"; then
+      fail "$directory must not define OPENAI_API_KEY in ${env_file#"$lagostim_root"/"$directory"/}"
+    fi
+  done
+done
+
+pi_config="$target_home/.pi/agent/settings.json"
+if [ -r "$pi_config" ]; then
+  expect "Pi provider" "$(jq -r '.defaultProvider // empty' "$pi_config")" "$(jq -r '.harnesses.pi.provider' "$policy")"
+  expect "Pi model" "$(jq -r '.defaultModel // empty' "$pi_config")" "$(jq -r '.harnesses.pi.model' "$policy")"
+else
+  fail "Pi settings are missing"
+fi
+
+opencode_config="$target_home/.config/opencode/opencode.json"
+if [ -r "$opencode_config" ]; then
+  opencode_expected="$(jq -r '.harnesses.opencode | "\(.provider)/\(.model)"' "$policy")"
+  expect "OpenCode model" "$(jq -r '.model // empty' "$opencode_config")" "$opencode_expected"
+else
+  fail "OpenCode config is missing"
+fi
+
+codex_config="$target_home/.codex/config.toml"
+if [ -r "$codex_config" ]; then
+  codex_model="$(sed -n 's/^model[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$codex_config" | head -1)"
+  expect "Codex model" "$codex_model" "$(jq -r '.harnesses.codex.model' "$policy")"
+else
+  fail "Codex config is missing"
+fi
+
+if [ -n "$usage_report" ]; then
+  usage_profile="${usage_report%%:*}"
+  usage_path="${usage_report#*:}"
+  case "$usage_profile" in
+    personal|family|work) ;;
+    *) fail "unknown usage-report profile: $usage_profile" ;;
+  esac
+
+  if [ ! -r "$usage_path" ] || ! jq -e '
+    (.completed | type == "boolean") and
+    (.failed | type == "boolean") and
+    (.provider | type == "string") and
+    (.model | type == "string")
+  ' "$usage_path" >/dev/null 2>&1; then
+    fail "invalid Hermes usage report: $usage_path"
+  elif [ "$usage_profile" = personal ] || [ "$usage_profile" = family ] || [ "$usage_profile" = work ]; then
+    expect "$usage_profile smoke completed" "$(jq -r '.completed' "$usage_path")" true
+    expect "$usage_profile smoke failed" "$(jq -r '.failed' "$usage_path")" false
+    expect "$usage_profile smoke provider" "$(jq -r '.provider' "$usage_path")" \
+      "$(jq -r --arg profile "$usage_profile" '.profiles[$profile].hermes.primary.provider' "$policy")"
+    expect "$usage_profile smoke model" "$(jq -r '.model' "$usage_path")" \
+      "$(jq -r --arg profile "$usage_profile" '.profiles[$profile].hermes.primary.model' "$policy")"
+  fi
+fi
+
+if [ "$errors" -eq 0 ]; then
+  printf 'agent model policy: synchronized\n'
+  exit 0
+fi
+
+exit 1

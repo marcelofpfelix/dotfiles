@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+emit_error() {
+  local request_id="$1"
+  local operation="$2"
+  local code="$3"
+  local message="$4"
+
+  jq -nc --arg request_id "$request_id" --arg code "$code" --arg message "$message" '{version:1,request_id:$request_id,ok:false,error:{code:$code,message:$message}}'
+  printf '[agent-host-broker] request_id=%s operation=%s result=denied code=%s\n' "$request_id" "$operation" "$code" >&2
+  exit 2
+}
+
+if ! IFS= read -r request || ! jq -e 'type == "object"' >/dev/null 2>&1 <<<"$request"; then
+  emit_error "" "" "invalid_request" "request must be one JSON object"
+fi
+
+request_id="$(jq -r '.request_id // ""' <<<"$request")"
+operation="$(jq -r '.operation // ""' <<<"$request")"
+version="$(jq -r '.version // 0' <<<"$request")"
+
+if [ "$version" != "1" ] || [ -z "$request_id" ] || [ -z "$operation" ]; then
+  emit_error "$request_id" "$operation" "invalid_request" "version 1, request_id, and operation are required"
+fi
+
+case "$operation" in
+  ping)
+    jq -nc --arg request_id "$request_id" '{
+      version: 1,
+      request_id: $request_id,
+      ok: true,
+      result: {
+        transport: "stdio-one-shot",
+        operations: ["ping", "repo_status", "docker_status"],
+        mutations: false
+      }
+    }'
+    ;;
+
+  repo_status)
+    requested_path="$(jq -r '.args.path // ""' <<<"$request")"
+    if [ -z "$requested_path" ] || [ ! -d "$requested_path" ]; then
+      emit_error "$request_id" "$operation" "invalid_path" "args.path must name an existing directory"
+    fi
+
+    canonical_path="$(cd "$requested_path" && pwd -P)"
+    case "$canonical_path" in
+      /Volumes/NVMe/gwt/*) ;;
+      *)
+        emit_error "$request_id" "$operation" "path_not_allowed" "repository must be inside the canonical GWT root"
+        ;;
+    esac
+
+    if ! git -C "$canonical_path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      emit_error "$request_id" "$operation" "not_a_worktree" "path must be a Git worktree"
+    fi
+
+    status="$(GIT_OPTIONAL_LOCKS=0 git -C "$canonical_path" status --short)"
+    jq -nc --arg request_id "$request_id" --arg path "$canonical_path" --arg status "$status" '{version:1,request_id:$request_id,ok:true,result:{path:$path,status:$status}}'
+    ;;
+
+  docker_status)
+    profile="$(jq -r '.args.profile // ""' <<<"$request")"
+    case "$profile" in
+      personal) container="personal-hermes" ;;
+      family) container="constanca-hermes" ;;
+      work) container="work-hermes" ;;
+      *)
+        emit_error "$request_id" "$operation" "profile_not_allowed" "profile must be personal, family, or work"
+        ;;
+    esac
+
+    status="$(docker --context colima ps --filter "name=^/${container}$" --format '{{.Names}}\t{{.Status}}')"
+    if [ -z "$status" ]; then
+      emit_error "$request_id" "$operation" "container_not_running" "the allowlisted container is not running"
+    fi
+
+    jq -nc --arg request_id "$request_id" --arg profile "$profile" --arg container "$container" --arg status "$status" '{version:1,request_id:$request_id,ok:true,result:{profile:$profile,container:$container,status:$status}}'
+    ;;
+
+  *)
+    emit_error "$request_id" "$operation" "operation_not_allowed" "operation is not in the read-only allowlist"
+    ;;
+esac
+
+printf '[agent-host-broker] request_id=%s operation=%s result=ok\n' "$request_id" "$operation" >&2

@@ -29,20 +29,18 @@ On macOS, these are expected to be available from Homebrew when possible.
 
 Required repos:
 
-- `$HOME/git/romkatv/zsh-defer`
 - `$HOME/git/aloxaf/fzf-tab`
 - `$HOME/git/zsh-users/zsh-autosuggestions`
 - `$HOME/git/zsh-users/zsh-history-substring-search`
-- `$HOME/git/zsh-users/zsh-syntax-highlighting`
+- `$HOME/git/zdharma-continuum/fast-syntax-highlighting`
 
 Example install:
 
 ```sh
-gsync --read --repo "romkatv/zsh-defer branch=master"
 gsync --read --repo "aloxaf/fzf-tab branch=master"
 gsync --read --repo "zsh-users/zsh-autosuggestions branch=master"
 gsync --read --repo "zsh-users/zsh-history-substring-search branch=master"
-gsync --read --repo "zsh-users/zsh-syntax-highlighting branch=master"
+gsync --read --repo "zdharma-continuum/fast-syntax-highlighting branch=master"
 ```
 
 ## Optional Desktop Tools
@@ -50,6 +48,7 @@ gsync --read --repo "zsh-users/zsh-syntax-highlighting branch=master"
 Some aliases and scripts use these when present:
 
 - `docker`
+- `notesmd-cli`
 - `tmux`
 - `gum`
 - `tshark`
@@ -102,6 +101,17 @@ On-demand binaries and services:
 - LiteLLM, Langfuse, and Helicone for shared API routing and observability
 - Hindsight local daemon with `uvx hindsight-embed`, after explicit memory-pilot
   approval
+- QMD for local semantic Brain search, after its release-age and native SQLite
+  compatibility gates pass
+
+Install the required headless Brain CLI on macOS with:
+
+```sh
+brew tap yakitrak/yakitrak
+brew install yakitrak/yakitrak/notesmd-cli
+```
+
+The Obsidian desktop app is optional and is not needed by `notesmd-cli`.
 
 Run `desktop/tools/ai-stack-doctor` to check what is installed and which on-demand pieces are
 ready to enable.
