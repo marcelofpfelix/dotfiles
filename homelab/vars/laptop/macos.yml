@@ -1,0 +1,7 @@
+---
+# macOS-specific desktop definitions for a future macOS composition playbook.
+laptop_macos_packages: []
+laptop_macos_home_tags:
+  desktop_darwin:
+    dir: desktop_darwin
+    path: "{{ laptop_dotfiles_root }}"

@@ -1,0 +1,32 @@
+---
+- name: Provision a new Ubuntu laptop
+  hosts: "{{ laptop_target | default('all') }}"
+  gather_facts: true
+
+  vars_files:
+    - vars/laptop/desktop.yml
+    - vars/laptop/ubuntu.yml
+
+  roles:
+    - role: marcelofpfelix.homelab.server
+      become: true
+      vars:
+        server_config_target_is_explicit: "{{ laptop_target is defined }}"
+        server_config_require_single_host: true
+        server_config_allowed_distributions:
+          - Ubuntu
+        server_config_manage_sudo: false
+        server_config_manage_packages: true
+        server_config_desktop_packages_common: "{{ laptop_desktop_common_packages }}"
+        server_config_desktop_packages_ubuntu: "{{ laptop_ubuntu_packages }}"
+      tags:
+        - laptop_system
+        - server_config
+
+    - role: marcelofpfelix.homelab.home
+      become: false
+      vars:
+        home_tags: "{{ laptop_desktop_home_tags | combine(laptop_ubuntu_home_tags) }}"
+      tags:
+        - laptop_home
+        - home

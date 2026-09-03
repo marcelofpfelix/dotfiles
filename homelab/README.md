@@ -61,6 +61,38 @@ make test-lagostim-compose
 
 ### Home
 
+`home.yml` remains the focused entry point for home folders, dotfiles, shell
+configuration, and SSH through `marcelofpfelix.homelab.home`.
 
+### New Ubuntu laptop
+
+`laptop.yml` composes the existing collection roles rather than duplicating
+their tasks:
+
+1. `marcelofpfelix.homelab.server` applies system configuration and layered
+   shared/Ubuntu packages.
+2. `marcelofpfelix.homelab.home` applies the `default`, `desktop`,
+   `default_debian`, and `desktop_debian` home layers.
+3. Service/container deployment remains separate under `deploy-service.yml`.
+
+The target is mandatory. Validate the composition and syntax without changing a
+machine:
+
+```console
+make test-laptop-playbook
+uv run ansible-playbook laptop.yml --syntax-check \
+  -i 'localhost,' -e laptop_target=localhost
+```
+
+On the Ubuntu laptop, inspect the local changes before applying them:
+
+```console
+uv run ansible-playbook laptop.yml --check --ask-become-pass \
+  -i 'localhost,' -c local -e laptop_target=localhost
+```
+
+Remove `--check` only after reviewing the dry-run. The collection role rejects
+non-Ubuntu targets and host patterns that select more than one machine. This is
+the first foundation slice, not yet the complete laptop build.
 
 ### Infrastructure as code

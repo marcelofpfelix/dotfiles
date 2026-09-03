@@ -1,20 +1,22 @@
 # Laptop IaC tasks
 
-These tasks are intentionally deferred. The new Ubuntu laptop automation must be designed from scratch rather than extending the legacy `home.yml` or server playbooks.
+These tasks track the complete Ubuntu laptop build. The new `laptop.yml` is a composition playbook over the supported collection roles: `server` owns system configuration and installation, `home` owns home folders, dotfiles and SSH, and `service` remains responsible for service/container deployment.
 
 ## Architecture
 
-- [ ] Create a fresh `homelab/laptop.yml` entry point for provisioning a new laptop.
-  - Acceptance: targets one explicitly selected laptop; does not default to the existing `desktop` group; supports check mode and tags.
-- [ ] Define a shared desktop layer for configuration common to Linux and macOS.
+- [x] Create a fresh `homelab/laptop.yml` entry point for provisioning a new laptop.
+  - Acceptance: requires an explicit target, and collection guards reject multiple hosts and non-Ubuntu systems before mutation; supports check mode and role tags.
+- [ ] Complete the shared desktop layer for configuration common to Linux and macOS.
+  - Progress: public `default` and `desktop` home tags plus common package definitions now feed the collection roles.
   - Examples: user identity, Git, shell tools, editor configuration, repositories, agent tooling, and dotfile deployment where behaviour is genuinely portable.
-- [ ] Define an Ubuntu-only desktop layer.
+- [ ] Complete the Ubuntu-only desktop layer.
+  - Progress: public `default_debian` and `desktop_debian` home tags plus Ubuntu package definitions now feed the collection roles.
   - Examples: APT repositories/packages, Hyprland, Quickshell, portals, PipeWire, NetworkManager, systemd user units, firmware, firewall, update policy, hibernation, backup integration, hardware support, and Tailscale.
-- [ ] Define a macOS-only desktop layer.
-  - Examples: Homebrew, LaunchAgents, macOS defaults, FileVault verification, application installation, and Darwin-specific paths.
-- [ ] Keep machine-specific and secret values in the Homework overlay; keep reusable roles, playbooks, defaults, and validation in Dotfiles.
-- [ ] Decide whether laptop roles live directly under `homelab/roles/` or in the external collection.
-  - Acceptance: whichever boundary is selected must be pinned and reproducible; no dependency on a mutable collection `main` branch.
+- [ ] Complete the macOS-only desktop layer.
+  - Progress: the `desktop_darwin` home-tag definition exists; macOS composition and packages remain deferred.
+- [x] Keep machine-specific and secret values in the Homework overlay; keep reusable role tasks and defaults in `ansible-collection-homelab`, and keep playbook composition plus public profiles in Dotfiles.
+- [x] Keep reusable laptop role work in the external collection.
+  - Foundation pinned to collection commit `a8f096b108edce7411be68f06b4e7eaf0c508da9`; Dotfiles contains no duplicate role tasks.
 
 ## Bootstrap and recovery
 
@@ -36,7 +38,7 @@ These tasks are intentionally deferred. The new Ubuntu laptop automation must be
 ## Inventory and security
 
 - [ ] Replace host/group name collisions for `laptop` and `mac` with distinct group and host names.
-- [ ] Give the new laptop explicit shared and Ubuntu desktop roles; do not rely on `desktop: true` as an unused marker.
+- [x] Give the new laptop explicit shared and Ubuntu desktop profiles consumed by the collection `server` and `home` roles; do not rely on `desktop: true` as an unused marker.
 - [ ] Remove global `StrictHostKeyChecking=no` from public and private Ansible configuration.
 - [ ] Manage trusted SSH host keys explicitly.
 - [ ] Make unrestricted passwordless sudo opt-in and avoid granting `NOPASSWD: ALL` to the entire sudo group.

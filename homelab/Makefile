@@ -1,4 +1,4 @@
-.PHONY: help pre build clean shell version inventory ping check private-link private-unlink private-status test-lagostim-compose test-lagostim-launchd
+.PHONY: help pre build clean shell version inventory ping check private-link private-unlink private-status test-laptop-playbook test-lagostim-compose test-lagostim-launchd
 
 ################################################################################
 # variables
@@ -27,6 +27,9 @@ pre: ## run pre-commit
 	uv run --extra dev pre-commit run --all-files
 
 check: pre ## run linting and quality checks
+
+test-laptop-playbook: ## validate the Ubuntu laptop composition contract
+	sh test/laptop_playbook_test.sh
 
 test-lagostim-compose: ## validate the canonical Hermes Compose definition
 	bash test/lagostim_compose_test.sh

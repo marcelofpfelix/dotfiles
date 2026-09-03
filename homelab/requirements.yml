@@ -2,7 +2,7 @@
 collections:
   - name: git+https://github.com/marcelofpfelix/ansible-collection-homelab.git
     type: git
-    version: main
+    version: a8f096b108edce7411be68f06b4e7eaf0c508da9
 
   - name: community.docker
   - name: geerlingguy.mac

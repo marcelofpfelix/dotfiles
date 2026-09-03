@@ -1,0 +1,15 @@
+---
+# Definitions shared by every desktop operating system.
+laptop_dotfiles_root: "{{ playbook_dir | dirname }}"
+laptop_desktop_common_packages:
+  - curl
+  - git
+  - rsync
+  - zsh
+laptop_desktop_home_tags:
+  default:
+    dir: default
+    path: "{{ laptop_dotfiles_root }}"
+  desktop:
+    dir: desktop
+    path: "{{ laptop_dotfiles_root }}"
