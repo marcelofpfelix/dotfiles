@@ -28,8 +28,8 @@ case "${1:-}" in
 esac
 
 open_quickshell() {
-	local qs_bin="${QS_BIN:-$HOME/.nix-profile/bin/qs}"
-	local quickshell_bin="${QUICKSHELL_BIN:-$HOME/.nix-profile/bin/quickshell}"
+	local qs_bin="${QS_BIN:-$HOME/.local/share/dotfiles-nix/desktop/bin/qs}"
+	local quickshell_bin="${QUICKSHELL_BIN:-$HOME/.local/share/dotfiles-nix/desktop/bin/quickshell}"
 	local config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
 	local log_file="${QBAR_LOG:-/tmp/qbar.log}"
 

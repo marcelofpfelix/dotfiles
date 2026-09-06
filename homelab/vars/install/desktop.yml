@@ -1,5 +1,6 @@
-# temporary record of the software used
-# use nix to install
+# Historical desktop-package planning only. Not consumed by Ansible.
+# Executable application intent lives in ../config.yml. Hyprland and Quickshell
+# are now owned by the pinned desktop/nix closure; this file remains historical.
 
 distro: ubuntu
   # alternative: arch, debian

@@ -86,7 +86,7 @@ Core binaries expected on the main workstation:
 - `task-master`
 - `serena`
 - `uv` and `uvx`
-- `rtk`
+- `headroom`
 - `rg`
 - `fd`
 - `ast-grep`

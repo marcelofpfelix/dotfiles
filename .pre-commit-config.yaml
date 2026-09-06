@@ -25,7 +25,7 @@ repos:
         pass_filenames: false
     -   id: act-ci
         name: run GitHub Actions locally with act
-        entry: act -W .github/workflows/ci.yml
+        entry: act -W .github/workflows/homelab-ci.yml -j pre-commit
         language: system
         pass_filenames: false
         stages: [manual]

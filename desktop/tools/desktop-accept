@@ -2,7 +2,7 @@
 set -euo pipefail
 
 tool_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export PATH="$tool_dir:$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+export PATH="$tool_dir:$HOME/bin:$HOME/.local/bin:$HOME/.local/share/dotfiles-nix/desktop/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
 repo=${DOTFILES_REPO:-$HOME/gwt/marcelofpfelix/dotfiles/main}
 
 cd "$repo"

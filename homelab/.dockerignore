@@ -8,15 +8,18 @@
 # Ansible core files
 !ansible.cfg
 !inventory.ini
-!requirements.yml
+!collections/
+!collections/requirements.yml
+collections/ansible_collections/
 
 # Ansible playbooks and configuration
 !*.yml
-!tasks/
 !vars/
-!plugins/
-!roles/
+!vars/**
+!files/
+!files/**
 !playbooks/
+!playbooks/**
 group_vars/
 host_vars/
 templates/

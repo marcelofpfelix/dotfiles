@@ -3,7 +3,7 @@
   hosts: "{{ target | default('mac') }}"
   become: "{{ deploy_become | default(false) }}"
   vars_files:
-    - vars/services/dummy.yml
+    - ../vars/services/dummy.yml
   tasks:
     - name: Include deploy service role
       ansible.builtin.include_role:

@@ -29,7 +29,7 @@ M.terminal_classes = {
 
 
 function M.quickshell_cmd(home)
-  return "env QT_QUICK_BACKEND=software " .. home .. "/.nix-profile/bin/quickshell --path " .. home .. "/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize"
+  return "env QT_QUICK_BACKEND=software " .. home .. "/.local/share/dotfiles-nix/desktop/bin/quickshell --path " .. home .. "/.config/quickshell/marcelof/shell.qml --no-duplicate --daemonize"
 end
 
 function M.board_run_cmd(home)

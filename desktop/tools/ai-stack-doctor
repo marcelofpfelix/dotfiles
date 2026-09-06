@@ -34,7 +34,7 @@ section() {
 }
 
 section "core binaries"
-for cmd in codex claude opencode openclaw bd task-master serena uv uvx rtk rg fd ast-grep jq tmux gh git node npm docker ponytail-install; do
+for cmd in codex claude opencode openclaw bd task-master serena uv uvx headroom rg fd ast-grep jq tmux gh git node npm docker ponytail-install; do
   check_cmd "$cmd" yes
 done
 check_cmd notesmd-cli yes yakitrak/yakitrak/notesmd-cli

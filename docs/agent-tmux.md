@@ -150,7 +150,7 @@ Those source files can be synced into `~/.codex`, `~/.claude`, and
 `~/.config/opencode` when you want native event capture active. Codex supports
 both `hooks.json` and inline `[hooks]` config; Claude discovers hooks through
 `settings.json` while the command lives in `.claude/hooks/`; OpenCode uses a
-separate `agent-tmux.ts` plugin and leaves the RTK plugin untouched.
+separate `agent-tmux.ts` plugin; context compression is handled by Headroom.
 
 Dry-run the source-to-home sync:
 

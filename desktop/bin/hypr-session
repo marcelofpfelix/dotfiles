@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:$PATH"
+desktop_nix_bin="${NIX_DESKTOP_BIN:-$HOME/.local/share/dotfiles-nix/desktop/bin}"
+export PATH="$desktop_nix_bin:$HOME/bin:$HOME/.local/bin:$PATH"
+export XDG_DATA_DIRS="${NIX_DESKTOP_SHARE:-$HOME/.local/share/dotfiles-nix/desktop/share}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 
 config="${HYPR_CONFIG:-$HOME/.config/hypr/init.lua}"
 shell_config="${QUICKSHELL_CONFIG:-marcelof}"
@@ -12,7 +14,7 @@ start_shell() {
         qbar start
         return
     fi
-    QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}" "$HOME/.nix-profile/bin/quickshell" --path "$HOME/.config/quickshell/marcelof/shell.qml" --no-duplicate --daemonize
+    QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}" "$desktop_nix_bin/quickshell" --path "$HOME/.config/quickshell/marcelof/shell.qml" --no-duplicate --daemonize
 }
 
 need() {
@@ -378,7 +380,7 @@ start_session() {
         return 0
     fi
 
-    exec start-hyprland -- --config "$config"
+    exec start-hyprland --force-nixgl -- --config "$config"
 }
 
 reload_session() {

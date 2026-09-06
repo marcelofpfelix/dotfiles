@@ -2,7 +2,7 @@
 set -uo pipefail
 
 tool_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export PATH="$tool_dir:$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+export PATH="$tool_dir:$HOME/bin:$HOME/.local/bin:$HOME/.local/share/dotfiles-nix/desktop/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
 
 status=0
 FIXABLE=false
@@ -484,16 +484,14 @@ check_shell_layout_contract() {
 }
 
 section "required commands"
-for cmd in hypr-session hypr-keys hypr-term qbar omarchy-shell omarchy-menu-select omarchy-menu-plugin omarchy-plugin-validate omarchy-plugin-review omarchy-plugin-list omarchy-plugin-add omarchy-plugin-enable omarchy-plugin-disable omarchy-plugin-remove qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker walker-websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app notificationctl reminderctl work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
+for cmd in hypr-session hypr-keys hypr-term qbar omarchy-shell omarchy-menu-select omarchy-menu-plugin omarchy-plugin-validate omarchy-plugin-review omarchy-plugin-list omarchy-plugin-add omarchy-plugin-enable omarchy-plugin-disable omarchy-plugin-remove qs-menu-smoke desktop-reload desktop-notification-smoke desktop-inhibit board identify compare montage audioctl check-audio-streams cliphist-menu passmenu-action screenshot-wayland wallpaper-wayland screen-record-wayland monitor desktop-accept desktop-startup-report chrome-wayland brave-wayland desktop-package-audit check-wayland-no-x11 script-picker websearch desktop-privacy-status desktop-osd external-brightness media-now-playing notification-focus-app notificationctl reminderctl work-inbox-status pomodoroctl calendar-agenda-status calendar-sync-status; do
   check_cmd "$cmd" yes
 done
-check_cmd walker yes
 check_cmd gum yes
 check_cmd fzf yes
 
 section "pickers"
 run_required script-picker script-picker --status
-run_required walker-websearch walker-websearch --status
 
 section "session smoke"
 run_required hypr-session hypr-session smoke

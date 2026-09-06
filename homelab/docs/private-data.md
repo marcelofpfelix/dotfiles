@@ -16,8 +16,11 @@ Ignored local paths:
 
 ## Recommended layout
 
-Use this repository for public, reusable automation and keep private state in a
-separate private repository or encrypted secret store.
+Use this repository for public playbook composition and non-sensitive
+configuration. Keep reusable Ansible role implementation in
+`ansible-collection-homelab`, and keep private state in Homework or an encrypted
+secret store. See [repository-architecture.md](repository-architecture.md) for
+the complete ownership contract.
 
 Recommended private repository shape using GNU Stow:
 
@@ -52,25 +55,32 @@ PRIVATE_REPO=../homework
 PRIVATE_PACKAGE=homelab
 ```
 
-Override those values when needed:
+That relative repository path is valid only for matching sibling checkout
+layouts. The active GWT worktrees require an explicit path:
 
 ```sh
-make private-link PRIVATE_REPO=../homework PRIVATE_PACKAGE=homelab-lab01
+make private-link PRIVATE_REPO=../../../homework/main PRIVATE_PACKAGE=homelab
 ```
 
-One-time migration outline:
+An absolute path is preferable in scripts and recovery notes:
 
 ```sh
-mkdir -p ../homework/homelab/vars
-mv group_vars ../homework/homelab/
-mv host_vars ../homework/homelab/
-mv templates ../homework/homelab/
-mv vars/work ../homework/homelab/vars/
-make private-link
+make private-link \
+  PRIVATE_REPO=/absolute/path/to/homework \
+  PRIVATE_PACKAGE=homelab
 ```
 
-Review the private repository before committing it. In particular, move secrets
-into vault files before committing `../homework/homelab`.
+When introducing another private path:
+
+1. Create it under Homework's `homelab/` package.
+2. Add the matching public path to Dotfiles `.gitignore` if needed.
+3. Run `make private-link` with the explicit Homework worktree path.
+4. Verify that the public path is a symlink owned by Homework before running
+   Ansible.
+
+Review the private repository before committing it. In particular, move secret
+values into encrypted files or the external secret store before committing the
+Homework `homelab/` package.
 
 `stow` is a good fit here because the public repository keeps the canonical
 paths that Ansible expects, while the private repository owns the actual files.
@@ -93,7 +103,7 @@ If the private overlay contains Ansible Vault encrypted files, use the private
 that run:
 
 ```sh
-ANSIBLE_VAULT_PASSWORD_FILE=scripts/ansible-vault-gopass-client ansible-playbook deploy-container.yml
+ANSIBLE_VAULT_PASSWORD_FILE=scripts/ansible-vault-gopass-client ansible-playbook playbooks/deploy-container.yml
 ```
 
 Create the gopass entry once:

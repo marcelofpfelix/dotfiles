@@ -1,0 +1,78 @@
+---
+# Target path populated by the public home sync before desktop_linux runs.
+config_nix_desktop_flake: "{{ ansible_user_dir }}/gwt/marcelofpfelix/dotfiles/main/desktop/nix"
+
+# Cross-platform personal GUI applications.
+gui:
+  - brave
+  - ghostty
+
+# Cross-platform work GUI applications.
+gui_work:
+  - slack
+  - onepassword
+  - google_chrome
+  - wireshark
+
+# Linux-only GUI applications called by the tracked desktop configuration.
+gui_linux:
+  - network_manager
+  - pavucontrol
+  - swappy
+
+# Cross-platform CLI/TUI applications called by tracked Dotfiles commands.
+cli:
+  - fzf
+  - gum
+  - htop
+  - jq
+  - oath_toolkit
+  - taskwarrior
+  - timewarrior
+
+# Cross-platform work CLI applications called by tracked work commands.
+cli_work:
+  - sngrep
+  - tcpdump
+
+# Fast-moving Linux desktop runtime built from desktop/nix/flake.lock.
+desktop_linux:
+  - hyprland
+  - quickshell
+
+# Linux-only CLI backends called by the tracked Wayland desktop configuration.
+cli_linux:
+  - bluez
+  - brightnessctl
+  - ddcutil
+  - dex
+  - ffmpeg
+  - grim
+  - imagemagick
+  - libnotify
+  - lm_sensors
+  - mpv
+  - network_manager
+  - playerctl
+  - power_profiles_daemon
+  - pulseaudio_utils
+  - slurp
+  - tesseract
+  - upower
+  - wf_recorder
+  - wireplumber
+  - wl_clipboard
+  - xdg_utils
+
+config_known_profiles:
+  - gui
+  - gui_work
+  - gui_linux
+  - desktop_linux
+  - cli
+  - cli_work
+  - cli_linux
+  - apt_upgrades
+  - apt_full_upgrade
+  - firmware
+  - ubuntu_cleanup

@@ -4,7 +4,7 @@
   become: true
   pre_tasks:
     - name: Load homelab secrets
-      ansible.builtin.include_tasks: tasks/load-secrets.yml
+      ansible.builtin.include_tasks: tasks/load-private-secrets.yml
   tasks:
     - name: Validations
       ansible.builtin.fail:

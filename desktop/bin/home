@@ -58,6 +58,11 @@ homelab_overlay=""
 homelab_run="$homelab"
 inventory_overlay=""
 
+inventory_target_is_host() {
+    ansible-inventory -i "$inventory" --list 2>/dev/null |
+        python3 -c 'import json, sys; hosts = json.load(sys.stdin).get("_meta", {}).get("hostvars", {}); raise SystemExit(sys.argv[1] not in hosts)' "$1"
+}
+
 cleanup_homelab_overlay() {
     if [ -n "$homelab_overlay" ] && [ -d "$homelab_overlay" ]; then
         rm -rf "$homelab_overlay"
@@ -85,6 +90,12 @@ prepare_homelab_overlay() {
         --exclude .serena \
         "${homelab}/" "$homelab_overlay/" || exit
     rsync -a "${private_homelab}/" "$homelab_overlay/" || exit
+
+    for inventory_vars in group_vars host_vars; do
+        if [ -d "$homelab_overlay/$inventory_vars" ]; then
+            ln -s "../$inventory_vars" "$homelab_overlay/playbooks/$inventory_vars" || exit
+        fi
+    done
 
     homelab_run="$homelab_overlay"
 }
@@ -129,14 +140,14 @@ home() {
         inventory=~/work.ini
         home_src=$homework
     else
-        inventory=inventory.ini
+        inventory="$homelab_run/inventory.ini"
         home_src=$dotfiles
     fi
 
     if [ "$fast" = "true" ]; then
         flags=" -e set_ssh=false -e set_shrc=false -e set_shrc_remote=true"
     else
-        flags=" -e set_ssh=true -e set_shrc=true"
+        flags=" -e set_ssh=false -e set_shrc=true"
     fi
 
     if [ -n "$dst" ]; then
@@ -152,15 +163,15 @@ home() {
         fi
     fi
 
-    if [ "$target" != "localhost" ] && ssh_user=$(ssh -G "$target" 2>/dev/null | awk '$1 == "user" { print $2; exit }') && [ -n "$ssh_user" ]; then
+    if [ "$target" != "localhost" ] && inventory_target_is_host "$target" && ssh_user=$(ssh -G "$target" 2>/dev/null | awk '$1 == "user" { print $2; exit }') && [ -n "$ssh_user" ]; then
         inventory_overlay="$(mktemp "${TMPDIR:-/tmp}/home-inventory.XXXXXX")" || exit
         cp "$inventory" "$inventory_overlay" || exit
         printf '\n[home_ssh_resolved]\n%s ansible_user=%s\n' "$target" "$ssh_user" >> "$inventory_overlay"
         inventory="$inventory_overlay"
     fi
 
-    log note "ansible-playbook $homelab_run/home.yml -i $inventory -e \"target=$target\" -e \"home_src=$home_src\" -e \"dotfiles=$dotfiles\" -e \"homefiles=$homework\" -e \"workfiles=$workdir\" -e homelab_secret_scope=home $flags" # service=$service
-    uv run ansible-playbook "$homelab_run/home.yml" -i "$inventory" -e "target=$target" -e "home_src=$home_src" -e "dotfiles=$dotfiles" -e "homefiles=$homework" -e "workfiles=$workdir" -e homelab_secret_scope=home $flags # service=$service
+    log note "ansible-playbook $homelab_run/playbooks/home.yml -i $inventory -e \"target=$target\" -e \"home_src=$home_src\" -e \"dotfiles=$dotfiles\" -e \"homefiles=$homework\" -e \"workfiles=$workdir\" -e homelab_secret_scope=home $flags" # service=$service
+    uv run ansible-playbook "$homelab_run/playbooks/home.yml" -i "$inventory" -e "target=$target" -e "home_src=$home_src" -e "dotfiles=$dotfiles" -e "homefiles=$homework" -e "workfiles=$workdir" -e homelab_secret_scope=home $flags # service=$service
 
 }
 

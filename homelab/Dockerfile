@@ -47,6 +47,8 @@ RUN set -o nounset -o errexit -o xtrace \
 COPY --from=builder ${VENV_PATH} ${VENV_PATH}
 COPY . .
 
+RUN ansible-galaxy collection install -r collections/requirements.yml -p collections
+
 RUN set -o nounset -o errexit -o xtrace \
     && groupadd --system ansible \
     && useradd --no-log-init --system --gid ansible --home-dir /home/ansible --create-home --shell /bin/bash ansible \

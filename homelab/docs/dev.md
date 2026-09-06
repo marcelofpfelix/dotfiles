@@ -95,7 +95,7 @@ import/migration path is fully validated.
 
 ## Home Play Boundary
 
-The `home.yml` play and `home` role must only make home-user changes:
+The `playbooks/home.yml` play and `home` role must only make home-user changes:
 dotfiles, user config, user services, and files under the target user home.
 They must not edit system config, use `become` for OS policy, restart system
 services, or change host-wide behavior such as NTP, networking, kernel, Docker,
@@ -108,7 +108,7 @@ Desktop hosts may use `chrony` for NTP, but the home playbook must not configure
 it. Ubuntu default `makestep 1 3` only permits stepping during the first three
 updates, which can leave a resumed laptop visibly wrong while chrony slowly
 slews. Any permanent `makestep 1 -1` policy belongs in a system-level desktop
-role, not `home.yml`.
+role, not `playbooks/home.yml`.
 
 Immediate repair command when the clock is already wrong:
 

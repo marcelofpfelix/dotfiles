@@ -6,7 +6,7 @@ After=graphical-session.target
 ExecStart=/usr/bin/espanso daemon
 Restart=on-failure
 RestartSec=3
-Environment=PATH=/home/marcelof/.nix-profile/bin:/home/marcelof/bin:/home/marcelof/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PATH=/home/marcelof/.local/share/dotfiles-nix/desktop/bin:/home/marcelof/bin:/home/marcelof/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 [Install]
 WantedBy=default.target

@@ -1,6 +1,0 @@
----
-- name: Configuring {{ target | default('localhost')}}
-  hosts: "{{ target | default('localhost') }}"
-  become: true
-  roles:
-    - role: marcelofpfelix.homelab.server

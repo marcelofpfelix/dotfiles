@@ -32,7 +32,7 @@ For repos that use Colima on this host, prefer the real socket path instead of t
 
 ```sh
 DOCKER_HOST=unix:///Volumes/NVMe/docker/colima/default/docker.sock \
-  act push -W .github/workflows/ci.yml -j check \
+  act push -W ../.github/workflows/homelab-ci.yml -j pre-commit \
   -P ubuntu-latest=catthehacker/ubuntu:act-latest \
   --container-architecture linux/arm64 \
   --container-daemon-socket /Volumes/NVMe/docker/colima/default/docker.sock
@@ -41,6 +41,40 @@ DOCKER_HOST=unix:///Volumes/NVMe/docker/colima/default/docker.sock \
 The symlinked path can fail with `mkdir /Users/marcelof/.colima: file exists` during container startup. `act` may also warn that GitHub cache restore/save failed; that is acceptable when the job itself succeeds.
 
 `basecamp/gh-signoff` is complementary, not a replacement for `act`: use `act` to execute the workflow locally, then optionally use `gh signoff` to publish a GitHub commit status for a PR after local checks pass. Requiring signoff changes GitHub branch protection, so keep it as an explicit repo policy decision.
+
+## Colima mount reliability
+
+Keep `mountInotify: false` in the profile source at
+`~/.colima/default/colima.yaml`, especially when a writable mount covers a
+large tree or an external volume. Colima marks mount inotify propagation as
+experimental. A blocked propagation event can wedge VirtioFS reads inside the
+VM, which makes containers and their health checks hang even while the same
+files remain readable on the host.
+
+Verify both the persistent profile and the rendered Lima configuration after a
+restart:
+
+```sh
+rg '^mountInotify:' \
+  ~/.colima/default/colima.yaml \
+  ~/.colima/_lima/colima/colima.yaml
+
+ps -axo command= | rg 'colima daemon start default.*--inotify' || true
+```
+
+Both files should report `false`, and the process check should return nothing.
+If `colima status`, `colima ssh`, and `docker exec` all hang, stop the service,
+force-stop only the underlying default VM, then start Colima again:
+
+```sh
+brew services stop colima
+LIMA_HOME="$HOME/.colima/_lima" limactl stop -f colima
+colima start
+brew services start colima
+```
+
+The force-stop preserves Colima's disk and host bind-mounted data. Containers
+that were explicitly stopped may still need `docker start` afterward.
 
 ## System
 
@@ -76,8 +110,9 @@ Additional package sources to evaluate:
 - Node tools: `clawdbot`, `claude-code`, `clawdhub`, `@telnyx/api-cli`
 - Agent CLIs:
   - `pi` via `npm install -g --ignore-scripts @earendil-works/pi-coding-agent`.
-    The npm `latest` metadata reported `0.80.7`, but the installed package and
-    `pi --version` reported `0.80.3`.
+    The verified installation is `0.84.4`. Pi `0.80.3` did not emit the
+    `agent_settled` lifecycle event consumed by Herdr's v8 Pi integration, so a
+    completed Pi turn remained incorrectly marked as `working`.
   - `hermes` via `pipx install hermes-agent`, currently `Hermes Agent v0.15.2`.
     Prefer this PyPI/pipx install over the unofficial npm bridge
     `hermes-agent`, which runs a Python install from npm `postinstall`.

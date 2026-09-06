@@ -16,6 +16,6 @@
       tags:
         - home_catalog
     - name: Load homelab secrets
-      ansible.builtin.include_tasks: tasks/load-secrets.yml
+      ansible.builtin.include_tasks: tasks/load-private-secrets.yml
   roles:
     - role: marcelofpfelix.homelab.home

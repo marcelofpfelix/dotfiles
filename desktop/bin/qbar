@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH="$HOME/.nix-profile/bin:$HOME/bin:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/share/dotfiles-nix/desktop/bin:$HOME/bin:$HOME/.local/bin:$PATH"
 export QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"
 
 QUIET=0
@@ -10,8 +10,8 @@ if [[ ${1:-} == "-q" ]]; then
   shift
 fi
 
-qs_bin="${QS_BIN:-$HOME/.nix-profile/bin/qs}"
-quickshell_bin="${QUICKSHELL_BIN:-$HOME/.nix-profile/bin/quickshell}"
+qs_bin="${QS_BIN:-$HOME/.local/share/dotfiles-nix/desktop/bin/qs}"
+quickshell_bin="${QUICKSHELL_BIN:-$HOME/.local/share/dotfiles-nix/desktop/bin/quickshell}"
 config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
 log_file="${QBAR_LOG:-/tmp/qbar.log}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:$PATH"
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.local/share/dotfiles-nix/desktop/bin:$PATH"
 
 quiet=0
 if [[ ${1:-} == "-q" ]]; then

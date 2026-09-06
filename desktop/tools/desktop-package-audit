@@ -2,55 +2,50 @@
 set -uo pipefail
 
 dotfiles_root="${DOTFILES_ROOT:-$HOME/gwt/marcelofpfelix/dotfiles/main}"
-package_file="${HOMELAB_DESKTOP_PACKAGES:-$dotfiles_root/homelab/vars/install/desktop.yml}"
+package_file="${HOMELAB_DESKTOP_PACKAGES:-$dotfiles_root/homelab/vars/config.yml}"
 status=0
 
 required_packages=(
   hyprland
-  hyprland-protocols
-  xdg-desktop-portal-hyprland
   quickshell
-  board
-  walker
-  elephant
-  nixGL
-  grim
-  slurp
+  brave
+  ghostty
+  slack
+  onepassword
+  google_chrome
+  wireshark
+  network_manager
+  pavucontrol
   swappy
-  imagemagick-6.q16
-  tesseract-ocr
-  cliamp
-  dua-cli
-  omawrite
-  wf-recorder
+  fzf
+  gum
+  htop
+  jq
+  taskwarrior
+  timewarrior
+  oath_toolkit
+  sngrep
+  tcpdump
+  bluez
   brightnessctl
   ddcutil
-  hyprsunset
-  wl-clipboard
-  wev
-  libinput-tools
-  espanso-wayland
-  wlrctl
-  playerctl
-  pavucontrol
-  mpv
-  ffmpeg
-  hyprlock
-  swaylock
-  hyprpicker
-  jq
-  libnotify-bin
-  network-manager
-  network-manager-gnome
-  pulseaudio-utils
-  lm-sensors
-  upower
-  power-profiles-daemon
-  bluez
-  xdg-desktop-portal-gtk
-  wireplumber
-  xdg-utils
   dex
+  ffmpeg
+  grim
+  imagemagick
+  libnotify
+  lm_sensors
+  mpv
+  playerctl
+  power_profiles_daemon
+  pulseaudio_utils
+  slurp
+  tesseract
+  upower
+  wf_recorder
+  wireplumber
+  wl_clipboard
+  xdg_utils
 )
 
 has_package() {

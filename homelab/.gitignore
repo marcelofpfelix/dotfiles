@@ -26,6 +26,7 @@ cache/
 .vault_pass
 .ansible/
 .serena/
+collections/ansible_collections/
 
 
 ###############################################################################
@@ -36,5 +37,5 @@ vars/work/
 group_vars/
 host_vars/
 templates/
-tasks/
+/tasks/
 scripts/

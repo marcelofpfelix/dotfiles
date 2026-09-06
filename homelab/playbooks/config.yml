@@ -1,0 +1,89 @@
+---
+- name: Configure inventory targets
+  hosts: "{{ config_target | mandatory }}"
+  gather_facts: false
+
+  vars_files:
+    - ../vars/config.yml
+
+  vars:
+    _config_raw_profiles: >-
+      {{ (config_profiles_csv | default('')).split(',') }}
+    _config_enabled_profiles: >-
+      {{ _config_raw_profiles | reject('equalto', '') | list }}
+
+  pre_tasks:
+    - name: Validate target configuration profiles
+      ansible.builtin.assert:
+        that:
+          - config_profiles_csv is defined
+          - config_profiles_csv is string
+          - config_profiles_csv | trim | length > 0
+          - _config_raw_profiles | select('equalto', '') | list | length == 0
+          - _config_enabled_profiles | difference(config_known_profiles) | length == 0
+        fail_msg: >-
+          Define config_profiles_csv as a non-empty comma-separated list using
+          only values from config_known_profiles.
+      tags:
+        - always
+
+    - name: Gather target facts after profile validation
+      ansible.builtin.setup:
+      tags:
+        - always
+
+  roles:
+    - role: marcelofpfelix.homelab.server
+      become: true
+      vars:
+        server_config_target_is_explicit: true
+        server_config_require_single_host: false
+        server_config_manage_sudo: false
+        server_config_manage_packages: false
+        server_config_manage_nix_desktop: >-
+          {{ 'desktop_linux' in _config_enabled_profiles }}
+        server_config_nix_desktop_flake: "{{ config_nix_desktop_flake }}"
+        server_config_nix_desktop_session_launcher: "{{ ansible_user_dir }}/bin/hypr-session"
+        server_config_nix_desktop_user: "{{ ansible_user_id }}"
+        server_config_nix_desktop_home: "{{ ansible_user_dir }}"
+        server_config_nix_desktop_out_link: >-
+          {{ ansible_user_dir }}/.local/share/dotfiles-nix/desktop
+        server_config_manage_cli_apps: >-
+          {{
+            'cli' in _config_enabled_profiles
+            or 'cli_work' in _config_enabled_profiles
+            or 'cli_linux' in _config_enabled_profiles
+          }}
+        server_config_manage_docker: false
+        server_config_manage_dns: false
+        server_config_manage_macos: false
+        server_config_manage_hardening: false
+        server_config_manage_gui_apps: >-
+          {{
+            'gui' in _config_enabled_profiles
+            or 'gui_work' in _config_enabled_profiles
+            or 'gui_linux' in _config_enabled_profiles
+          }}
+        server_config_gui_apps: >-
+          {{
+            (gui if 'gui' in _config_enabled_profiles else [])
+            + (gui_work if 'gui_work' in _config_enabled_profiles else [])
+          }}
+        server_config_gui_linux_apps: >-
+          {{ gui_linux if 'gui_linux' in _config_enabled_profiles else [] }}
+        server_config_wireshark_capture_user: "{{ ansible_user_id }}"
+        server_config_cli_apps: >-
+          {{
+            (cli if 'cli' in _config_enabled_profiles else [])
+            + (cli_work if 'cli_work' in _config_enabled_profiles else [])
+          }}
+        server_config_cli_linux_apps: >-
+          {{ cli_linux if 'cli_linux' in _config_enabled_profiles else [] }}
+        server_config_upgrade_packages: >-
+          {{ 'apt_upgrades' in _config_enabled_profiles }}
+        server_config_full_upgrade_packages: >-
+          {{ 'apt_full_upgrade' in _config_enabled_profiles }}
+        server_config_upgrade_firmware: >-
+          {{ 'firmware' in _config_enabled_profiles }}
+        server_config_cleanup_ubuntu: >-
+          {{ 'ubuntu_cleanup' in _config_enabled_profiles }}

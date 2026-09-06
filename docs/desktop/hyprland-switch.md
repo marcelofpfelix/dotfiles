@@ -56,7 +56,7 @@ GDM and SDDM discover Wayland sessions from `/usr/share/wayland-sessions/*.deskt
 
 - `Name=Hyprland`
 - `Exec=/home/marcelof/bin/hypr-session start`
-- `TryExec=/home/marcelof/.nix-profile/bin/start-hyprland`
+- `TryExec=/home/marcelof/.local/share/dotfiles-nix/desktop/bin/start-hyprland`
 
 For GDM, the helper also sets `Session=hyprland` and `XSession=hyprland` in `/var/lib/AccountsService/users/marcelof`, writes `~/.dmrc`, and re-enables Wayland if `/etc/gdm3/custom.conf` had `WaylandEnable=false`. With autologin still enabled, reboot should enter Hyprland directly. To choose manually at boot, disable GDM autologin first.
 

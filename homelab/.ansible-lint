@@ -1,9 +1,12 @@
+offline: true
+extra_vars:
+  config_target: localhost
+
 exclude_paths:
   - .ansible/
   - .venv/
-  - deploy-container.yml
-  - home.yml
-  - server-config.yml
+  - collections/ansible_collections/
+  - files/
   - group_vars/
   - host_vars/
   - templates/

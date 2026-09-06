@@ -1,30 +1,39 @@
 # homelab
 
-Homelab automation using Ansible
+Homelab automation using Ansible.
 
-See [docs/private-data.md](docs/private-data.md) for how private inventory,
-templates, and secrets are handled.
+Read [the repository architecture](docs/repository-architecture.md) before
+adding automation. Reusable role tasks belong in
+`ansible-collection-homelab`; this public repository owns composition and
+non-sensitive configuration. See [private data](docs/private-data.md) for the
+Homework overlay and secret policy.
 
 ### Configuration management
 
+`playbooks/config.yml` is the single system-configuration playbook. Targets declare
+optional profiles in inventory and the collection auto-detects Debian-family or
+Darwin behaviour.
+
 ```console
-  ## examples
-ansible-playbook server-config.yml"
+uv run ansible-playbook playbooks/config.yml -e config_target=lap1
 ```
+
+See [system configuration](docs/configuration.md) for profiles, tags, safe
+upgrades and platform package mappings.
 
 ### Deploy Containers
 
 ```console
   ## examples
-ansible-playbook deploy_container.yml -e "container=container_name target=hostname"
+ansible-playbook playbooks/deploy-container.yml -e "container=container_name target=hostname"
 ```
 
 ### Deploy Local Services
 
 ```console
-ansible-playbook deploy-service.yml -e deploy_service_name=lagostim-personal-hermes
-ansible-playbook deploy-service.yml -e deploy_service_name=lagostim-constanca-hermes
-ansible-playbook deploy-service.yml -e deploy_service_name=lagostim-work-hermes
+ansible-playbook playbooks/deploy-service.yml -e deploy_service_name=lagostim-personal-hermes
+ansible-playbook playbooks/deploy-service.yml -e deploy_service_name=lagostim-constanca-hermes
+ansible-playbook playbooks/deploy-service.yml -e deploy_service_name=lagostim-work-hermes
 ```
 
 The Lagostim service definitions manage macOS LaunchAgents using the canonical
@@ -61,38 +70,33 @@ make test-lagostim-compose
 
 ### Home
 
-`home.yml` remains the focused entry point for home folders, dotfiles, shell
+`playbooks/home.yml` remains the focused entry point for home folders, dotfiles, shell
 configuration, and SSH through `marcelofpfelix.homelab.home`.
 
-### New Ubuntu laptop
+### Laptop configuration
 
-`laptop.yml` composes the existing collection roles rather than duplicating
-their tasks:
+`lap1` declares `gui`, `gui_work`, `gui_linux`, `desktop_linux`, `cli`, `cli_work`, `cli_linux`, `apt_upgrades`, `apt_full_upgrade`, `firmware`, and `ubuntu_cleanup` capabilities
+in the public inventory. The same `playbooks/config.yml` playbook can target a Debian,
+Ubuntu, or Darwin host and the collection selects the appropriate platform
+adapter from gathered facts.
 
-1. `marcelofpfelix.homelab.server` applies system configuration and layered
-   shared/Ubuntu packages.
-2. `marcelofpfelix.homelab.home` applies the `default`, `desktop`,
-   `default_debian`, and `desktop_debian` home layers.
-3. Service/container deployment remains separate under `deploy-service.yml`.
-
-The target is mandatory. Validate the composition and syntax without changing a
-machine:
+Validate the composition and list focused tasks without changing the laptop:
 
 ```console
-make test-laptop-playbook
-uv run ansible-playbook laptop.yml --syntax-check \
-  -i 'localhost,' -e laptop_target=localhost
+make test-config-playbook
+uv run ansible-playbook playbooks/config.yml --syntax-check -e config_target=lap1
+uv run ansible-playbook playbooks/config.yml --list-tasks \
+  -e config_target=lap1 --tags gui
 ```
 
-On the Ubuntu laptop, inspect the local changes before applying them:
-
-```console
-uv run ansible-playbook laptop.yml --check --ask-become-pass \
-  -i 'localhost,' -c local -e laptop_target=localhost
-```
-
-Remove `--check` only after reviewing the dry-run. The collection role rejects
-non-Ubuntu targets and host patterns that select more than one machine. This is
-the first foundation slice, not yet the complete laptop build.
+`playbooks/home.yml` remains separate for home folders, dotfiles, shell configuration and
+SSH. Service/container deployment remains separate under `playbooks/deploy-service.yml`.
+See [system configuration](docs/configuration.md) and
+[laptop bootstrap](docs/laptop-bootstrap.md).
 
 ### Infrastructure as code
+
+The public baseline, private overlay, and reusable collection are deliberately
+separate. Follow [the repository architecture](docs/repository-architecture.md)
+for ownership, local collection symlinks, Homework Stow integration, recovery
+order, and publication order.

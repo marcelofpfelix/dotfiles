@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.local/share/dotfiles-nix/desktop/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
 repo=${DOTFILES_REPO:-$HOME/gwt/marcelofpfelix/dotfiles/main}
 profile=${HYPR_PROFILE:-default}
 profile_file="$repo/desktop/.config/hypr/profiles/$profile.lua"

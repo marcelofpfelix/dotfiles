@@ -12,7 +12,7 @@
 
     - name: Include service vars {{ deploy_service_name }}
       ansible.builtin.include_vars:
-        file: "vars/services/{{ deploy_service_name }}.yml"
+        file: "../vars/services/{{ deploy_service_name }}.yml"
 
     - name: Inspect local service runtime bundle
       ansible.builtin.stat:

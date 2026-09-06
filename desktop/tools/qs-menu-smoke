@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.nix-profile/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
+export PATH="$HOME/bin:$HOME/.local/bin:$HOME/.local/share/dotfiles-nix/desktop/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin:$PATH"
 
 sleep_time="${QS_MENU_SMOKE_SLEEP:-0.5}"
 base_dir="${QS_MENU_SMOKE_BASE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/menu-smoke}"
@@ -25,7 +25,7 @@ panels=("${qs_menu_panels[@]}")
 status=0
 open_after=0
 inspect_after=0
-qs_bin="${QS_BIN:-$HOME/.nix-profile/bin/qs}"
+qs_bin="${QS_BIN:-$HOME/.local/share/dotfiles-nix/desktop/bin/qs}"
 config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
 
 usage() {
