@@ -17,14 +17,22 @@ BarWidget {
   }
 
   Process {
+    id: boardWatch
     command: ["env", "BAR_COLOR_FORMAT=quickshell", "board", "--config",
       Quickshell.env("HOME") + "/.config/board/board.toml", "render", "--watch", "--format",
       "quickshell", "--surface", "quickshell-bar"]
     running: true
+    onExited: boardWatchRestart.restart()
     stdout: SplitParser {
       splitMarker: "\n"
       onRead: data => status.text = String(data || "").trim()
     }
+  }
+
+  Timer {
+    id: boardWatchRestart
+    interval: 1000
+    onTriggered: if (!boardWatch.running) boardWatch.running = true
   }
 
   implicitWidth: status.implicitWidth

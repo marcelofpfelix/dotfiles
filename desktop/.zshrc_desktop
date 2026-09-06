@@ -119,6 +119,8 @@ alias lt='l -T'
 alias ls='ls $LS_OPTIONS -1'
 alias lg='ll --git-ignore'
 alias groot='cd $(git rev-parse --show-toplevel)'
+alias img='chafa -f kitty'
+alias imgt='chafa -f symbols'
 
 
 # Run the Hermes CLI inside an existing Lagostim container. Keep the Colima

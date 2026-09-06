@@ -375,10 +375,11 @@ check_board_status() {
   fi
 
   if grep -Fq 'anchors.centerIn: parent' "$HOME/.config/omarchy/plugins/marcelof.board-status/BarWidget.qml" \
-      && grep -Fq 'textFormat: Text.RichText' "$HOME/.config/omarchy/plugins/marcelof.board-status/BarWidget.qml"; then
-    ok board-widget "centered rich text"
+      && grep -Fq 'textFormat: Text.RichText' "$HOME/.config/omarchy/plugins/marcelof.board-status/BarWidget.qml" \
+      && grep -Fq 'onExited: boardWatchRestart.restart()' "$HOME/.config/omarchy/plugins/marcelof.board-status/BarWidget.qml"; then
+    ok board-widget "centered rich text with watcher recovery"
   else
-    fail board-widget "alignment or rich text regressed"
+    fail board-widget "alignment, rich text, or watcher recovery regressed"
   fi
 }
 

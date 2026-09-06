@@ -1673,3 +1673,10 @@ Upstream was refreshed at Omarchy Quattro commit `1926611`. Omarchy itself keeps
 fixed menu actions in JSONC, lists only real manifests, and manages plugins through
 the selector. The local `menu` manifest field is the only adaptation: it avoids
 duplicating routes for portable custom overlays that must also work on Omarchy.
+
+## 2026-09-05 Terminal Image Parity
+
+- [ ] P2: Bring terminal image support to the Mac.
+  - Install and track Chafa and Yazi through Homebrew, apply the shared `img`/`imgt` aliases, and enable Herdr Kitty graphics.
+  - Acceptance: Ghostty displays `img`, text terminals display `imgt`, Yazi reports `Kgp`, and a remote file piped over SSH to local `img -` renders locally.
+  - Validation: command/version checks, one PNG smoke test in Ghostty and Herdr, `ya env`, SSH pipe test, and no duplicate platform-specific helper scripts.
