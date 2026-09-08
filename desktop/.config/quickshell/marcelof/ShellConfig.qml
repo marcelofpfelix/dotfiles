@@ -96,7 +96,7 @@ QtObject {
   }
   function reboot() { return systemctl("reboot") }
   function poweroff() { return systemctl("poweroff") }
-  function exitHyprland() { return ["hyprctl", "dispatch", "exit"] }
+  function exitHyprland() { return ["hyprctl", "dispatch", "hl.dsp.exit()"] }
   function sessionCommand(action) {
     switch (action) {
     case hibernateAction: return hibernate()

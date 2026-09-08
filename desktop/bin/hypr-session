@@ -6,6 +6,14 @@ desktop_nix_bin="${NIX_DESKTOP_BIN:-$HOME/.local/share/dotfiles-nix/desktop/bin}
 export PATH="$desktop_nix_bin:$HOME/bin:$HOME/.local/bin:$PATH"
 export XDG_DATA_DIRS="${NIX_DESKTOP_SHARE:-$HOME/.local/share/dotfiles-nix/desktop/share}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 
+session_env="${HYPR_SESSION_ENV:-$HOME/.config/hypr/session.env}"
+if [ -r "$session_env" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "$session_env"
+    set +a
+fi
+
 config="${HYPR_CONFIG:-$HOME/.config/hypr/init.lua}"
 shell_config="${QUICKSHELL_CONFIG:-marcelof}"
 profile="${HYPR_PROFILE:-default}"
@@ -396,7 +404,7 @@ reload_session() {
 
 rollback() {
     if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-        hyprctl dispatch exit
+        hyprctl dispatch 'hl.dsp.exit()'
     else
         printf 'Not inside Hyprland. X11 configs are archived under archive/x11/desktop.\n'
     fi
