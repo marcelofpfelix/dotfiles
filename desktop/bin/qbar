@@ -10,8 +10,8 @@ if [[ ${1:-} == "-q" ]]; then
   shift
 fi
 
-qs_bin="${QS_BIN:-$HOME/.local/share/dotfiles-nix/desktop/bin/qs}"
-quickshell_bin="${QUICKSHELL_BIN:-$HOME/.local/share/dotfiles-nix/desktop/bin/quickshell}"
+qs_bin="${QS_BIN:-qs}"
+quickshell_bin="${QUICKSHELL_BIN:-quickshell}"
 config_path="${QUICKSHELL_PATH:-$HOME/.config/quickshell/marcelof/shell.qml}"
 log_file="${QBAR_LOG:-/tmp/qbar.log}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
