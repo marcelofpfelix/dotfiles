@@ -34,15 +34,27 @@ copy_source() {
 }
 
 self_test() {
-  local tmp plugin out
+  local tmp plugin git_plugin out
   tmp=$(mktemp -d)
   plugin="$tmp/plugin"
+  git_plugin="$tmp/git-plugin"
   mkdir -p "$plugin"
   printf "import QtQuick\nItem {}\n" >"$plugin/Menu.qml"
   printf "%s\n" "{\"schemaVersion\":1,\"id\":\"local.add-test\",\"name\":\"Add Test\",\"version\":\"1.0.0\",\"kinds\":[\"menu\"],\"entryPoints\":{\"menu\":\"Menu.qml\"}}" >"$plugin/manifest.json"
   out=$(HOME="$tmp/home" OMARCHY_PLUGINS_DIR="$tmp/home/.config/omarchy/plugins" "$0" --yes "$plugin" 2>/dev/null)
   grep -Fq "Added local.add-test" <<<"$out"
   [ -f "$tmp/home/.config/omarchy/plugins/local.add-test/manifest.json" ]
+
+  mkdir -p "$git_plugin"
+  printf "import QtQuick\nItem {}\n" >"$git_plugin/Menu.qml"
+  printf "%s\n" "{\"schemaVersion\":1,\"id\":\"git.add-test\",\"name\":\"Git Add Test\",\"version\":\"1.0.0\",\"kinds\":[\"menu\"],\"entryPoints\":{\"menu\":\"Menu.qml\"}}" >"$git_plugin/manifest.json"
+  git -C "$git_plugin" init -q
+  git -C "$git_plugin" -c user.name=test -c user.email=test@example.invalid add .
+  git -C "$git_plugin" -c user.name=test -c user.email=test@example.invalid commit -qm test
+  out=$(HOME="$tmp/home" OMARCHY_PLUGINS_DIR="$tmp/home/.config/omarchy/plugins" "$0" --yes "file://$git_plugin" 2>/dev/null)
+  grep -Fq "Added git.add-test" <<<"$out"
+  [ -d "$tmp/home/.config/omarchy/plugins/git.add-test/.git" ]
+
   rm -rf "$tmp"
   printf "omarchy-plugin-add self-test: ok\n"
 }

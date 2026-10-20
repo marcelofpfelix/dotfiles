@@ -70,6 +70,8 @@ Use `omarchy-plugin-review <plugin-dir>` before enabling any third-party plugin.
 
 Use `omarchy-plugin-add --yes <plugin-dir-or-git-url>` to stage a reviewed plugin under `~/.config/omarchy/plugins/<id>`. Add `--enable` only for a reviewed `overlay`, `service`, or `bar-widget` plugin; the command rescans, waits for discovery, and enables it through the live shell.
 
+Use `omarchy-plugin-list` for a human table with source path, source URL, and clone origin, or `omarchy-plugin-list --json` for the complete machine-readable inventory.
+
 ### Omarchy replacement audit
 
 Recorded base: Omarchy commit `1926611` from 2026-08-23. The reproducible pin

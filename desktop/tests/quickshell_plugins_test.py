@@ -101,12 +101,12 @@ class PluginRuntimeTest(unittest.TestCase):
         config = json.loads((self.root / "desktop/.config/omarchy/shell.json").read_text())
         self.assertIn("marcelof.plugin-manager", {entry["id"] for entry in config["plugins"]})
 
-    def test_plugin_list_prints_git_or_local_origin(self):
+    def test_plugin_list_prints_all_provenance(self):
         plugins = [
             {"id": "git.test", "enabled": False, "firstParty": False,
              "sourceType": "git", "sourcePath": "/plugins/git.test",
              "sourceUrl": "https://example.test/plugin.git", "kinds": ["overlay"],
-             "name": "Git Test"},
+             "clonedFrom": "omarchy.test", "name": "Git Test"},
             {"id": "local.test", "enabled": True, "firstParty": False,
              "sourceType": "local", "sourcePath": "/plugins/local.test",
              "sourceUrl": "", "kinds": ["overlay"], "name": "Local Test"},
@@ -120,8 +120,10 @@ class PluginRuntimeTest(unittest.TestCase):
                 env={**os.environ, "PATH": directory + ":" + os.environ["PATH"]},
                 text=True, capture_output=True, check=True,
             )
-        self.assertIn("https://example.test/plugin.git", result.stdout)
-        self.assertIn("/plugins/local.test", result.stdout)
+        for value in ("PATH", "URL", "CLONED FROM", "/plugins/git.test",
+                      "https://example.test/plugin.git", "omarchy.test",
+                      "/plugins/local.test"):
+            self.assertIn(value, result.stdout)
 
 
 if __name__ == "__main__":

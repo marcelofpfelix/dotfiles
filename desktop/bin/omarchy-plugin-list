@@ -39,9 +39,11 @@ jq -r '
     (.sourceType // (if .firstParty then "built-in" else "local" end)),
     ((.kinds // []) | join(",")),
     (.name // ""),
-    (if (.sourceUrl // "") != "" then .sourceUrl else (.sourcePath // "") end)
+    (.sourcePath // ""),
+    (.sourceUrl // ""),
+    (.clonedFrom // "")
   ] | @tsv
 ' <<<"$plugins" | awk -F '\t' '
-  BEGIN { printf "%-32s %-9s %-9s %-18s %-24s %s\n", "ID", "STATE", "SOURCE", "KINDS", "NAME", "ORIGIN" }
-  { printf "%-32s %-9s %-9s %-18s %-24s %s\n", $1, $2, $3, $4, $5, $6 }
+  BEGIN { printf "%-32s %-9s %-9s %-18s %-24s %-36s %-36s %s\n", "ID", "STATE", "SOURCE", "KINDS", "NAME", "PATH", "URL", "CLONED FROM" }
+  { printf "%-32s %-9s %-9s %-18s %-24s %-36s %-36s %s\n", $1, $2, $3, $4, $5, $6, $7, $8 }
 '
