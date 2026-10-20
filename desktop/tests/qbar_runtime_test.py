@@ -12,6 +12,12 @@ QBAR = ROOT / "desktop/bin/qbar"
 
 
 class QbarRuntimeTest(unittest.TestCase):
+    def test_hyprland_autostart_uses_runtime_owner(self):
+        source = (ROOT / "desktop/.config/hypr/profiles/common.lua").read_text()
+        startup = source.split("function M.quickshell_cmd(home)", 1)[1].split("\nend", 1)[0]
+        self.assertIn('return home .. "/bin/qbar start"', startup)
+        self.assertNotIn("dotfiles-nix/desktop/bin/quickshell", startup)
+
     def test_ipc_resolves_path_and_keeps_current_display(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
