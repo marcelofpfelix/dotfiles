@@ -45,6 +45,19 @@ class PluginRuntimeTest(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, "unloaded service"):
             validate(self.config, self.plugins)
 
+    def test_emoji_asset_path_has_one_binding(self):
+        source = (Path(__file__).resolve().parents[2] /
+                  "desktop/.config/quickshell/marcelof/shell.qml").read_text()
+        overlay = source.split("EmojiPlugin.Emojis {", 1)[1].split("\n  }", 1)[0]
+        self.assertEqual(overlay.count("pluginPath:"), 1)
+
+    def test_runtime_fields_are_inside_plugin_records(self):
+        source = (Path(__file__).resolve().parents[2] /
+                  "desktop/.config/quickshell/marcelof/shell.qml").read_text()
+        record = source.split("plugins.push({", 1)[1].split("})", 1)[0]
+        for field in ("serviceLoaded:", "widgetRegistered:", "widgetCount:"):
+            self.assertIn(field, record)
+
 
 if __name__ == "__main__":
     if sys.argv[1:] == ["--live"]:

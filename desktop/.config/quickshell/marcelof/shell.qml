@@ -1045,7 +1045,6 @@ ShellRoot {
     id: wifiQrOverlay
     targetScreen: root.laptopScreen
     shell: pluginHostObject
-    pluginPath: pluginRegistry.firstPartyDir + "/emojis"
     manifest: ({ id: shellConfig.pluginIds.wifiQr })
   }
 
@@ -1225,6 +1224,9 @@ ShellRoot {
           version: manifest.version,
           kinds: manifest.kinds,
           enabled: pluginRegistry.isEnabled(pluginId),
+          serviceLoaded: pluginServiceHost.serviceFor(pluginId) !== null,
+          widgetCount: dynamicBar.moduleWidgets(pluginId).length,
+          widgetRegistered: barWidgetRegistry.has(pluginId),
           active: root.dynamicPluginOpen(pluginId),
           canDisable: supported,
           canEnable: supported,
@@ -1237,10 +1239,9 @@ ShellRoot {
       return JSON.stringify(plugins)
     }
     function rescanPlugins(): string { pluginRegistry.rescan(); return "ok" }
+    function listBarGeometry(): string { return JSON.stringify(dynamicBar.debugBarGeometry()) }
+    function listPluginConfig(): string { return JSON.stringify(pluginConfig.config) }
     function setPluginEnabled(id: string, value: string): string {
-          serviceLoaded: pluginServiceHost.serviceFor(pluginId) !== null,
-          widgetCount: dynamicBar.moduleWidgets(pluginId).length,
-          widgetRegistered: barWidgetRegistry.has(pluginId),
       const normalized = String(value || "").toLowerCase()
       return root.setDynamicPluginEnabled(id, normalized === "true" || normalized === "1" || normalized === "on" || normalized === "yes")
     }
@@ -1253,8 +1254,6 @@ ShellRoot {
       return root.notificationService && root.notificationService.doNotDisturb ? "on" : "off"
     }
     function isDnd(): string { return dndState() }
-    function listBarGeometry(): string { return JSON.stringify(dynamicBar.debugBarGeometry()) }
-    function listPluginConfig(): string { return JSON.stringify(pluginConfig.config) }
     function toggleDnd(): string { root.toggleDnd(); return dndState() }
     function setDnd(value: string): string {
       if (!root.notificationService) return "unavailable"
