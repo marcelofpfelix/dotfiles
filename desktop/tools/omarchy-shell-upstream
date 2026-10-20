@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Report, prepare, or apply an upstream Omarchy shell update."""
+
+import argparse
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_SHELL = ROOT / "desktop/.config/quickshell/marcelof"
+DEFAULT_LOCK = ROOT / "desktop/upstream/omarchy-shell.json"
+DEFAULT_CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "dotfiles/omarchy.git"
+STABLE_TAG = re.compile(r"^v\d+\.\d+\.\d+$")
+
+
+def run(*args, cwd=None, check=True, text=True):
+    return subprocess.run(args, cwd=cwd, check=check, text=text, capture_output=True)
+
+
+def git(repo, *args, check=True, text=True):
+    return run("git", "-C", str(repo), *args, check=check, text=text)
+
+
+def ensure_upstream(repository, cache, checkout=None):
+    if checkout:
+        git(checkout, "rev-parse", "--git-dir")
+        return checkout
+    if not cache.exists():
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        run("git", "clone", "--bare", repository, str(cache))
+    git(cache, "fetch", "--force", "--tags", "origin")
+    return cache
+
+
+def resolve_commit(repo, ref):
+    result = git(repo, "rev-parse", f"{ref}^{{commit}}", check=False)
+    if result.returncode != 0 and re.fullmatch(r"[0-9a-f]{40}", ref):
+        git(repo, "fetch", "--depth=1", "origin", ref)
+        result = git(repo, "rev-parse", f"{ref}^{{commit}}")
+    elif result.returncode != 0:
+        raise SystemExit(result.stderr.strip() or f"unknown upstream ref: {ref}")
+    return result.stdout.strip()
+
+
+def latest_tag(repo):
+    tags = git(repo, "tag", "--list", "v*", "--sort=-version:refname").stdout.splitlines()
+    return next((tag for tag in tags if STABLE_TAG.fullmatch(tag)), None)
+
+
+def tree_files(repo, commit):
+    output = git(repo, "ls-tree", "-r", "--name-only", commit, "shell").stdout.splitlines()
+    return {line.removeprefix("shell/") for line in output if line.startswith("shell/")}
+
+
+def blob(repo, commit, relative):
+    return git(repo, "show", f"{commit}:shell/{relative}", text=False).stdout
+
+
+def executable(repo, commit, relative):
+    line = git(repo, "ls-tree", commit, f"shell/{relative}").stdout.strip()
+    return line.startswith("100755 ")
+
+
+def local_files(root):
+    return {str(path.relative_to(root)) for path in root.rglob("*") if path.is_file()}
+
+
+def selected(relative, imports, import_prefixes):
+    return relative in imports or any(relative.startswith(prefix.rstrip("/") + "/")
+                                      for prefix in import_prefixes)
+
+
+def classify(shell_root, upstream, base_commit, target_commit, imports, import_prefixes):
+    local = local_files(shell_root)
+    base = tree_files(upstream, base_commit)
+    target = tree_files(upstream, target_commit)
+    result = {name: [] for name in (
+        "current", "clean", "adapted", "removed", "selectedNew", "localOnly",
+        "upstreamNew", "upstreamOnly"
+    )}
+    for relative in sorted(local & base):
+        current = (shell_root / relative).read_bytes()
+        base_data = blob(upstream, base_commit, relative)
+        if relative not in target:
+            result["removed"].append(relative)
+        elif current == blob(upstream, target_commit, relative):
+            result["current"].append(relative)
+        elif current == base_data:
+            result["clean"].append(relative)
+        else:
+            result["adapted"].append(relative)
+    result["localOnly"] = sorted(local - base)
+    result["upstreamNew"] = sorted(target - base)
+    missing = target - local
+    result["selectedNew"] = sorted(path for path in missing
+                                   if selected(path, imports, import_prefixes))
+    result["upstreamOnly"] = sorted(path for path in missing
+                                    if not selected(path, imports, import_prefixes))
+    return result
+
+
+def print_report(report, base_tag, target_tag, target_commit):
+    print(f"base={base_tag} target={target_tag} commit={target_commit}")
+    for key in ("current", "clean", "adapted", "removed", "selectedNew", "localOnly",
+                "upstreamNew", "upstreamOnly"):
+        print(f"{key}={len(report[key])}")
+    for key in ("clean", "adapted", "removed", "selectedNew", "upstreamOnly"):
+        if report[key]:
+            print(f"\n[{key}]")
+            print("\n".join(report[key]))
+
+
+def merged_candidate(shell_root, upstream, base_commit, target_commit, target_tag, report, destination):
+    shutil.copytree(shell_root, destination)
+    conflicts = []
+    for relative in report["selectedNew"]:
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(blob(upstream, target_commit, relative))
+        target.chmod(0o755 if executable(upstream, target_commit, relative) else 0o644)
+    for relative in report["clean"]:
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(blob(upstream, target_commit, relative))
+        target.chmod(0o755 if executable(upstream, target_commit, relative) else 0o644)
+    for relative in report["adapted"]:
+        target = destination / relative
+        with tempfile.TemporaryDirectory() as directory:
+            temp = Path(directory)
+            current_file = temp / "local"
+            base_file = temp / "base"
+            upstream_file = temp / "upstream"
+            current_file.write_bytes((shell_root / relative).read_bytes())
+            base_file.write_bytes(blob(upstream, base_commit, relative))
+            upstream_file.write_bytes(blob(upstream, target_commit, relative))
+            result = run(
+                "git", "merge-file", "-p", "-L", "local", "-L", "base",
+                "-L", target_tag, str(current_file), str(base_file), str(upstream_file),
+                check=False, text=False,
+            )
+            if result.returncode == 255:
+                detail = result.stderr.decode(errors="replace").strip()
+                raise SystemExit(f"merge failed for {relative}: {detail or result.returncode}")
+            target.write_bytes(result.stdout)
+            if result.returncode > 0:
+                conflicts.append(relative)
+    metadata = {"targetTag": target_tag, "targetCommit": target_commit, "conflicts": conflicts, **report}
+    (destination / ".omarchy-upgrade.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    return conflicts
+
+
+def require_clean(shell_root, lock_file):
+    root = Path(git(shell_root, "rev-parse", "--show-toplevel").stdout.strip())
+    try:
+        lock_path = lock_file.relative_to(root)
+    except ValueError as error:
+        raise SystemExit("lock file must be inside the shell source checkout") from error
+    paths = [str(shell_root.relative_to(root)), str(lock_path)]
+    status = git(root, "status", "--porcelain", "--", *paths).stdout.strip()
+    if status:
+        raise SystemExit("refusing apply: managed source has uncommitted changes\n" + status)
+
+
+def apply_candidate(shell_root, candidate, report):
+    for relative in report["clean"] + report["adapted"] + report["selectedNew"]:
+        source = candidate / relative
+        target = shell_root / relative
+        if not target.exists() or source.read_bytes() != target.read_bytes():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", nargs="?", choices=("report", "prepare", "apply"), default="report")
+    parser.add_argument("ref", nargs="?", default="latest", help="stable tag or commit; default: latest")
+    parser.add_argument("--shell-root", type=Path, default=DEFAULT_SHELL)
+    parser.add_argument("--lock-file", type=Path, default=DEFAULT_LOCK)
+    parser.add_argument("--cache-dir", type=Path, default=DEFAULT_CACHE)
+    parser.add_argument("--upstream-dir", type=Path, help="existing checkout; skips fetch")
+    parser.add_argument("--output", type=Path, help="candidate directory for prepare")
+    parser.add_argument("--json", action="store_true")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    lock = json.loads(args.lock_file.read_text())
+    upstream = ensure_upstream(lock["repository"], args.cache_dir, args.upstream_dir)
+    target_tag = latest_tag(upstream) if args.ref == "latest" else args.ref
+    if not target_tag:
+        raise SystemExit("no stable Omarchy release tag found")
+    base_commit = resolve_commit(upstream, lock["baseCommit"])
+    target_commit = resolve_commit(upstream, target_tag)
+    imports = set(lock.get("imports", []))
+    import_prefixes = set(lock.get("importPrefixes", []))
+    report = classify(args.shell_root, upstream, base_commit, target_commit, imports,
+                      import_prefixes)
+    if args.json:
+        print(json.dumps({"baseTag": lock["baseTag"], "targetTag": target_tag,
+                          "targetCommit": target_commit, **report}, indent=2))
+    else:
+        print_report(report, lock["baseTag"], target_tag, target_commit)
+    if args.command == "report":
+        return
+    output = args.output or Path(tempfile.mkdtemp(prefix=f"omarchy-shell-{target_tag}-")) / "shell"
+    if output.exists():
+        raise SystemExit(f"candidate already exists: {output}")
+    conflicts = merged_candidate(
+        args.shell_root, upstream, base_commit, target_commit, target_tag, report, output
+    )
+    print(f"candidate={output}")
+    if conflicts:
+        print("conflicts=" + ",".join(conflicts), file=sys.stderr)
+        raise SystemExit(1)
+    if report["removed"]:
+        raise SystemExit("upstream removed managed files; review them manually before apply")
+    if args.command == "apply":
+        require_clean(args.shell_root, args.lock_file)
+        apply_candidate(args.shell_root, output, report)
+        lock.update({"baseTag": target_tag, "baseCommit": target_commit})
+        args.lock_file.write_text(json.dumps(lock, indent=2) + "\n")
+        print("applied=true")
+
+
+if __name__ == "__main__":
+    main()

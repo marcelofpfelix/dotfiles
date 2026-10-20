@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "marcelof.plugin-manager",
+  "name": "Plugin Manager",
+  "version": "1.0.0",
+  "author": "Marcelo Felix",
+  "description": "Inspect and toggle installed Omarchy-compatible plugins",
+  "kinds": ["overlay"],
+  "entryPoints": {
+    "overlay": "Overlay.qml"
+  }
+}

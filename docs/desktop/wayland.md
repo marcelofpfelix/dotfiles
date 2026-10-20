@@ -62,9 +62,9 @@ Editable today: primary color, density, weather location, DND, tray behavior, hi
 
 `desktop/bin/omarchy-shell` is a local compatibility shim over `qbar`, not a second shell runtime. It supports the Omarchy-style `shell` IPC target for existing local menus, including `omarchy.menu` as the root menu and `omarchy.clock` as the calendar. Direct plugin targets are mapped only when backed by existing local state: panel open/close/toggle methods, notification DND/history/clear, helper-owned media play/pause/status, and lock. Unsupported targets still fail clearly.
 
-Built-in menus share one declarative registry in `ShellConfigData.qml`. Omarchy-compatible clients can inspect them with `omarchy-shell shell listPlugins` and `omarchy-shell shell listShellConfig`; these first-party menu surfaces remain read-only. Super+Space > Setup > Plugins exposes enable/disable for toggleable manifests. The same plugin list includes reviewed schema-1 plugins discovered under `~/.config/omarchy/plugins`.
+Built-in menus share one declarative registry in `ShellConfigData.qml`. Omarchy-compatible clients can inspect them with `omarchy-shell shell listPlugins` and `omarchy-shell shell listShellConfig`; plugin records include source type, local path, Git URL when available, and clone provenance. Super+Space > Setup > Plugins > Manage plugins opens the portable `marcelof.plugin-manager` overlay for search, source inspection, and enable/disable. The focused Enable/Disable selectors remain recovery paths. The same registry includes reviewed schema-1 plugins discovered under `~/.config/omarchy/plugins`.
 
-Dynamic compatibility now uses Omarchy's manifest contract for `overlay`, `service`, and `bar-widget` plugins. `~/.config/omarchy/shell.json` is canonical for enablement, bar placement, ordering, and inline widget settings; reviewed third-party plugins remain under `~/.config/omarchy/plugins`. The copied service and bar-widget hosts load those kinds without a second shell process. Generic `panel`, `menu`, and alternate `bar` entry points remain unsupported until their upstream hosts replace local ownership. Third-party QML is unsandboxed and disabled by default.
+Dynamic compatibility now uses Omarchy's manifest contract for `overlay`, `panel`, `service`, and `bar-widget` plugins. `~/.config/omarchy/shell.json` is canonical for enablement, bar placement, ordering, and inline widget settings; reviewed third-party plugins remain under `~/.config/omarchy/plugins`. The copied hosts load those kinds without a second shell process. Generic `menu` and alternate `bar` entry points remain unsupported until their upstream hosts replace local ownership. Third-party QML is unsandboxed and disabled by default.
 
 Use `omarchy-plugin-review <plugin-dir>` before enabling any third-party plugin. It validates the manifest, rejects symlinks and unsafe entry points, and reminds that plugin QML is unsandboxed.
 
@@ -72,7 +72,10 @@ Use `omarchy-plugin-add --yes <plugin-dir-or-git-url>` to stage a reviewed plugi
 
 ### Omarchy replacement audit
 
-Snapshot: `/tmp/omarchy-quattro` on branch `quattro`, current local snapshot `1926611` from 2026-08-23.
+Recorded base: Omarchy commit `1926611` from 2026-08-23. The reproducible pin
+and three-way upgrade workflow live in `desktop/upstream/omarchy-shell.json`
+and `desktop/tools/omarchy-shell-upstream`; temporary clones are no longer the
+source of truth.
 
 The shell now copies Omarchy's shared Commons/Ui foundation, plugin registry, dynamic bar, notification service, menu engine, indicators, and night-light service, plus staged lock/idle/polkit services. Local panels remain manifest-backed plugins or narrow root surfaces. Adaptations are limited to Ubuntu command paths, the installed Qt version, laptop-screen-only rendering, and behavior that upstream does not provide. Replaced QML stays under `archive/wayland/quickshell/`.
 

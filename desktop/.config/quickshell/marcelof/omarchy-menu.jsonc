@@ -32,7 +32,7 @@
   "setup.keybindings": {"icon":"󰌌","label":"Keybindings","aliases":["keys","hotkeys"],"action":"$HOME/bin/qbar keybindings"},
 
   "setup.plugin": {"icon":"󰐱","label":"Plugins","aliases":["plugin","plugins"]},
-  "setup.plugin.manage": {"icon":"󰐱","label":"Manage plugins","action":"$HOME/bin/omarchy-menu-plugin manage"},
+  "setup.plugin.manage": {"icon":"󰐱","label":"Manage plugins","action":"$HOME/bin/qbar plugins"},
   "setup.plugin.enable": {"icon":"󰄬","label":"Enable plugin","action":"$HOME/bin/omarchy-menu-plugin enable"},
   "setup.plugin.disable": {"icon":"󰅖","label":"Disable plugin","action":"$HOME/bin/omarchy-menu-plugin disable"},
 

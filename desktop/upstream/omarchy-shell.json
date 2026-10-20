@@ -1,0 +1,27 @@
+{
+  "repository": "https://github.com/omacom/omarchy.git",
+  "baseTag": "snapshot-2026-08-23",
+  "baseCommit": "19266119ea827a13acefe0ac223d803a186d0e88",
+  "imports": [
+    "Ui/PluginBarApi.qml",
+    "services/AuthServiceStore.js",
+    "services/PluginAppLibraryApi.qml",
+    "services/PluginBarStateApi.qml",
+    "services/PluginBarWidgetRegistryApi.qml",
+    "services/PluginFirstPartyServiceApi.qml",
+    "services/PluginRegistryApi.qml",
+    "services/PluginShellApi.qml"
+  ],
+  "importPrefixes": [
+    "plugins/agents",
+    "plugins/dev-gallery",
+    "plugins/panels/clock",
+    "plugins/panels/disk-speedtest",
+    "plugins/panels/dropbox",
+    "plugins/panels/speedtest",
+    "plugins/panels/tailscale",
+    "plugins/panels/weather",
+    "plugins/reminders",
+    "plugins/services/battery"
+  ]
+}

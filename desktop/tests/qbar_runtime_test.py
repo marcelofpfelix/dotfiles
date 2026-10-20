@@ -68,6 +68,13 @@ class QbarRuntimeTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout, "lock-helper-called\n")
 
+    def test_start_recovers_wayland_before_launching(self):
+        source = QBAR.read_text()
+        recover = source.split("recover_wayland_display()", 1)[1].split("\n}", 1)[0]
+        start = source.split("start()", 1)[1].split("\n}", 1)[0]
+        self.assertIn('QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"', recover)
+        self.assertIn("recover_wayland_display", start)
+
 
 if __name__ == "__main__":
     unittest.main()

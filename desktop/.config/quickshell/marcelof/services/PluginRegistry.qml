@@ -141,6 +141,8 @@ QtObject {
         return selectedBar === key
       }
       if (isDisabled(config, key)) return false
+      if (Array.isArray(manifest.kinds) && manifest.kinds.indexOf(barWidgetKind) !== -1)
+        return findEntryLocation(config, key).found
       if (manifest.__isFirstParty) return true
     }
     return findEntryLocation(config, key).found
@@ -593,6 +595,9 @@ QtObject {
         var manifest = JSON.parse(raw)
         manifest.__sourceDir = currentSource
         manifest.__isFirstParty = (currentKind === "firstparty")
+        if (!manifest.__sourceType)
+          manifest.__sourceType = manifest.__isFirstParty ? "built-in" : "local"
+        if (!manifest.__sourceUrl) manifest.__sourceUrl = ""
         var validated = validateManifest(manifest, currentSource + "/manifest.json")
         if (validated) {
           if (currentKind === "firstparty") firstParty[validated.id] = validated
@@ -700,10 +705,14 @@ QtObject {
     // directory without wrapper folders.
     // Third-party plugins stay at the top level of ~/.config/omarchy/plugins.
     var script = ""
-      + "emit_manifest() { local kind=\"$1\"; local manifest=\"$2\"; local sub; "
+      + "emit_manifest() { local kind=\"$1\"; local manifest=\"$2\"; local sub source_type source_url; "
       + "  if [[ ${manifest##*/} == \"manifest.json\" ]]; then sub=\"${manifest%/manifest.json}\"; else sub=\"$(dirname -- \"$manifest\")\"; fi; "
+      + "  if [[ $kind == firstparty ]]; then source_type=built-in; source_url=https://github.com/omacom/omarchy; "
+      + "  elif source_url=$(git -C \"$sub\" config --get remote.origin.url 2>/dev/null) && [[ -n $source_url ]]; then source_type=git; "
+      + "  else source_type=local; source_url=; fi; "
       + "  printf '===%s::%s===\\n' \"$kind\" \"$sub\"; "
-      + "  cat \"$manifest\"; "
+      + "  jq -c --arg sourceType \"$source_type\" --arg sourceUrl \"$source_url\" "
+      + "    '. + {__sourceType: $sourceType, __sourceUrl: $sourceUrl}' \"$manifest\"; "
       + "  printf '\\n=== EOM ===\\n'; "
       + "}; "
       + "scan_firstparty() { local dir=\"$1\"; "

@@ -34,7 +34,7 @@ list_instances() {
 }
 
 usage() {
-  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|tray|controls|calendar|work-inbox|personal-dashboard|notifications|notifications-clear|display|battery|bluetooth|wifi-qr|power|session-action|inhibit|keybindings|clipboard|emoji|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
+  printf 'use: qbar [-q] [start|stop|restart|reload|status|runtime-prune|shell|notice|toggle|show|hide|root-menu|plugins|tray|controls|calendar|work-inbox|personal-dashboard|notifications|notifications-clear|display|battery|bluetooth|wifi-qr|power|session-action|inhibit|keybindings|clipboard|emoji|passmenu|websearch|media|screen|wallpaper|launcher|settings|dnd|osd-volume|osd-brightness|osd-kbd|osd-mic|close-panels]\n' >&2
 }
 
 kill_all() {
@@ -67,12 +67,16 @@ runtime_prune() {
 }
 
 recover_wayland_display() {
-  [ -n "${WAYLAND_DISPLAY:-}" ] && return 0
+  if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
+    return 0
+  fi
   local runtime socket
   runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
   for socket in "$runtime"/wayland-[0-9]*; do
     [ -S "$socket" ] || continue
     export WAYLAND_DISPLAY="${socket##*/}"
+    export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
     return 0
   done
 }
@@ -171,6 +175,7 @@ running() {
 
 start() {
   running && return 0
+  recover_wayland_display
   "$quickshell_bin" --path "$config_path" --no-duplicate --daemonize >>"$log_file" 2>&1 || true
   sleep 0.3
   running && return 0
@@ -198,6 +203,7 @@ case "${1:-status}" in
   toggle|show|hide) ipc "$1" ;;
   launcher) menu_summon launcher ;;
   root-menu|menu) menu_toggle root-menu ;;
+  plugins|plugin-manager) menu_toggle marcelof.plugin-manager ;;
   tray|tray-manage) menu_toggle tray ;;
   controls) menu_toggle controls ;;
   media|audio) ipc_target omarchy.audio toggle ;;

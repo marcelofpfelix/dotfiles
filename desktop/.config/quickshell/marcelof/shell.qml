@@ -1231,7 +1231,10 @@ ShellRoot {
           canDisable: supported,
           canEnable: supported,
           firstParty: manifest.__isFirstParty === true,
-          clonedFrom: "",
+          sourceType: manifest.__sourceType || (manifest.__isFirstParty ? "built-in" : "local"),
+          sourcePath: manifest.__sourceDir || "",
+          sourceUrl: manifest.__sourceUrl || "",
+          clonedFrom: manifest.omarchy && manifest.omarchy.clonedFrom ? manifest.omarchy.clonedFrom : "",
           menu: manifest.menu || null
         })
       }

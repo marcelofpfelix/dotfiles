@@ -28,10 +28,25 @@
       ]
     }
   },
-  "disabledPlugins": ["omarchy.lock", "omarchy.idle", "omarchy.polkit"],
+  "disabledPlugins": [
+    "omarchy.agents",
+    "omarchy.battery",
+    "omarchy.clock",
+    "omarchy.dev-gallery",
+    "omarchy.disk-speedtest",
+    "omarchy.dropbox",
+    "omarchy.idle",
+    "omarchy.lock",
+    "omarchy.polkit",
+    "omarchy.reminders",
+    "omarchy.speedtest",
+    "omarchy.tailscale",
+    "omarchy.weather"
+  ],
   "plugins": [
     { "id": "marcelof.board-dashboard" },
     { "id": "marcelof.media-controls" },
-    { "id": "marcelof.network-tools" }
+    { "id": "marcelof.network-tools" },
+    { "id": "marcelof.plugin-manager" }
   ]
 }

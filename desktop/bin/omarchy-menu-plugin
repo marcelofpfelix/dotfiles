@@ -22,7 +22,8 @@ plugin_rows() {
    | .[] | select($filter)
    | \$icon + \"\\t\" + .name + \"\\t\" + .id
      + (if \$mode == \"manage\" then \" · \" + (if .enabled then \"enabled\" else \"disabled\" end)
-        + \" · \" + ((.kinds // []) | join(\",\")) else \"\" end)" <<<"$plugins"
+        + \" · \" + ((.kinds // []) | join(\",\"))
+        + \" · \" + (.sourceType // (if .firstParty then \"built-in\" else \"local\" end)) else \"\" end)" <<<"$plugins"
 }
 
 plugin_action() {

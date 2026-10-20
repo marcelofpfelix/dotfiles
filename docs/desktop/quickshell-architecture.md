@@ -63,6 +63,43 @@ Retired X11 files stay under `archive/x11/desktop/`; replaced Wayland shell file
 
 Use reference repos for behavior, layout patterns, and small implementation ideas. Upstream runtime command names are allowed only when they remove local glue and stay wrapped by local entrypoints such as `qbar`. Do not import broad framework rewrites, distro update machinery, or assumptions that fight the default i3-compatible profile.
 
+## Omarchy Source And Upgrades
+
+The Omarchy shell source is tracked separately from local ownership:
+
+- `Commons/`, `Ui/`, and matching paths under `plugins/` and `services/` are
+  upstream-derived. Some are byte-identical; others retain Ubuntu, Qt,
+  single-monitor, lifecycle, notification-history, or local-command adapters.
+- top-level `Shell*.qml`, `marcelof.*` plugins, `ShellConfigData.qml`, and
+  `omarchy-menu.jsonc` are local code and configuration.
+- `desktop/.config/omarchy/shell.json` is the deployed default layout. The live
+  `~/.config/omarchy/shell.json` and
+  `~/.local/state/quickshell/marcelof/settings.json` are mutable runtime state,
+  not upstream source.
+
+`desktop/upstream/omarchy-shell.json` pins the upstream base used for the local
+adaptations. Use `desktop/tools/omarchy-shell-upstream` to compare it with a
+stable tag:
+
+```sh
+desktop/tools/omarchy-shell-upstream report latest
+desktop/tools/omarchy-shell-upstream prepare latest
+```
+
+`report` classifies shared files as current, clean upstream updates, local
+adaptations, or removals. `prepare` performs three-way merges into a temporary
+candidate and adds only the foundation files and complete built-in plugin
+families selected by the lock. Every tagged built-in is installed; optional
+ones remain in `disabledPlugins` until explicitly enabled. It does not import
+unselected upstream files, delete local files, or touch the active source.
+After reviewing and testing that candidate, `apply` updates only already-managed
+or explicitly selected files and advances the pin; it refuses conflicts,
+upstream removals, and dirty managed source. See
+`omarchy-source-map.md` for the component inventory and current release audit.
+
+This is intentionally not Omarchy's distro updater. Package migrations, Arch
+policy, themes, and community plugins remain outside this repository.
+
 ## Do Not Abstract
 
 Do not add a new helper just because two files share one line. Move code only when it removes real duplication, keeps `shell.qml` focused on root wiring, or makes menu behavior testable from one place.

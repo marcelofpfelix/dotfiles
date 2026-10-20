@@ -1664,6 +1664,7 @@ notification center.
 - [x] P1: Add one unified plugin management selector.
   - Completed 2026-08-23: Setup > Plugins > Manage plugins reuses the copied selector, shows ID, state, and kind, and toggles the selected manifest. Enable/Disable remain focused fallback views; no second registry or QML status panel was added.
   - Validation: selector self-test, shell syntax, live registry state, persistence round trip, and menu screenshot.
+  - Follow-up 2026-10-20: the same registry now backs one portable overlay that adds search and source provenance. The focused selectors remain recovery paths; no second registry, installer, or state file was introduced. Execution is tracked in Beads under `homelab-2qz.56`.
 
 - [x] P1: Generate public custom-plugin routes from enabled manifest metadata.
   - Completed 2026-08-23: enabled manifests may declare one optional `menu` item. The copied menu model merges defaults, plugin routes, then user extensions; disabling a plugin removes its generated route. Private services and bar-only plugins remain absent.

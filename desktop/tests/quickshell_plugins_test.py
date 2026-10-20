@@ -1,8 +1,10 @@
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 
 
@@ -25,6 +27,8 @@ def validate(config, plugins):
 
 
 class PluginRuntimeTest(unittest.TestCase):
+    root = Path(__file__).resolve().parents[2]
+
     def setUp(self):
         self.config = {"bar": {"layout": {"right": [{"id": "omarchy.media"}]}}}
         self.plugins = [{"id": "omarchy.media", "enabled": True,
@@ -52,11 +56,72 @@ class PluginRuntimeTest(unittest.TestCase):
         self.assertEqual(overlay.count("pluginPath:"), 1)
 
     def test_runtime_fields_are_inside_plugin_records(self):
-        source = (Path(__file__).resolve().parents[2] /
-                  "desktop/.config/quickshell/marcelof/shell.qml").read_text()
+        source = (self.root / "desktop/.config/quickshell/marcelof/shell.qml").read_text()
         record = source.split("plugins.push({", 1)[1].split("})", 1)[0]
-        for field in ("serviceLoaded:", "widgetRegistered:", "widgetCount:"):
+        for field in ("serviceLoaded:", "widgetRegistered:", "widgetCount:",
+                      "sourceType:", "sourcePath:", "sourceUrl:", "clonedFrom:"):
             self.assertIn(field, record)
+
+    def test_bar_widget_enabled_state_follows_layout(self):
+        source = (self.root /
+                  "desktop/.config/quickshell/marcelof/services/PluginRegistry.qml").read_text()
+        enabled = source.split("function isEnabled(id)", 1)[1].split("function supportsKind", 1)[0]
+        self.assertIn("manifest.kinds.indexOf(barWidgetKind)", enabled)
+        self.assertIn("return findEntryLocation(config, key).found", enabled)
+
+    def test_all_upstream_builtins_are_installed(self):
+        expected = {
+            "active-window", "agents", "audio", "background", "bar", "battery",
+            "bluetooth", "clipboard", "clock", "dev-gallery", "disk-speedtest",
+            "dropbox", "emojis", "idle", "image-picker", "indicators",
+            "keyboard-layout", "lock", "media", "menu", "microphone", "monitor",
+            "network", "nightlight", "notifications", "osd", "polkit", "power",
+            "reminders", "spacer", "speedtest", "system-update", "tailscale",
+            "tray", "weather", "wifiqr", "workspaces",
+        }
+        manifests = (self.root / "desktop/.config/quickshell/marcelof/plugins").rglob("*manifest.json")
+        installed = set()
+        for manifest in manifests:
+            plugin_id = json.loads(manifest.read_text()).get("id", "")
+            if plugin_id.startswith("omarchy."):
+                installed.add(plugin_id.removeprefix("omarchy."))
+        self.assertEqual(installed, expected)
+        config = json.loads((self.root / "desktop/.config/omarchy/shell.json").read_text())
+        optional = {"omarchy." + plugin for plugin in {
+            "agents", "battery", "clock", "dev-gallery", "disk-speedtest",
+            "dropbox", "reminders", "speedtest", "tailscale", "weather",
+        }}
+        self.assertTrue(optional.issubset(set(config["disabledPlugins"])))
+
+    def test_plugin_manager_is_portable_and_in_root_menu(self):
+        plugin = self.root / "desktop/.config/omarchy/plugins/marcelof.plugin-manager"
+        manifest = json.loads((plugin / "manifest.json").read_text())
+        self.assertEqual(manifest["id"], "marcelof.plugin-manager")
+        self.assertEqual(manifest["entryPoints"]["overlay"], "Overlay.qml")
+        config = json.loads((self.root / "desktop/.config/omarchy/shell.json").read_text())
+        self.assertIn("marcelof.plugin-manager", {entry["id"] for entry in config["plugins"]})
+
+    def test_plugin_list_prints_git_or_local_origin(self):
+        plugins = [
+            {"id": "git.test", "enabled": False, "firstParty": False,
+             "sourceType": "git", "sourcePath": "/plugins/git.test",
+             "sourceUrl": "https://example.test/plugin.git", "kinds": ["overlay"],
+             "name": "Git Test"},
+            {"id": "local.test", "enabled": True, "firstParty": False,
+             "sourceType": "local", "sourcePath": "/plugins/local.test",
+             "sourceUrl": "", "kinds": ["overlay"], "name": "Local Test"},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            mock = Path(directory) / "omarchy-shell"
+            mock.write_text("#!/bin/sh\nprintf '%s\\n' '" + json.dumps(plugins) + "'\n")
+            mock.chmod(0o755)
+            result = subprocess.run(
+                [str(self.root / "desktop/bin/omarchy-plugin-list")],
+                env={**os.environ, "PATH": directory + ":" + os.environ["PATH"]},
+                text=True, capture_output=True, check=True,
+            )
+        self.assertIn("https://example.test/plugin.git", result.stdout)
+        self.assertIn("/plugins/local.test", result.stdout)
 
 
 if __name__ == "__main__":
