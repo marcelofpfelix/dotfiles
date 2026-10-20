@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH="$HOME/.local/share/dotfiles-nix/desktop/bin:$HOME/bin:$HOME/.local/bin:$PATH"
+# A separately upgraded profile must win over an older desktop closure.
+export PATH="$HOME/.nix-profile/bin:$HOME/.local/share/dotfiles-nix/desktop/bin:$HOME/bin:$HOME/.local/bin:$PATH"
 export QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"
 launcher_data_dirs="$HOME/.local/share/dotfiles-nix/desktop/share:$HOME/.nix-profile/share:$HOME/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share:/var/lib/snapd/desktop"
 export XDG_DATA_DIRS="$launcher_data_dirs${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"

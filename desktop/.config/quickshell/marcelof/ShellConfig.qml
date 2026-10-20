@@ -85,7 +85,7 @@ QtObject {
   function inhibit(action) { return [bin("desktop-inhibit"), action] }
   function brightness(action) { return [bin("bri"), action] }
   function keyboardBrightness(action) { return [bin("kbd-brightness"), action] }
-  function locker() { return ["sh", "-c", "command -v hyprlock >/dev/null 2>&1 && exec hyprlock; command -v swaylock >/dev/null 2>&1 && exec swaylock -f; loginctl lock-session || notify-send Hyprland \"No Wayland locker found\""] }
+  function locker() { return [home + "/bin/lock-session"] }
   function systemctl(action) { return ["systemctl", action] }
   function suspend() { return systemctl("suspend") }
   function hibernate() { return systemctl("hibernate") }

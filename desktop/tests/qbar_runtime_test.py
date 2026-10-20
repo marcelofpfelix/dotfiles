@@ -25,6 +25,14 @@ class QbarRuntimeTest(unittest.TestCase):
                 "'display':os.environ['WAYLAND_DISPLAY']}))\n"
             )
             qs.chmod(0o755)
+            profile = home / ".nix-profile/bin"
+            profile.mkdir(parents=True)
+            (profile / "qs").symlink_to(qs)
+            stale = home / ".local/share/dotfiles-nix/desktop/bin"
+            stale.mkdir(parents=True)
+            stale_qs = stale / "qs"
+            stale_qs.write_text('#!/bin/sh\nprintf "stale-desktop-runtime\\n"\n')
+            stale_qs.chmod(0o755)
             timeout = binary / "timeout"
             timeout.write_text('#!/bin/sh\nshift; shift; exec "$@"\n')
             timeout.chmod(0o755)
