@@ -10,7 +10,8 @@ Item {
   id: root
 
   property string omarchyPath: Quickshell.env("OMARCHY_PATH")
-  property string pluginPath: omarchyPath + "/shell/plugins/emojis"
+  property string pluginPath: omarchyPath ? omarchyPath + "/shell/plugins/emojis"
+    : Quickshell.env("HOME") + "/.config/quickshell/marcelof/plugins/emojis"
   property var targetScreen: null
   property var shell: null
   property var manifest: null
