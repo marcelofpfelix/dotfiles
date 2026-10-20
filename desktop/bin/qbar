@@ -3,6 +3,8 @@ set -euo pipefail
 
 export PATH="$HOME/.local/share/dotfiles-nix/desktop/bin:$HOME/bin:$HOME/.local/bin:$PATH"
 export QT_QUICK_BACKEND="${QT_QUICK_BACKEND:-software}"
+launcher_data_dirs="$HOME/.local/share/dotfiles-nix/desktop/share:$HOME/.nix-profile/share:$HOME/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share:/var/lib/snapd/desktop"
+export XDG_DATA_DIRS="$launcher_data_dirs${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
 
 QUIET=0
 if [[ ${1:-} == "-q" ]]; then
@@ -80,7 +82,7 @@ call_ipc() {
   shift
 
   recover_wayland_display
-  if output=$(timeout --kill-after=1s "${QBAR_IPC_TIMEOUT:-2s}" "$qs_bin" ipc --path "$config_path" --any-display call "$target" "$@" 2>&1); then
+  if output=$(timeout --kill-after=1s "${QBAR_IPC_TIMEOUT:-2s}" "$qs_bin" ipc --path "$config_path" call "$target" "$@" 2>&1); then
     status=0
   else
     status=$?
@@ -217,7 +219,7 @@ case "${1:-status}" in
   wifi-qr|wifiqr) menu_toggle wifiqr ;;
   network) ipc_target omarchy.network toggle ;;
   websearch) ipc_target websearch toggle ;;
-  lock) ipc_target lock lock ;;
+  lock) exec "$HOME/bin/lock-session" ;;
   power|session) menu_toggle power ;;
   session-action)
     [ -n "${2:-}" ] || { usage; exit 2; }

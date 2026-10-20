@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if pgrep -u "$(id -u)" -x swaylock >/dev/null; then
+    exit 0
+fi
+
+# Hyprland intentionally keeps the session blocked when a lock client crashes.
+# Clear only that stale failsafe immediately before starting the replacement.
+if command -v hyprctl >/dev/null 2>&1; then
+    hyprctl --instance 0 eval 'hl.clear_crashed_lockscreen()' >/dev/null
+fi
+
+exec /usr/bin/swaylock --color 11111b
